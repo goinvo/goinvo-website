@@ -108,7 +108,7 @@ afterEach(() => {
 
 // ── Strategy ─────────────────────────────────────────────────────────────────
 
-const STORED_POSTURE = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-10T00:00:00Z' } }
+const STORED_POSTURE = { runway: { certainUntil: '2027-03-10', confirmedAt: '2026-09-10T00:00:00Z' } }
 const PRIOR_REVIEW = {
   confirmedAt: '2026-09-02T00:00:00Z',
   confirmedBy: 'Ezra',
@@ -309,11 +309,11 @@ describe('renderMoneyAndDirection — the redraw a money press leaves in place',
   it('reads the records AFTER the press: the receipt carries the number now, and the next question follows', async () => {
     // The runway was just confirmed; the strategy has never been checked.
     routeOutreach({ strategy: strategyData({ contacts: [] }) })
-    routePosture({ stored: { runway: { certainUntil: '2027-01-25', confirmedAt: NOW.toISOString() } }, review: null })
+    routePosture({ stored: { runway: { certainUntil: '2027-03-10', confirmedAt: NOW.toISOString() } }, review: null })
     const blocks = await renderMoneyAndDirection({ now: NOW, receipt: { kind: 'runwayConfirmed', who: '<@UJULES>' } })
     expectValidSlackBlocks(blocks)
     expect(blocks.every((block) => String(block.block_id).startsWith('mq_money'))).toBe(true)
-    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@UJULES> · Thu 24 Sep — 4 months (to 25 Jan 2027).')
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@UJULES> · Thu 24 Sep — 5.5 months (to 10 Mar 2027).')
     expect(buttons(blocks).map((button) => button.text.text)).toEqual([LABEL.RUNWAY_CHANGED, LABEL.PLAN_FITS, LABEL.PLAN_RETHINK])
     expect(buttons(blocks).some((button) => button.style)).toBe(false)
   })

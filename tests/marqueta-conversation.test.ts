@@ -195,7 +195,7 @@ const pulseFor = (from: string, to: string) => summarizeOutreach([], { from, to,
 const STRATEGY_LOAD = {
   snapshot: {
     monthKey: '2026-09',
-    money: '3.5 months of runway, to 25 Jan 2027.',
+    money: '5.5 months of runway, to 10 Mar 2027.',
     postureId: 'rebuild',
     postureTitle: 'Rebuild',
     postureStrategy: 'Outreach leads.',
@@ -209,8 +209,8 @@ const STRATEGY_LOAD = {
   review: null,
   due: { due: true, reason: 'Never checked.' },
   runway: {
-    summary: '3.5 months of runway, to 25 Jan 2027.',
-    resolved: { id: 'rebuild', source: 'runway', months: 3.5, certainUntil: '2027-01-25', disagreement: null },
+    summary: '5.5 months of runway, to 10 Mar 2027.',
+    resolved: { id: 'rebuild', source: 'runway', months: 5.5, certainUntil: '2027-03-10', disagreement: null },
     checkIn: { due: true, urgent: false, reason: 'Acme was marked won on 20 Sep —', question: 'did it extend the runway?' },
   },
   latestWin: null,
@@ -940,7 +940,7 @@ describe('the questions', () => {
   it('answers money with the runway and the pipeline — and the runway’s own buttons when a check-in is due', async () => {
     mocks.loadStrategySnapshot.mockResolvedValue(STRATEGY_LOAD)
     const reply = await ask('<@UBOT> how are we for money?')
-    expect(reply.text).toBe('*Runway* — 3.5 months of certain runway, to 25 Jan 2027 (Rebuild)')
+    expect(reply.text).toBe('*Runway* — 5.5 months of certain runway, to 10 Mar 2027 (Rebuild)')
     const labels = buttonsIn(reply.blocks).map((element) => element.text.text)
     expect(labels).toEqual(['Still right', 'We signed something…', 'It changed…'])
     expect(JSON.stringify(reply.blocks)).toContain("Pipeline: 3 in meeting/opportunity, ~$45,000 estimated")

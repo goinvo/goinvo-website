@@ -49,7 +49,7 @@ const NOW = new Date('2026-09-24T14:00:00Z')
 describe('formatSlackDay', () => {
   it('writes "Mon 21 Sep", with the year only when it is not this year’s', () => {
     expect(formatSlackDay('2026-09-21', NOW)).toBe('Mon 21 Sep')
-    expect(formatSlackDay('2027-01-25', NOW)).toBe('Mon 25 Jan 2027')
+    expect(formatSlackDay('2027-03-10', NOW)).toBe('Wed 10 Mar 2027')
     expect(formatSlackDay('2025-12-31', NOW)).toBe('Wed 31 Dec 2025')
     expect(formatSlackDay(new Date('2026-09-25T16:00:00Z'), NOW)).toBe('Fri 25 Sep')
   })
@@ -209,7 +209,7 @@ describe('errorLine and askMarqueta', () => {
 describe('replaceBlocksByPrefix', () => {
   const blocks: Block[] = [
     { type: 'header', text: { type: 'plain_text', text: 'Monday plan' } },
-    { type: 'section', block_id: 'mq_money_runway', text: { type: 'mrkdwn', text: 'Still 5 months?' } },
+    { type: 'section', block_id: 'mq_money_runway', text: { type: 'mrkdwn', text: 'Still 5.5 months?' } },
     { type: 'context', block_id: 'mq_money_next', elements: [{ type: 'mrkdwn', text: 'Next: the plan' }] },
     { type: 'actions', block_id: 'mq_footer', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Open This week' }, url: 'https://x.test' }] },
   ]

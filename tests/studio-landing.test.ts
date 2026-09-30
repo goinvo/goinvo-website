@@ -337,9 +337,9 @@ describe('money and direction in the Studio', () => {
   it('answers about the runway with the runway API’s bodies — never a posture, never setAt', () => {
     expect(runwayAnswerBody('confirm', {}, 'Shay')).toEqual({ action: 'confirm', personName: 'Shay' })
     expect(runwayAnswerBody('signed', { label: 'SoW — Acme', months: '3' })).toEqual({ action: 'signed', label: 'SoW — Acme', monthsAdded: 3 })
-    expect(runwayAnswerBody('changed', { months: '4,5 months', basis: 'Signed work in hand' })).toEqual({
+    expect(runwayAnswerBody('changed', { months: '6,5 months', basis: 'Signed work in hand' })).toEqual({
       action: 'set',
-      months: 4.5,
+      months: 6.5,
       basis: 'Signed work in hand',
     })
     for (const body of [
@@ -356,7 +356,7 @@ describe('money and direction in the Studio', () => {
     expect(runwayAnswerBody('signed', { label: '', months: '3' })).toBeNull()
     expect(runwayAnswerBody('signed', { label: 'SoW', months: '' })).toBeNull()
     expect(runwayAnswerBody('changed', { months: '-2' })).toBeNull()
-    expect(parseRunwayMonths('about 4.5')).toBe(4.5)
+    expect(parseRunwayMonths('about 6.5')).toBe(6.5)
     expect(parseRunwayMonths('-2')).toBeNull()
     expect(parseRunwayMonths('0')).toBeNull()
     expect(parseRunwayMonths('soon')).toBeNull()
@@ -384,7 +384,7 @@ describe('money and direction in the Studio', () => {
       _id: 'marketingFinancialPosture',
       posture: 'survival',
       setAt: '2026-09-01T00:00:00.000Z',
-      runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T00:00:00.000Z' },
+      runway: { certainUntil: '2027-03-10', confirmedAt: '2026-08-01T00:00:00.000Z' },
     }
     const before = resolveRunwayPosture(store.doc as StoredPosture, NOW)
     expect(before.source).toBe('manual')
@@ -405,7 +405,7 @@ describe('money and direction in the Studio', () => {
     expect(none.resolved.months).toBeNull()
     expect(none.checkIn.due).toBe(true)
     expect(runwayAnswersOffered(none)).toEqual(['changed'])
-    const recorded = runwayStateFrom({ runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T00:00:00.000Z' } }, NOW)
+    const recorded = runwayStateFrom({ runway: { certainUntil: '2027-03-10', confirmedAt: '2026-08-01T00:00:00.000Z' } }, NOW)
     expect(runwayAnswersOffered(recorded)).toEqual(['confirm', 'signed', 'changed'])
     expect(runwayAnswersOffered(null)).toEqual([])
     expect(MONEY).toContain("offered.includes('confirm') && (")
@@ -413,7 +413,7 @@ describe('money and direction in the Studio', () => {
 
   it('shows a reader who cannot write the runway, read the old way, and does not nag them on the Dashboard', () => {
     // The fallback describes the record with the API's own pure functions.
-    const stored: StoredPosture = { posture: 'survival', setAt: '2026-09-01T00:00:00.000Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T00:00:00.000Z' } }
+    const stored: StoredPosture = { posture: 'survival', setAt: '2026-09-01T00:00:00.000Z', runway: { certainUntil: '2027-03-10', confirmedAt: '2026-08-01T00:00:00.000Z' } }
     const state = runwayStateFrom(stored, NOW)
     expect(state.resolved).toEqual(resolveRunwayPosture(stored, NOW))
     expect(state.summary).toMatch(/months? of certain runway/)
@@ -441,7 +441,7 @@ describe('money and direction in the Studio', () => {
       _id: 'marketingFinancialPosture',
       posture: 'survival',
       setAt: '2026-07-02T10:00:00.000Z',
-      runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T12:00:00.000Z' },
+      runway: { certainUntil: '2027-03-10', confirmedAt: '2026-08-27T12:00:00.000Z' },
     }
     const monday = new Date('2026-09-28T13:00:00Z')
     store.doc = JSON.parse(JSON.stringify(record))
@@ -450,7 +450,7 @@ describe('money and direction in the Studio', () => {
     expect(moneyNudgeDue(before)).toBe(true)
 
     const after = await confirmRunway({ personName: 'Shay', now: monday })
-    // Still a disagreement (3.4 months is Rebuild; the stale bin says Survival) — said, not nagged about.
+    // Still a disagreement (about 5.5 months is Rebuild; the stale bin says Survival) — said, not nagged about.
     expect(after.resolved).toMatchObject({ source: 'runway', id: 'rebuild' })
     expect(after.resolved.disagreement).toBeTruthy()
     expect(moneyNudgeDue(after)).toBe(false)
@@ -461,7 +461,7 @@ describe('money and direction in the Studio', () => {
   it('shows an override in the select only while it is the one in charge, and can always pick any posture', () => {
     // The runway is in charge: the stored "Survival" is not what the plan uses.
     const runwayInCharge = runwayStateFrom(
-      { posture: 'survival', setAt: '2026-07-02T10:00:00.000Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T12:00:00.000Z' } },
+      { posture: 'survival', setAt: '2026-07-02T10:00:00.000Z', runway: { certainUntil: '2027-03-10', confirmedAt: '2026-08-27T12:00:00.000Z' } },
       NOW,
     )
     expect(runwayInCharge.resolved.source).toBe('runway')
@@ -473,7 +473,7 @@ describe('money and direction in the Studio', () => {
 
     // The override in charge: shown as chosen.
     const overriding = runwayStateFrom(
-      { posture: 'survival', setAt: '2026-09-20T00:00:00.000Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T12:00:00.000Z' } },
+      { posture: 'survival', setAt: '2026-09-20T00:00:00.000Z', runway: { certainUntil: '2027-03-10', confirmedAt: '2026-08-27T12:00:00.000Z' } },
       NOW,
     )
     expect(overriding.resolved.source).toBe('manual')

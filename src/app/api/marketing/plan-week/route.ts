@@ -139,7 +139,7 @@ function weekPulse(contacts: PulseContact[], followUps: Array<{ overdue: boolean
 }
 
 /**
- * "Rebuild — 5 months of certain runway (to 25 Jan 2027)": the posture this
+ * "<Posture> — N months of certain runway (to 31 Dec 2099)": the posture this
  * week was planned against, and the fact it came from.
  *
  * From the same read that chose the posture, so the header can never name a

@@ -6,7 +6,7 @@
  * Studio, or from Slack — they all write the same record.
  *
  *   npx tsx scripts/set-runway.ts --months 5 --basis "signed work in hand"
- *   npx tsx scripts/set-runway.ts --until 2027-01-25
+ *   npx tsx scripts/set-runway.ts --until 2099-12-31
  *   npx tsx scripts/set-runway.ts --confirm
  *   npx tsx scripts/set-runway.ts --signed "SoW - Acme discovery" --months 3
  *   npx tsx scripts/set-runway.ts                       # just read it

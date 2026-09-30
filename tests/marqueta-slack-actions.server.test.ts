@@ -195,7 +195,7 @@ function strategyLoad(now: Date = NOW) {
     },
   ]
   // Confirmed in August: stale, so the runway check-in is due.
-  const stored: StoredPosture = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T00:00:00Z' } }
+  const stored: StoredPosture = { runway: { certainUntil: '2027-03-10', confirmedAt: '2026-08-01T00:00:00Z' } }
   const resolved = resolveRunwayPosture(stored, now)
   const runway = { stored, resolved, checkIn: runwayCheckIn(stored, now), summary: describeRunway(stored, now) }
   const thisMonth = summarizeOutreach(contacts, { ...monthWindow(now, 0), now })

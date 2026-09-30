@@ -65,7 +65,7 @@ type RunwayState = {
 type RunwayForm = 'signed' | 'changed'
 
 /**
- * Months as people type them — "4.5", "about 4.5", "4,5 months" — or null.
+ * Months as people type them — "6.5", "about 6.5", "6,5 months" — or null.
  * The minus is checked before anything is stripped: "-2" means two months
  * PAST the end, and stripping it would have extended the runway by two. The
  * Slack modal reads its field the same way.

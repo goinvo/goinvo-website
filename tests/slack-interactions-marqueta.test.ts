@@ -1298,7 +1298,7 @@ function mondayPlan() {
   const header = { type: 'header', text: { type: 'plain_text', text: 'Monday plan' } }
   const card = buildTaskCard({ _id: 'op-other', title: 'Somebody else’s task', ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'working' }, { now: NOW, mode: 'plan' })
   const money = [
-    { type: 'section', block_id: 'mq_money_runway', text: { type: 'mrkdwn', text: '*Money and direction*\nStill 3.5 months of certain runway?' } },
+    { type: 'section', block_id: 'mq_money_runway', text: { type: 'mrkdwn', text: '*Money and direction*\nStill 5.5 months of certain runway?' } },
     {
       type: 'actions',
       block_id: 'mq_money_runway_actions',
@@ -1321,7 +1321,7 @@ const withoutMoney = (blocks: Block[]) => blocks.filter((block) => !String(block
 describe('the runway’s Still right', () => {
   it('confirms under the board name and redraws only the money group: the receipt, with the button that changes it', async () => {
     const plan = mondayPlan()
-    mocks.confirmRunway.mockResolvedValue({ summary: '3.5 months of certain runway (to 25 Jan 2027) — Rebuild.' })
+    mocks.confirmRunway.mockResolvedValue({ summary: '5.5 months of certain runway (to 10 Mar 2027) — Rebuild.' })
     mocks.fetchSlackMessage.mockResolvedValue({ text: plan.text, blocks: plan.blocks, attachments: plan.attachments })
     await post(press(MARKETING_ACTION.runwayConfirm, 'runway', { message: { ts: '200.2', text: plan.text, blocks: plan.blocks, attachments: plan.attachments } }))
     await runAfter()
@@ -1344,7 +1344,7 @@ describe('the runway’s Still right', () => {
   })
 
   it('answers in the plan’s thread when the message has no money group to swap (posted before it had ids)', async () => {
-    mocks.confirmRunway.mockResolvedValue({ summary: '3.5 months.' })
+    mocks.confirmRunway.mockResolvedValue({ summary: '5.5 months.' })
     const old = { ts: '200.2', text: 'This week in marketing', blocks: [{ type: 'section', text: { type: 'mrkdwn', text: '*Money and direction*' } }] }
     await post(press(MARKETING_ACTION.runwayConfirm, 'runway', { message: old }))
     await runAfter()
@@ -1483,7 +1483,7 @@ describe('the runway modal', () => {
     })
 
   it('remembers where it was opened, and redraws that message’s money group on save', async () => {
-    mocks.readRunway.mockResolvedValue({ summary: '5 months of certain runway — Rebuild.' })
+    mocks.readRunway.mockResolvedValue({ summary: '5.5 months of certain runway — Rebuild.' })
     const plan = mondayPlan()
     await post(press(MARKETING_ACTION.runwayUpdate, '', { message: { ts: '200.2', blocks: plan.blocks } }))
     const [, view] = mocks.openSlackModal.mock.calls[0]
@@ -1491,7 +1491,7 @@ describe('the runway modal', () => {
     expectValidSlackModal(view)
     expect(JSON.parse(view.private_metadata)).toEqual({ k: 'update', ch: 'CBOT', th: '200.2' })
 
-    mocks.setRunway.mockResolvedValue({ summary: '5 months of certain runway (to 24 Feb 2027) — Rebuild.' })
+    mocks.setRunway.mockResolvedValue({ summary: '5.5 months of certain runway (to 10 Mar 2027) — Rebuild.' })
     mocks.fetchSlackMessage.mockResolvedValue({ text: plan.text, blocks: plan.blocks, attachments: [] })
     const response = await submitRunway(view.private_metadata)
     expect(await response.json()).toEqual({})

@@ -219,7 +219,7 @@ function digestData(overrides: Record<string, unknown> = {}) {
 }
 
 /** The runway and the strategy, as `loadStrategySnapshot` returns them. Both due by default. */
-function strategyLoad(now: Date = NOW, stored: StoredPosture = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-20T00:00:00Z' } }, strategyDue = true) {
+function strategyLoad(now: Date = NOW, stored: StoredPosture = { runway: { certainUntil: '2027-03-10', confirmedAt: '2026-08-20T00:00:00Z' } }, strategyDue = true) {
   const contacts = [
     {
       _id: 'c-jane',
@@ -649,12 +649,12 @@ describe('what else the digest says', () => {
   })
 
   it('asks the strategy when only it is due, and nothing about money when nothing is', async () => {
-    mocks.loadStrategySnapshot.mockResolvedValue(strategyLoad(NOW, { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-18T00:00:00Z' } }))
+    mocks.loadStrategySnapshot.mockResolvedValue(strategyLoad(NOW, { runway: { certainUntil: '2027-03-10', confirmedAt: '2026-09-18T00:00:00Z' } }))
     const strategy = json((await dryRun()).blocks)
     expect(strategy).toContain(MARQUETA_ACTION.strategyConfirm)
     expect(strategy).not.toContain(MARKETING_ACTION.runwayConfirm)
 
-    mocks.loadStrategySnapshot.mockResolvedValue(strategyLoad(NOW, { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-18T00:00:00Z' } }, false))
+    mocks.loadStrategySnapshot.mockResolvedValue(strategyLoad(NOW, { runway: { certainUntil: '2027-03-10', confirmedAt: '2026-09-18T00:00:00Z' } }, false))
     expect(json((await dryRun()).blocks)).not.toContain('mq_money')
   })
 
@@ -662,7 +662,7 @@ describe('what else the digest says', () => {
     mocks.loadStrategySnapshot.mockRejectedValue(new Error('outreach read timed out'))
     const body = await dryRun()
     const text = json(body.blocks)
-    expect(text).toContain('Still 4 months of certain runway (to 25 Jan 2027), or has that moved?')
+    expect(text).toContain('Still 5.5 months of certain runway (to 10 Mar 2027), or has that moved?')
     expect(text).not.toContain(MARQUETA_ACTION.strategyConfirm)
     // Without the call log there is no pulse to report — the line says only what it knows.
     expect(body.blocks[2].elements[0].text).toBe('Last week: 3 tasks done')

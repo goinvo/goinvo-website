@@ -8,9 +8,9 @@
  * recommending a strategy chosen for a reality nobody had re-checked.
  *
  * So the stored fact is a DATE — the last day the studio is confident it can
- * pay for — and the bin is computed from it. "5 months, certain" becomes
- * `certainUntil: 2027-01-25`, which is 5 months today, 3 months in
- * November, and 0 in January whether or not anyone remembers to update it. The
+ * pay for — and the bin is computed from it. "N months, certain" becomes
+ * `certainUntil: <date>`, which shrinks by itself as the date approaches and
+ * reaches 0 on that date whether or not anyone remembers to update it. The
  * strategy follows the number down on its own, and the check-in fires before it
  * crosses a line rather than after.
  *
@@ -316,7 +316,7 @@ export function formatMonths(months: number): string {
   return `${rounded} month${rounded === 1 ? '' : 's'}`
 }
 
-/** "25 Jan 2027" — for a line a person reads, not a machine. */
+/** "31 Dec 2099" — for a line a person reads, not a machine. */
 export function formatRunwayDate(dateKey: string | null | undefined): string {
   const at = parse(dateKey)
   if (at === null) return 'not recorded'
@@ -327,7 +327,7 @@ export function formatRunwayDate(dateKey: string | null | undefined): string {
  * One line stating the position, for the digest and the AI context.
  *
  * Always names the source. "Rebuild" on its own invites the reader to assume
- * somebody decided it; "certain to 25 Jan 2027 (5 months)" can be argued with.
+ * somebody decided it; "certain to 31 Dec 2099 (N months)" can be argued with.
  */
 export function describeRunway(stored: StoredPosture, now: Date = new Date()): string {
   const resolved = resolveRunwayPosture(stored, now)

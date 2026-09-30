@@ -16,7 +16,7 @@ const AUG = new Date('2026-08-27T12:00:00Z')
 
 describe('monthsOfRunway', () => {
   it('measures from today to the last day we can pay for', () => {
-    expect(monthsOfRunway('2027-01-25', AUG)).toBeCloseTo(4.94, 2)
+    expect(monthsOfRunway('2027-02-10', AUG)).toBeCloseTo(5.47, 2)
   })
 
   it('returns null when nothing is recorded, rather than guessing zero', () => {
@@ -36,7 +36,7 @@ describe('postureForRunwayMonths', () => {
     expect(postureForRunwayMonths(1)).toBe('survival')
     expect(postureForRunwayMonths(2.9)).toBe('survival')
     expect(postureForRunwayMonths(3)).toBe('rebuild')
-    expect(postureForRunwayMonths(4.5)).toBe('rebuild')
+    expect(postureForRunwayMonths(5)).toBe('rebuild')
     expect(postureForRunwayMonths(6)).toBe('stable')
     expect(postureForRunwayMonths(18)).toBe('growth')
   })
@@ -53,7 +53,7 @@ describe('resolveRunwayPosture', () => {
       {
         posture: 'survival',
         setAt: '2026-07-02T10:00:00Z',
-        runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T09:00:00Z' },
+        runway: { certainUntil: '2027-02-10', confirmedAt: '2026-08-27T09:00:00Z' },
       },
       AUG,
     )
@@ -68,7 +68,7 @@ describe('resolveRunwayPosture', () => {
       {
         posture: 'survival',
         setAt: '2026-08-26T10:00:00Z',
-        runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T09:00:00Z' },
+        runway: { certainUntil: '2027-02-10', confirmedAt: '2026-08-01T09:00:00Z' },
       },
       AUG,
     )
@@ -81,7 +81,7 @@ describe('resolveRunwayPosture', () => {
       {
         posture: 'survival',
         setAt: '2026-07-02T10:00:00Z',
-        runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T09:00:00Z' },
+        runway: { certainUntil: '2027-02-10', confirmedAt: '2026-08-27T09:00:00Z' },
       },
       AUG,
     )
@@ -91,7 +91,7 @@ describe('resolveRunwayPosture', () => {
 
   it('says nothing about disagreement when they agree', () => {
     const resolved = resolveRunwayPosture(
-      { posture: 'rebuild', setAt: '2026-08-01T00:00:00Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T00:00:00Z' } },
+      { posture: 'rebuild', setAt: '2026-08-01T00:00:00Z', runway: { certainUntil: '2027-02-10', confirmedAt: '2026-08-27T00:00:00Z' } },
       AUG,
     )
     expect(resolved.disagreement).toBeNull()
@@ -107,14 +107,14 @@ describe('resolveRunwayPosture', () => {
   it('decays on its own as the date approaches', () => {
     // The whole point: the same stored record, read later, recommends a
     // different strategy without anyone remembering to change it.
-    const stored = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T00:00:00Z' } }
+    const stored = { runway: { certainUntil: '2027-02-10', confirmedAt: '2026-08-27T00:00:00Z' } }
     expect(resolveRunwayPosture(stored, AUG).id).toBe('rebuild')
     expect(resolveRunwayPosture(stored, new Date('2026-12-11T00:00:00Z')).id).toBe('survival')
   })
 })
 
 describe('runwayCheckIn', () => {
-  const fresh = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T00:00:00Z' } }
+  const fresh = { runway: { certainUntil: '2027-02-10', confirmedAt: '2026-08-27T00:00:00Z' } }
 
   it('stays quiet when the number was just confirmed', () => {
     expect(runwayCheckIn(fresh, AUG).due).toBe(false)
@@ -133,8 +133,8 @@ describe('runwayCheckIn', () => {
 
   it('gets urgent before the runway ends, not after', () => {
     // Two months out the strategy is about to tighten sharply; asking then is
-    // useful, asking in January is an obituary.
-    const check = runwayCheckIn(fresh, new Date('2026-12-09T00:00:00Z'))
+    // useful, asking in February is an obituary.
+    const check = runwayCheckIn(fresh, new Date('2026-12-26T00:00:00Z'))
     expect(check.due).toBe(true)
     expect(check.urgent).toBe(true)
   })
@@ -146,9 +146,9 @@ describe('runwayCheckIn', () => {
 })
 
 describe('runwayCheckIn — a win since the last confirmation', () => {
-  // Confirmed 27 Aug; on 12 Sep the record is 16 days old and ~4 months out,
+  // Confirmed 27 Aug; on 12 Sep the record is 16 days old and ~5 months out,
   // so none of the original three triggers fire. Only the win can.
-  const fresh = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T00:00:00Z' } }
+  const fresh = { runway: { certainUntil: '2027-02-10', confirmedAt: '2026-08-27T00:00:00Z' } }
   const SEP_12 = new Date('2026-09-12T12:00:00Z')
 
   it('asks whether a win logged after the confirmation moved the date', () => {
@@ -158,7 +158,7 @@ describe('runwayCheckIn — a win since the last confirmation', () => {
     expect(check.urgent).toBe(false)
     // formatRunwayDate is en-GB, and newer ICU spells September "Sept".
     expect(check.reason).toMatch(/^Jane Doe \(Acme\) was marked won on 10 Sept? 2026 — did it extend the runway\?$/)
-    expect(check.question).toBe('The date still says 4.5 months (to 25 Jan 2027).')
+    expect(check.question).toBe('The date still says 5 months (to 10 Feb 2027).')
   })
 
   it('accepts a bare date as well as a datetime', () => {
@@ -179,7 +179,7 @@ describe('runwayCheckIn — a win since the last confirmation', () => {
   })
 
   it('behaves exactly as before when no win is passed', () => {
-    for (const now of [AUG, SEP_12, new Date('2026-12-09T00:00:00Z'), new Date('2026-10-01T00:00:00Z')]) {
+    for (const now of [AUG, SEP_12, new Date('2026-12-26T00:00:00Z'), new Date('2026-10-01T00:00:00Z')]) {
       const baseline = runwayCheckIn(fresh, now)
       expect(runwayCheckIn(fresh, now, {})).toEqual(baseline)
       expect(runwayCheckIn(fresh, now, { latestWin: null })).toEqual(baseline)
@@ -188,9 +188,9 @@ describe('runwayCheckIn — a win since the last confirmation', () => {
   })
 
   it('never outranks a runway that is running out, stale, or missing', () => {
-    const win = { latestWin: { at: '2026-12-04T00:00:00Z', label: 'Acme' } }
+    const win = { latestWin: { at: '2026-12-21T00:00:00Z', label: 'Acme' } }
 
-    const urgent = runwayCheckIn(fresh, new Date('2026-12-09T00:00:00Z'), win)
+    const urgent = runwayCheckIn(fresh, new Date('2026-12-26T00:00:00Z'), win)
     expect(urgent.urgent).toBe(true)
     expect(urgent.reason).not.toContain('Acme')
 
@@ -200,7 +200,7 @@ describe('runwayCheckIn — a win since the last confirmation', () => {
     expect(stale.due).toBe(true)
     expect(stale.reason).toMatch(/last confirmed/)
 
-    const never = runwayCheckIn({ runway: { certainUntil: '2027-01-25' } }, SEP_12, win)
+    const never = runwayCheckIn({ runway: { certainUntil: '2027-02-10' } }, SEP_12, win)
     expect(never.reason).toMatch(/never been confirmed/)
 
     const missing = runwayCheckIn({}, SEP_12, win)
@@ -226,14 +226,14 @@ describe('runwayCheckIn — a win since the last confirmation', () => {
 describe('applyCommitment', () => {
   it('extends from the existing date, not from today', () => {
     // Signing three months of work in August when the runway already reaches
-    // January means April, not November. Resetting from today would silently
+    // February means May, not November. Resetting from today would silently
     // throw away the runway that was already there.
     const next = applyCommitment(
-      { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T00:00:00Z' },
+      { certainUntil: '2027-02-10', confirmedAt: '2026-08-27T00:00:00Z' },
       { label: 'SoW — Acme discovery', signedAt: '2026-08-27', monthsAdded: 3 },
       AUG,
     )
-    expect(next.certainUntil).toBe(addMonths(3, new Date('2027-01-25T00:00:00Z')))
+    expect(next.certainUntil).toBe(addMonths(3, new Date('2027-02-10T00:00:00Z')))
     expect(next.certainUntil! > '2027-04-01').toBe(true)
   })
 
@@ -261,7 +261,7 @@ describe('applyCommitment', () => {
 
 describe('formatMonths', () => {
   it('rounds to the half month, because the number is rough', () => {
-    expect(formatMonths(4.47)).toBe('4.5 months')
+    expect(formatMonths(6.47)).toBe('6.5 months')
     expect(formatMonths(1)).toBe('1 month')
   })
 
@@ -276,9 +276,9 @@ describe('formatMonths', () => {
 
 describe('describeRunway', () => {
   it('states the number and the date, not just the bin', () => {
-    const line = describeRunway({ runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T00:00:00Z' } }, AUG)
-    expect(line).toContain('5 months')
-    expect(line).toContain('Jan 2027')
+    const line = describeRunway({ runway: { certainUntil: '2027-02-10', confirmedAt: '2026-08-27T00:00:00Z' } }, AUG)
+    expect(line).toContain('5.5 months')
+    expect(line).toContain('Feb 2027')
     expect(line).toContain('Rebuild')
   })
 

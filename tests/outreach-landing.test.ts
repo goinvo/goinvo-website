@@ -257,7 +257,7 @@ describe('dates on Outreach cards', () => {
   it('read like Slack’s — “Mon 28 Sep” — never “9/28/2026”', () => {
     expect(outreachDateLabel('2026-09-28T12:00:00.000Z', NOW)).toBe('Mon 28 Sep')
     expect(outreachDateLabel('2026-09-28', NOW)).toBe('Mon 28 Sep')
-    expect(outreachDateLabel('2027-01-25T12:00:00.000Z', NOW)).toBe('Mon 25 Jan 2027')
+    expect(outreachDateLabel('2027-03-10T12:00:00.000Z', NOW)).toBe('Wed 10 Mar 2027')
     for (const nothing of [undefined, null, '', 'not a date']) expect(outreachDateLabel(nothing, NOW)).toBe('—')
   })
 })

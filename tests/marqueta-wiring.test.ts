@@ -325,11 +325,11 @@ const JANE_REF = encodeContactRef({ contactId: 'contact-jane', organization: 'Ma
 function runwayState(stored: StoredPosture, now: Date): MoneyRunway {
   return { summary: describeRunway(stored, now), checkIn: runwayCheckIn(stored, now), resolved: resolveRunwayPosture(stored, now) }
 }
-const STALE_RUNWAY = runwayState({ runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-20T00:00:00Z' } }, NOW)
-const FRESH_RUNWAY = runwayState({ runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-20T00:00:00Z' } }, NOW)
+const STALE_RUNWAY = runwayState({ runway: { certainUntil: '2027-03-10', confirmedAt: '2026-08-20T00:00:00Z' } }, NOW)
+const FRESH_RUNWAY = runwayState({ runway: { certainUntil: '2027-03-10', confirmedAt: '2026-09-20T00:00:00Z' } }, NOW)
 const SNAPSHOT = buildStrategySnapshot({
   now: NOW,
-  runwaySummary: '3.5 months of certain runway (to 25 Jan 2027) — Rebuild.',
+  runwaySummary: '5.5 months of certain runway (to 10 Mar 2027) — Rebuild.',
   postureId: 'rebuild',
   thisMonth: summarizeOutreach([], { ...monthWindow(NOW, 0), now: NOW }),
   lastMonth: summarizeOutreach([], { ...monthWindow(NOW, -1), now: NOW }),

@@ -64,7 +64,7 @@ export type WeekPlanResponse = {
   weekEnd: string
   posture: string
   /**
-   * "Rebuild — 5 months of certain runway (to 25 Jan 2027)", from the read
+   * "<Posture> — N months of certain runway (to 31 Dec 2099)", from the read
    * that chose the posture; null when that read failed (the bare posture is
    * shown instead).
    */
