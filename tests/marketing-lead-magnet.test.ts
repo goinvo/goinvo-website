@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Route-level mocks (hoisted). The pure signup core and the type registry are
@@ -204,6 +204,10 @@ describe('lead magnet signup core (pure)', () => {
 })
 
 describe('POST /api/newsletter/subscribe', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.isAllowedChatRequest.mockReturnValue(true)
@@ -228,6 +232,26 @@ describe('POST /api/newsletter/subscribe', () => {
     const response = await POST(subscribeRequest({ email: 'person@example.com' }))
     expect(response.status).toBe(403)
     expect(mocks.upsertEmailOctopusContact).not.toHaveBeenCalled()
+  })
+
+  it('allows *.vercel.app origins only on preview deployments', async () => {
+    mocks.isAllowedChatRequest.mockReturnValue(false)
+    vi.stubEnv('VERCEL_ENV', 'preview')
+    const previewRequest = new Request('https://site-git-branch-goinvo.vercel.app/api/newsletter/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', origin: 'https://site-git-branch-goinvo.vercel.app' },
+      body: JSON.stringify({ email: 'person@example.com' }),
+    }) as unknown as NextRequest
+    expect((await POST(previewRequest)).status).toBe(200)
+
+    // The same host is still refused when this deployment is production.
+    vi.stubEnv('VERCEL_ENV', 'production')
+    const productionRequest = new Request('https://site-git-branch-goinvo.vercel.app/api/newsletter/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', origin: 'https://site-git-branch-goinvo.vercel.app' },
+      body: JSON.stringify({ email: 'person@example.com' }),
+    }) as unknown as NextRequest
+    expect((await POST(productionRequest)).status).toBe(403)
   })
 
   it('answers the honeypot with success while delivering nothing', async () => {

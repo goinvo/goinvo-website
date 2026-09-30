@@ -171,9 +171,30 @@ async function recordOutreachContact(
   }
 }
 
+/**
+ * Vercel preview deployments run on *.vercel.app hosts that are not in the
+ * site origin allowlist. Allow them ONLY when this deployment itself is a
+ * preview (VERCEL_ENV=preview) so reviewers can exercise the signup flow on
+ * branch previews; production keeps the strict allowlist.
+ */
+function isVercelPreviewRequest(request: NextRequest): boolean {
+  if (process.env.VERCEL_ENV !== 'preview') return false
+  const source = request.headers.get('origin') || request.headers.get('referer')
+  try {
+    const host = source
+      ? new URL(source).hostname
+      : (request.headers.get('host') || '').split(':')[0]
+    return host.endsWith('.vercel.app')
+  } catch {
+    return false
+  }
+}
+
 export async function POST(request: NextRequest) {
   if (isLikelyBot(request.headers.get('user-agent'))) return json({ ok: true }, 200)
-  if (!isAllowedChatRequest(request)) return json({ error: 'Origin not allowed.' }, 403)
+  if (!isAllowedChatRequest(request) && !isVercelPreviewRequest(request)) {
+    return json({ error: 'Origin not allowed.' }, 403)
+  }
   if (await isRateLimited(clientIp(request))) {
     return json({ error: 'Too many signups from this connection — try again in a minute.' }, 429)
   }
