@@ -662,7 +662,7 @@ describe('what else the digest says', () => {
     mocks.loadStrategySnapshot.mockRejectedValue(new Error('outreach read timed out'))
     const body = await dryRun()
     const text = json(body.blocks)
-    expect(text).toContain('Still 4 months of certain runway (to 10 Mar 2027), or has that moved?')
+    expect(text).toContain('Still 5.5 months of certain runway (to 10 Mar 2027), or has that moved?')
     expect(text).not.toContain(MARQUETA_ACTION.strategyConfirm)
     // Without the call log there is no pulse to report — the line says only what it knows.
     expect(body.blocks[2].elements[0].text).toBe('Last week: 3 tasks done')

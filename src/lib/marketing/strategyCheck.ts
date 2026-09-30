@@ -683,7 +683,7 @@ function strategyQuestionBlocks(input: { snapshot: StrategySnapshot; reason: str
  * The line a money press leaves where its question was, with the press that
  * reverses it where there is one:
  *
- *   ✅ Runway confirmed by <@U> · Thu 24 Sep — 5 months (to 10 Mar 2027).   [It changed…]
+ *   ✅ Runway confirmed by <@U> · Thu 24 Sep — N months (to 31 Dec 2099).   [It changed…]
  *   ✅ Plan confirmed for September by <@U> — I’ll ask again in October.
  *   <@U> asked for a rethink — it’s a decision on This week, suggested to Jules.   [Open This week]
  *
@@ -821,7 +821,7 @@ export type MoneyState = {
 
 const hint = (text: string): Block => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] })
 
-/** "5.5 months of certain runway, to 10 Mar 2027 (Rebuild)": the number first, the bin after it. */
+/** "N months of certain runway, to 31 Dec 2099 (<Posture>)": the number first, the bin after it. */
 function runwayHeadline(runway: MoneyRunway, now: Date): string {
   const title = getFinancialPosture(runway.resolved.id)?.title || String(runway.resolved.id || '')
   const parts = runwayParts(runway.resolved, now)

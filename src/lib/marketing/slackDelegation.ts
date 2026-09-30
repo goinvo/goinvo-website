@@ -735,13 +735,13 @@ export function buildIdentityPromptBlocks(unmappedOwners: string[]): Block[] {
 
 // ── Money: the runway question ──────────────────────────────────────────────
 
-/** "10 Mar 2027": the studio's calendar, the year only when it is not this one. No weekday on a far-off date. */
+/** "31 Dec 2099": the studio's calendar, the year only when it is not this one. No weekday on a far-off date. */
 export function runwayDay(date: string | null | undefined, now: Date): string {
   return formatSlackDay(String(date || ''), now).replace(/^[A-Z][a-z]{2} /, '')
 }
 
 /**
- * The runway as its two facts — "5 months" and "10 Mar 2027" — or null when
+ * The runway as its two facts — "N months" and "31 Dec 2099" — or null when
  * there is no future date to state. Months are rough on purpose (runway.ts).
  */
 export function runwayParts(input: { months?: number | null; certainUntil?: string | null }, now: Date): { months: string; day: string } | null {
@@ -751,7 +751,7 @@ export function runwayParts(input: { months?: number | null; certainUntil?: stri
   return { months: formatMonths(months), day }
 }
 
-/** "5 months (to 10 Mar 2027)", for receipts and answers. '' with no future date. */
+/** "N months (to 31 Dec 2099)", for receipts and answers. '' with no future date. */
 export function runwayFacts(input: { months?: number | null; certainUntil?: string | null }, now: Date): string {
   const parts = runwayParts(input, now)
   return parts ? `${parts.months} (to ${parts.day})` : ''
@@ -763,7 +763,7 @@ export function runwayFacts(input: { months?: number | null; certainUntil?: stri
  * Money is the input the whole strategy hangs off, so Marqueta asks, in the
  * channel, at the moment the number is about to stop being true — and states
  * the number rather than the bin: "Rebuild" invites the reader to assume
- * somebody decided it; "5 months, to 10 Mar 2027" can be argued with, and
+ * somebody decided it; "N months, to 31 Dec 2099" can be argued with, and
  * being argued with is the point.
  *
  * The check-in's reason says WHY it is asking (stale, close to the line, a

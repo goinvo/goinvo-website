@@ -450,7 +450,7 @@ describe('money and direction in the Studio', () => {
     expect(moneyNudgeDue(before)).toBe(true)
 
     const after = await confirmRunway({ personName: 'Shay', now: monday })
-    // Still a disagreement (5.5 months is Rebuild; the stale bin says Survival) — said, not nagged about.
+    // Still a disagreement (about 5.5 months is Rebuild; the stale bin says Survival) — said, not nagged about.
     expect(after.resolved).toMatchObject({ source: 'runway', id: 'rebuild' })
     expect(after.resolved.disagreement).toBeTruthy()
     expect(moneyNudgeDue(after)).toBe(false)
