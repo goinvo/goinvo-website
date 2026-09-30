@@ -831,6 +831,9 @@ openings sort first. Pure helpers + tests: `src/lib/marketing/orgResearch.ts`,
   `refetchQuery` runs only the two allowlisted page queries with `{slug}`; it once ran any GROQ with
   the server token (task_2160). Never add a server action that takes a query, a type or a tag from
   the caller. Guard: `tests/sanity-actions-allowlist.test.ts`.
+- CI reads live content with the repo secret `SANITY_API_READ_TOKEN` (Viewer; also used by the
+  heartbeat watchdog). **GitHub Actions logs on this repo are public** — a test may count or assert
+  on documents but must never print their contents.
 - Rollback: `npx sanity dataset visibility set production public` (no redeploy needed).
 - Before any change like this: `npx sanity dataset export <name> <file>` (the 2026-09-30 exports
   are outside the repo) and record article credits before and after — the flip was checked with an
