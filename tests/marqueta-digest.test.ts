@@ -551,7 +551,8 @@ describe('what else the digest says', () => {
   // Shay, in the seeded quarter — and every other way onto the team list
   // was closed to somebody who owned nothing. Only people on it are ever asked.
   it('offers the whole team in the one-time setup, not only the names that own work', async () => {
-    delete process.env.MARKETING_TEAM_NAMES
+    // The team comes from the deployment's environment; no names live in this public repo (task_1008).
+    process.env.MARKETING_TEAM_NAMES = 'Jules,Shay,Ezra,Joss'
     store.data = digestData({ availability: [AVAILABILITY[0]] })
     const setupOf = (blocks: Block[]) => blocks.find((block) => block.accessory?.action_id === MARKETING_ACTION.linkIdentity)
     const options = (blocks: Block[]) => (setupOf(blocks)?.accessory.options || []).map((option: Block) => option.value)
@@ -562,6 +563,9 @@ describe('what else the digest says', () => {
     expect(options((await dryRun()).blocks)).toEqual(['Dana'])
     // Set empty: the board's own unmapped owners only — none here, so no prompt.
     process.env.MARKETING_TEAM_NAMES = ''
+    expect(setupOf((await dryRun()).blocks)).toBeUndefined()
+    // Unset reads the same as empty: the code carries no default team.
+    delete process.env.MARKETING_TEAM_NAMES
     expect(setupOf((await dryRun()).blocks)).toBeUndefined()
   })
 
@@ -658,7 +662,7 @@ describe('what else the digest says', () => {
     mocks.loadStrategySnapshot.mockRejectedValue(new Error('outreach read timed out'))
     const body = await dryRun()
     const text = json(body.blocks)
-    expect(text).toContain('Still 3.5 months of certain runway (to 25 Jan 2027), or has that moved?')
+    expect(text).toContain('Still 4 months of certain runway (to 25 Jan 2027), or has that moved?')
     expect(text).not.toContain(MARQUETA_ACTION.strategyConfirm)
     // Without the call log there is no pulse to report — the line says only what it knows.
     expect(body.blocks[2].elements[0].text).toBe('Last week: 3 tasks done')

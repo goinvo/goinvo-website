@@ -16,7 +16,7 @@ const AUG = new Date('2026-08-27T12:00:00Z')
 
 describe('monthsOfRunway', () => {
   it('measures from today to the last day we can pay for', () => {
-    expect(monthsOfRunway('2027-01-25', AUG)).toBeCloseTo(4.5, 1)
+    expect(monthsOfRunway('2027-01-25', AUG)).toBeCloseTo(4.94, 2)
   })
 
   it('returns null when nothing is recorded, rather than guessing zero', () => {
@@ -109,7 +109,7 @@ describe('resolveRunwayPosture', () => {
     // different strategy without anyone remembering to change it.
     const stored = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T00:00:00Z' } }
     expect(resolveRunwayPosture(stored, AUG).id).toBe('rebuild')
-    expect(resolveRunwayPosture(stored, new Date('2026-11-27T00:00:00Z')).id).toBe('survival')
+    expect(resolveRunwayPosture(stored, new Date('2026-12-11T00:00:00Z')).id).toBe('survival')
   })
 })
 
@@ -134,7 +134,7 @@ describe('runwayCheckIn', () => {
   it('gets urgent before the runway ends, not after', () => {
     // Two months out the strategy is about to tighten sharply; asking then is
     // useful, asking in January is an obituary.
-    const check = runwayCheckIn(fresh, new Date('2026-11-25T00:00:00Z'))
+    const check = runwayCheckIn(fresh, new Date('2026-12-09T00:00:00Z'))
     expect(check.due).toBe(true)
     expect(check.urgent).toBe(true)
   })
@@ -158,7 +158,7 @@ describe('runwayCheckIn — a win since the last confirmation', () => {
     expect(check.urgent).toBe(false)
     // formatRunwayDate is en-GB, and newer ICU spells September "Sept".
     expect(check.reason).toMatch(/^Jane Doe \(Acme\) was marked won on 10 Sept? 2026 — did it extend the runway\?$/)
-    expect(check.question).toBe('The date still says 4 months (to 25 Jan 2027).')
+    expect(check.question).toBe('The date still says 4.5 months (to 25 Jan 2027).')
   })
 
   it('accepts a bare date as well as a datetime', () => {
@@ -179,7 +179,7 @@ describe('runwayCheckIn — a win since the last confirmation', () => {
   })
 
   it('behaves exactly as before when no win is passed', () => {
-    for (const now of [AUG, SEP_12, new Date('2026-11-25T00:00:00Z'), new Date('2026-10-01T00:00:00Z')]) {
+    for (const now of [AUG, SEP_12, new Date('2026-12-09T00:00:00Z'), new Date('2026-10-01T00:00:00Z')]) {
       const baseline = runwayCheckIn(fresh, now)
       expect(runwayCheckIn(fresh, now, {})).toEqual(baseline)
       expect(runwayCheckIn(fresh, now, { latestWin: null })).toEqual(baseline)
@@ -188,9 +188,9 @@ describe('runwayCheckIn — a win since the last confirmation', () => {
   })
 
   it('never outranks a runway that is running out, stale, or missing', () => {
-    const win = { latestWin: { at: '2026-11-20T00:00:00Z', label: 'Acme' } }
+    const win = { latestWin: { at: '2026-12-04T00:00:00Z', label: 'Acme' } }
 
-    const urgent = runwayCheckIn(fresh, new Date('2026-11-25T00:00:00Z'), win)
+    const urgent = runwayCheckIn(fresh, new Date('2026-12-09T00:00:00Z'), win)
     expect(urgent.urgent).toBe(true)
     expect(urgent.reason).not.toContain('Acme')
 
@@ -261,7 +261,7 @@ describe('applyCommitment', () => {
 
 describe('formatMonths', () => {
   it('rounds to the half month, because the number is rough', () => {
-    expect(formatMonths(4.47)).toBe('5 months')
+    expect(formatMonths(4.47)).toBe('4.5 months')
     expect(formatMonths(1)).toBe('1 month')
   })
 

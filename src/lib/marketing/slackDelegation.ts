@@ -904,7 +904,7 @@ export function readRunwaySubmission(values: Record<string, Record<string, { val
 } {
   const at = (block: string, input: string) => String(values?.[block]?.[input]?.value || '').trim()
   const raw = at(RUNWAY_MONTHS_BLOCK, RUNWAY_MONTHS_INPUT)
-  // "5 months", "about 4.5", "4,5" - people type units. Take the number and
+  // "4.5 months", "about 4.5", "4,5" - people type units. Take the number and
   // reject anything that is not one rather than storing NaN as a date.
   //
   // The minus is checked BEFORE stripping, because stripping it turns "-2" into

@@ -262,7 +262,7 @@ export type CoverageGap = {
 /**
  * Segments the plan targets but the audience does not contain.
  *
- * Med-device human factors is the live example: it is named in the turnaround
+ * Med-device human factors is the live example: it is named in the outreach
  * plan and has a handful of contacts, so choosing it means cold outreach with
  * no warm entry. Better to see that before committing a quarter to it.
  */

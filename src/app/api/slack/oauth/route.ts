@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 
   const envLines = [
     `SLACK_BOT_TOKEN=${data.access_token}`,
-    `SLACK_CHAT_CHANNEL_ID=${process.env.SLACK_CHAT_CHANNEL_ID || 'C0WEBCHAT00'}`,
+    `SLACK_CHAT_CHANNEL_ID=${process.env.SLACK_CHAT_CHANNEL_ID || '<set-SLACK_CHAT_CHANNEL_ID>'}`,
     `SLACK_SIGNING_SECRET=${process.env.SLACK_SIGNING_SECRET || '<set-this-from-slack-app-basic-information>'}`,
     'SLACK_OAUTH_SETUP_ENABLED=false',
   ]

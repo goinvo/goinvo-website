@@ -271,7 +271,7 @@ async function commitRecord(record: PatchRecord): Promise<unknown> {
 
 const isTaskPatch = (record: PatchRecord) => !record.id.startsWith('marketingHeartbeat')
 const taskPatches = () => mocks.patches.filter(isTaskPatch)
-const ENV_KEYS = ['SLACK_BOT_TOKEN', 'SLACK_MARKETING_CHANNEL_ID', 'SLACK_CHANNEL_ID', 'MARKETING_PUBLIC_BASE_URL'] as const
+const ENV_KEYS = ['SLACK_BOT_TOKEN', 'SLACK_MARKETING_CHANNEL_ID', 'SLACK_CHANNEL_ID', 'MARKETING_PUBLIC_BASE_URL', 'MARKETING_TEAM_NAMES'] as const
 const saved: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>> = {}
 
 function digestRequest(query = '', body: Record<string, unknown> = {}) {
@@ -811,6 +811,7 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
     // to use a setup that listed only people who already owned work.
     it('books a marketing teammate who owns nothing yet, under the team’s name for them', async () => {
       openTasks = 0
+      process.env.MARKETING_TEAM_NAMES = 'Jules,Shay,Ezra,Joss'   // the deployment's list; the code has none (task_1008)
       const result = await away({ personName: 'Joss', slackUserId: 'UJOSS' })
       expect(result).toMatchObject({ ok: true, changed: true, ownerName: 'Joss', status: 'away' })
       expect(record('Joss')).toMatchObject({ ownerName: 'Joss', status: 'away' })
