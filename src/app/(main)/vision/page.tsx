@@ -176,6 +176,7 @@ export default async function VisionPage() {
       const rawClient = client.withConfig({
         token: previewToken,
         useCdn: false,
+        perspective: 'raw', // the base client pins 'published'; draft-only documents need raw
       })
       const { drafts, publishedIds } = await rawClient.fetch(draftFeaturesQuery)
       draftFeatures = (drafts as (Feature & { _id: string })[])

@@ -75,6 +75,7 @@ export default async function WorkPage({ searchParams }: WorkPageProps) {
       const rawClient = client.withConfig({
         token: previewToken,
         useCdn: false,
+        perspective: 'raw', // the base client pins 'published'; draft-only documents need raw
       })
       const { drafts, publishedIds } = await rawClient.fetch(draftCaseStudiesQuery)
       draftCaseStudies = (drafts as (CaseStudy & { _id: string })[])
