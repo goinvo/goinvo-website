@@ -8,8 +8,8 @@ import { shopStorefrontQuery } from '@/sanity/lib/queries'
 export const SHOP_CATALOG_REVALIDATE_SECONDS = 60
 import {
   SHOP_SHIPPING_PRICE_CENTS,
+  productPriceCents,
   shippingCentsFromSettings,
-  shopPriceCentsFor,
   type CheckoutCatalogItem,
   type CheckoutRequest,
 } from './checkout'
@@ -205,10 +205,7 @@ export async function resolveCheckoutCatalog(
       throw new Error('This checkout currently supports USD pricing only.')
     }
 
-    const configuredPrice =
-      typeof product?.price === 'number'
-        ? Math.round(product.price * 100)
-        : shopPriceCentsFor(requestedItem.slug)
+    const configuredPrice = productPriceCents(requestedItem.slug, product?.price)
     if (!Number.isSafeInteger(configuredPrice) || configuredPrice < 50) {
       throw new Error(`${visualization.title} has an invalid checkout price.`)
     }

@@ -10,7 +10,7 @@ import {
   SHOP_MAX_DONATION_CENTS,
   SHOP_MIN_DONATION_CENTS,
   SHOP_SHIPPING_PRICE_CENTS,
-  shopPriceCentsFor,
+  productPriceCents,
 } from '@/lib/shop/checkout'
 
 export type VisualizationPrint = {
@@ -194,7 +194,7 @@ function itemMatchesCollection(item: VisualizationPrint, collection: CollectionI
 // $0, and so a per-piece price (the comic book) shows the same number the
 // checkout will charge.
 function printPriceOf(item: VisualizationPrint) {
-  return item.price || shopPriceCentsFor(item.slug) / 100
+  return productPriceCents(item.slug, item.price || undefined) / 100
 }
 
 function formatPrice(amount: number, currency = 'USD') {
