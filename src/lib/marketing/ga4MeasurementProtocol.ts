@@ -1,12 +1,15 @@
 /**
  * GA4 Measurement Protocol (server-side) forwarder.
  *
- * The first-party A/B collector (/api/marketing/analytics/collect) already
- * receives ~100% of experiment events server-side, because the page beacons them
- * with navigator.sendBeacon. GA4's client gtag only delivers ~5% of those same
- * events (ad/tracking blockers). This module re-sends the experiment events to
- * GA4 via the Measurement Protocol so GA4 reports recover the missing ~95% —
- * WITHOUT double-counting (the client gtag path is skipped for experiment events).
+ * The first-party A/B collector (/api/marketing/analytics/collect) receives
+ * experiment events server-side, because the page beacons them with
+ * navigator.sendBeacon. This module re-sends those events to GA4 via the
+ * Measurement Protocol so GA4 carries the same numbers, WITHOUT double-counting
+ * (the client gtag path is skipped for experiment events).
+ *
+ * A client tag can be blocked, but we have never measured the rate for this
+ * audience and should not imply one. An earlier version of this comment
+ * quantified it; that claim was withdrawn in 2026-09.
  *
  * It is INERT until GA4_MP_API_SECRET is set: an unconfigured deploy forwards
  * nothing and never errors. Everything here is best-effort — short timeout,
