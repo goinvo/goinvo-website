@@ -3,11 +3,9 @@ import { z } from 'zod'
 
 // Default print price when a marketingProduct doc doesn't override it.
 //
-// Back to $30 on 2026-08-17: an email already quoted $30, so that price is
-// honoured for a month rather than raised out from under anyone who received
-// it. The rise to $50 (the studio) is scheduled for 2026-09-17 and tracked as an
-// operation on the Outreach board so it is not quietly forgotten.
-// ($30 from 2026-08-07; $6 at launch.)
+// $30 since 2026-08-07 ($6 at launch). A rise to $50 was decided on 2026-08-17
+// and dropped on 2026-09-30: no poster had ever sold at $30, so there was no
+// demand for a higher price to stand on.
 //
 // The CMS is the source of truth: every piece on the storefront has a
 // marketingProduct document whose `price` wins over this constant, so in
@@ -66,6 +64,15 @@ export function isProductOrderable(product: ProductAvailabilityInput | undefined
     return false
   }
   return true
+}
+
+/**
+ * What one piece costs, in cents: its CMS price when the document sets one, otherwise the code
+ * fallback. The storefront DISPLAYS this number and checkout CHARGES it; both call this function,
+ * so the two cannot disagree. Guard: tests/shop-price-parity.test.ts.
+ */
+export function productPriceCents(slug: string | undefined, cmsPriceDollars: number | null | undefined): number {
+  return typeof cmsPriceDollars === 'number' ? Math.round(cmsPriceDollars * 100) : shopPriceCentsFor(slug)
 }
 
 export function shopPriceCentsFor(slug: string | undefined): number {
