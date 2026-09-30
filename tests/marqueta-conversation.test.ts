@@ -125,11 +125,11 @@ const NOW = new Date('2026-09-24T14:00:00Z')
 const daysFromNow = (days: number) => new Date(NOW.getTime() + days * 86_400_000).toISOString()
 
 const TEAM: TeamMemberAvailability[] = [
-  { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available' },
-  { ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' },
+  { ownerName: 'Jules', slackUserId: 'UJULES', status: 'available' },
+  { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'available' },
 ]
 
-const MEMBER = { ok: true, name: 'Juhan Sonin', isGuest: false, isBot: false }
+const MEMBER = { ok: true, name: 'Jules Soren', isGuest: false, isBot: false }
 
 const JANE: PrepDataContact = {
   _id: 'contact-jane',
@@ -195,7 +195,7 @@ const pulseFor = (from: string, to: string) => summarizeOutreach([], { from, to,
 const STRATEGY_LOAD = {
   snapshot: {
     monthKey: '2026-09',
-    money: '3.5 months of runway, to 11 Jan 2027.',
+    money: '3.5 months of runway, to 25 Jan 2027.',
     postureId: 'rebuild',
     postureTitle: 'Rebuild',
     postureStrategy: 'Outreach leads.',
@@ -209,8 +209,8 @@ const STRATEGY_LOAD = {
   review: null,
   due: { due: true, reason: 'Never checked.' },
   runway: {
-    summary: '3.5 months of runway, to 11 Jan 2027.',
-    resolved: { id: 'rebuild', source: 'runway', months: 3.5, certainUntil: '2027-01-11', disagreement: null },
+    summary: '3.5 months of runway, to 25 Jan 2027.',
+    resolved: { id: 'rebuild', source: 'runway', months: 3.5, certainUntil: '2027-01-25', disagreement: null },
     checkIn: { due: true, urgent: false, reason: 'Acme was marked won on 20 Sep —', question: 'did it extend the runway?' },
   },
   latestWin: null,
@@ -221,8 +221,8 @@ const STRATEGY_LOAD = {
 const ask = (text: string, overrides: Partial<Parameters<typeof answerMarqueta>[0]> = {}) =>
   answerMarqueta({
     text,
-    personName: 'Juhan Sonin',
-    slackUserId: 'UJUHAN',
+    personName: 'Jules Soren',
+    slackUserId: 'UJULES',
     channel: 'C1',
     ts: '1727182800.000100',
     botUserId: 'UBOT',
@@ -240,7 +240,7 @@ beforeEach(() => {
   mocks.afterQueue.length = 0
   mocks.commit.mockImplementation(async () => ({}))
   mocks.getSlackUserProfile.mockResolvedValue(MEMBER)
-  mocks.getSlackUserDisplayName.mockResolvedValue('Juhan Sonin')
+  mocks.getSlackUserDisplayName.mockResolvedValue('Jules Soren')
   mocks.getSlackBotUserId.mockResolvedValue('UBOT')
   mocks.postSlackMessage.mockImplementation(async (input: { channel: string }) => ({ channel: input.channel, ts: '1727182900.000200' }))
   mocks.postSlackEphemeral.mockResolvedValue(true)
@@ -359,11 +359,11 @@ describe('prep', () => {
   })
 
   it('gives the call list for "my calls", as the requester’s list', async () => {
-    routeOutreach({ prep: prepData([JANE, { ...ATT, owner: 'Juhan', status: 'contacted', followUpAt: daysFromNow(-1) }]) })
+    routeOutreach({ prep: prepData([JANE, { ...ATT, owner: 'Jules', status: 'contacted', followUpAt: daysFromNow(-1) }]) })
     const reply = await ask('<@UBOT> my calls')
-    expect(reply.text).toBe('Calls for Juhan — 1 call worth making, 1 overdue')
+    expect(reply.text).toBe('Calls for Jules — 1 call worth making, 1 overdue')
     expect(reply.blocks?.length).toBeGreaterThan(0)
-    expect(JSON.stringify(reply.blocks)).toContain('Calls for Juhan')
+    expect(JSON.stringify(reply.blocks)).toContain('Calls for Jules')
     expectValidSlackBlocks(reply.blocks!)
   })
 })
@@ -379,24 +379,24 @@ describe('logging a call from a message', () => {
 
     // Thursday + three days is Sunday: the follow-up lands on Monday.
     expect(reply.text).toBe(
-      ':white_check_mark: <@UJUHAN> logged a voicemail for Jane Doe (Acme Health). Status: Contacted (was New). Next follow-up Mon 28 Sep.',
+      ':white_check_mark: <@UJULES> logged a voicemail for Jane Doe (Acme Health). Status: Contacted (was New). Next follow-up Mon 28 Sep.',
     )
     expect(mocks.patches).toHaveLength(1)
     const ops = mocks.patches[0].ops
     expect(ops).toContainEqual(['ifRevisionId', 'rev-1'])
     const insert = ops.find((op) => op[0] === 'insert') as [string, string, string, Record<string, unknown>[]]
-    expect(insert[3][0]).toMatchObject({ _key: KEY, by: 'Juhan', outcome: 'Left a voicemail' })
+    expect(insert[3][0]).toMatchObject({ _key: KEY, by: 'Jules', outcome: 'Left a voicemail' })
 
     const undo = buttonsIn(reply.blocks).find((element) => element.action_id === MARQUETA_ACTION.callLogUndo)
     expect(decodeCallLogUndo(undo?.value)).toMatchObject({ contactId: 'contact-jane', interactionKey: KEY })
     expectValidSlackBlocks(reply.blocks!)
   })
 
-  // An unlinked Juhan whose Slack says "Juhan Sonin": the log's `by` is where
-  // his follow-ups are filed, and "Juhan Sonin" would file them under a
-  // second person the moment he linked as "Juhan".
+  // An unlinked Jules whose Slack says "Jules Soren": the log's `by` is where
+  // his follow-ups are filed, and "Jules Soren" would file them under a
+  // second person the moment he linked as "Jules".
   it('never logs a call under a display name the team list does not know', async () => {
-    const unlinked = [{ ownerName: 'Juhan', status: 'available' as const }]
+    const unlinked = [{ ownerName: 'Jules', status: 'available' as const }]
     routeOutreach({ availability: unlinked, openTasks: 0, logContact: { ...JANE, _rev: 'rev-1', interactions: [] } })
     const reply = await ask('<@UBOT> called Jane Doe at Acme Health, left a voicemail', { slackUserId: 'UNEW' })
     expect(mocks.patches).toHaveLength(0)
@@ -405,9 +405,9 @@ describe('logging a call from a message', () => {
 
     // A name already on the marketing team is somebody, linked or not.
     routeOutreach({ availability: unlinked, openTasks: 0, logContact: { ...JANE, _rev: 'rev-1', interactions: [] } })
-    await ask('<@UBOT> called Jane Doe at Acme Health, left a voicemail', { slackUserId: 'UNEW', personName: 'Juhan' })
+    await ask('<@UBOT> called Jane Doe at Acme Health, left a voicemail', { slackUserId: 'UNEW', personName: 'Jules' })
     const insert = mocks.patches[0]?.ops.find((op) => op[0] === 'insert') as [string, string, string, Record<string, unknown>[]]
-    expect(insert[3][0]).toMatchObject({ by: 'Juhan' })
+    expect(insert[3][0]).toMatchObject({ by: 'Jules' })
   })
 
   it('writes nothing the second time the same message arrives', async () => {
@@ -599,13 +599,13 @@ describe('my tasks', () => {
     routeOutreach({
       mine: {
         tasks: [
-          task('t1', 'juhan'),
-          task('t2', 'Juhan', { status: 'blocked', blocker: 'Waiting on <numbers>' }),
-          task('t3', 'Eric'),
+          task('t1', 'jules'),
+          task('t2', 'Jules', { status: 'blocked', blocker: 'Waiting on <numbers>' }),
+          task('t3', 'Ezra'),
         ],
         contacts: [
-          { _id: 'c1', name: 'Jane Doe', organization: 'Acme Health', owner: 'Juhan', status: 'contacted', followUpAt: daysFromNow(1) },
-          { _id: 'c2', name: 'Bob Roe', organization: 'Beta', owner: 'Eric', status: 'contacted', followUpAt: daysFromNow(1) },
+          { _id: 'c1', name: 'Jane Doe', organization: 'Acme Health', owner: 'Jules', status: 'contacted', followUpAt: daysFromNow(1) },
+          { _id: 'c2', name: 'Bob Roe', organization: 'Beta', owner: 'Ezra', status: 'contacted', followUpAt: daysFromNow(1) },
         ],
       },
     })
@@ -625,12 +625,12 @@ describe('my tasks', () => {
   })
 
   it('stays under Slack’s limits with a long list', async () => {
-    const tasks = Array.from({ length: 20 }, (_, index) => task(`t${index}`, 'Juhan'))
+    const tasks = Array.from({ length: 20 }, (_, index) => task(`t${index}`, 'Jules'))
     const contacts = Array.from({ length: 9 }, (_, index) => ({
       _id: `c${index}`,
       name: `Person ${index}`,
       organization: 'Acme',
-      owner: 'Juhan',
+      owner: 'Jules',
       status: 'contacted',
       followUpAt: daysFromNow(1),
     }))
@@ -670,10 +670,10 @@ describe('availability', () => {
     decodeAvailabilityUndo(buttonsIn(reply.blocks).find((element) => element.action_id === MARQUETA_ACTION.availabilityUndo)?.value)
 
   it('writes it under the board name, not the Slack display name — patched, never replaced — with Undo', async () => {
-    const reply = await ask('<@UBOT> away 2026-09-28 2026-10-02', { personName: 'Juhan Sonin' })
+    const reply = await ask('<@UBOT> away 2026-09-28 2026-10-02', { personName: 'Jules Soren' })
     const { patched, created } = availabilityWrites()
     expect(created).toEqual([
-      { _id: 'marketingTeamAvailability.juhan', _type: 'marketingTeamAvailability', ownerName: 'Juhan', status: 'available' },
+      { _id: 'marketingTeamAvailability.jules', _type: 'marketingTeamAvailability', ownerName: 'Jules', status: 'available' },
     ])
     expect(patched).toHaveLength(1)
     expect(setOf(patched[0])).toMatchObject({ status: 'away', from: '2026-09-28', until: '2026-10-02' })
@@ -684,17 +684,17 @@ describe('availability', () => {
     expect(reply.text).toBe(
       'You’re away Mon 28 Sep – Fri 2 Oct. I’ll leave you out of next week’s plan, and your 2 open tasks will show as needing someone.',
     )
-    expect(undoOf(reply)).toMatchObject({ ownerName: 'Juhan', slackUserId: 'UJUHAN', prior: null })
+    expect(undoOf(reply)).toMatchObject({ ownerName: 'Jules', slackUserId: 'UJULES', prior: null })
     expectValidSlackBlocks(reply.blocks!)
   })
 
   it('keeps the Slack link, the allocation and the note, conditional on the revision it read', async () => {
     routeOutreach({
       availabilityRecord: {
-        _id: 'marketingTeamAvailability.juhan',
+        _id: 'marketingTeamAvailability.jules',
         _rev: 'rev-avail',
-        ownerName: 'Juhan',
-        slackUserId: 'UJUHAN',
+        ownerName: 'Jules',
+        slackUserId: 'UJULES',
         status: 'away',
         from: '2026-10-12',
         until: '2026-10-16',
@@ -750,7 +750,7 @@ describe('availability', () => {
 
   it('"I’m back" is the reverse: available from today, with the old end date removed', async () => {
     routeOutreach({
-      availabilityRecord: { _id: 'marketingTeamAvailability.juhan', _rev: 'r', ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'away', from: '2026-09-21', until: '2026-09-27' },
+      availabilityRecord: { _id: 'marketingTeamAvailability.jules', _rev: 'r', ownerName: 'Jules', slackUserId: 'UJULES', status: 'away', from: '2026-09-21', until: '2026-09-27' },
     })
     const reply = await ask('<@UBOT> I’m back')
     const [record] = availabilityWrites().patched
@@ -762,7 +762,7 @@ describe('availability', () => {
 
   it('says so, and writes nothing, when the record already says it', async () => {
     routeOutreach({
-      availabilityRecord: { _id: 'marketingTeamAvailability.juhan', _rev: 'r', ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'away', from: '2026-09-28', until: '2026-10-04' },
+      availabilityRecord: { _id: 'marketingTeamAvailability.jules', _rev: 'r', ownerName: 'Jules', slackUserId: 'UJULES', status: 'away', from: '2026-09-28', until: '2026-10-04' },
     })
     const reply = await ask('<@UBOT> away next week')
     expect(availabilityWrites().patched).toHaveLength(0)
@@ -782,19 +782,19 @@ describe('availability', () => {
 
   it('answers a question about one of her topics as that topic, and still writes nothing', async () => {
     mocks.loadStrategySnapshot.mockResolvedValue(STRATEGY_LOAD)
-    expect((await ask('<@UBOT> what does the pipeline look like with Eric away?')).text).toMatch(/^\*Pipeline\* —/)
+    expect((await ask('<@UBOT> what does the pipeline look like with Ezra away?')).text).toMatch(/^\*Pipeline\* —/)
     expect((await ask('<@UBOT> who’s away this week?')).text).toMatch(/^\*This week\* —/)
-    expect((await ask('<@UBOT> is Juhan away next week?')).text).toMatch(/^\*This week\* —/)
+    expect((await ask('<@UBOT> is Jules away next week?')).text).toMatch(/^\*This week\* —/)
     expectNoWrite()
   })
 
   it('never writes when the message is about somebody else', async () => {
     for (const text of [
-      'Eric is away next week',
-      '<@UERIC> is away next week',
+      'Ezra is away next week',
+      '<@UEZRA> is away next week',
       'I heard Bob is on holiday',
-      'I’m covering while Eric is away',
-      'I’m away and Eric is too',
+      'I’m covering while Ezra is away',
+      'I’m away and Ezra is too',
       'she’s away until 2026-10-02',
     ]) {
       const reply = await ask(`<@UBOT> ${text}`)
@@ -812,16 +812,16 @@ describe('availability', () => {
   })
 
   it('a guest cannot write anybody’s availability, their own name included', async () => {
-    mocks.getSlackUserProfile.mockResolvedValue({ ok: true, name: 'Juhan', isGuest: true, isBot: false })
-    const reply = await ask('<@UBOT> I’m away next week', { slackUserId: 'UGUEST', personName: 'Juhan' })
+    mocks.getSlackUserProfile.mockResolvedValue({ ok: true, name: 'Jules', isGuest: true, isBot: false })
+    const reply = await ask('<@UBOT> I’m away next week', { slackUserId: 'UGUEST', personName: 'Jules' })
     expect(reply.text).toMatch(/GoInvo team/)
     expectNoWrite()
     expect(mocks.outreach.fetch).not.toHaveBeenCalled()
   })
 
   it('a member whose display name matches a name linked to someone else is NOT that person', async () => {
-    mocks.getSlackUserProfile.mockResolvedValue({ ok: true, name: 'Juhan', isGuest: false, isBot: false })
-    const namesake = { slackUserId: 'UOTHER', personName: 'Juhan' }
+    mocks.getSlackUserProfile.mockResolvedValue({ ok: true, name: 'Jules', isGuest: false, isBot: false })
+    const namesake = { slackUserId: 'UOTHER', personName: 'Jules' }
 
     // Said to them alone: a refusal about who they are is not for the room.
     const away = await ask('<@UBOT> I’m away next week', namesake)
@@ -845,10 +845,10 @@ describe('availability', () => {
 
   it('refuses a record that is linked to someone else even when the roster did not show it', async () => {
     routeOutreach({
-      availability: [{ ownerName: 'Juhan', status: 'available' }],
-      availabilityRecord: { _id: 'marketingTeamAvailability.juhan', _rev: 'r', ownerName: 'Juhan', slackUserId: 'UJUHAN' },
+      availability: [{ ownerName: 'Jules', status: 'available' }],
+      availabilityRecord: { _id: 'marketingTeamAvailability.jules', _rev: 'r', ownerName: 'Jules', slackUserId: 'UJULES' },
     })
-    const reply = await ask('<@UBOT> I’m away next week', { slackUserId: 'UOTHER', personName: 'Juhan' })
+    const reply = await ask('<@UBOT> I’m away next week', { slackUserId: 'UOTHER', personName: 'Jules' })
     expect(reply.text).toBe('')
     expect(reply.ephemeral).toMatch(/which name on the team list is yours/)
     expect(availabilityWrites().patched).toHaveLength(0)
@@ -940,7 +940,7 @@ describe('the questions', () => {
   it('answers money with the runway and the pipeline — and the runway’s own buttons when a check-in is due', async () => {
     mocks.loadStrategySnapshot.mockResolvedValue(STRATEGY_LOAD)
     const reply = await ask('<@UBOT> how are we for money?')
-    expect(reply.text).toBe('*Runway* — 3.5 months of certain runway, to 11 Jan 2027 (Rebuild)')
+    expect(reply.text).toBe('*Runway* — 3.5 months of certain runway, to 25 Jan 2027 (Rebuild)')
     const labels = buttonsIn(reply.blocks).map((element) => element.text.text)
     expect(labels).toEqual(['Still right', 'We signed something…', 'It changed…'])
     expect(JSON.stringify(reply.blocks)).toContain("Pipeline: 3 in meeting/opportunity, ~$45,000 estimated")
@@ -1050,13 +1050,13 @@ describe('a hello', () => {
   it('is three lines at most and ends on this person’s most useful thing', async () => {
     routeOutreach({
       mine: {
-        tasks: [{ _id: 't1', title: 'Write the case study', ownerName: 'Juhan', status: 'queued' }],
-        contacts: [{ _id: 'c1', name: 'Jane Doe', organization: 'Acme Health', owner: 'Juhan', status: 'contacted', followUpAt: daysFromNow(-1) }],
+        tasks: [{ _id: 't1', title: 'Write the case study', ownerName: 'Jules', status: 'queued' }],
+        contacts: [{ _id: 'c1', name: 'Jane Doe', organization: 'Acme Health', owner: 'Jules', status: 'contacted', followUpAt: daysFromNow(-1) }],
       },
     })
     const reply = await ask('<@UBOT> hi')
     expect(reply.text).toBe(
-      'Hi Juhan. I keep GoInvo’s outreach list, the week’s marketing tasks and the runway.\nYou have 1 follow-up due — say `Marqueta, my calls`.',
+      'Hi Jules. I keep GoInvo’s outreach list, the week’s marketing tasks and the runway.\nYou have 1 follow-up due — say `Marqueta, my calls`.',
     )
     expect(reply.text.split('\n').length).toBeLessThanOrEqual(3)
   })
@@ -1144,19 +1144,19 @@ describe('the new answers', () => {
   })
 
   const WEEK = [
-    { _id: 'w1', title: 'Draft the pre-mortem article (v2)', ownerName: 'Shirley', status: 'working', dueAt: daysFromNow(1) },
+    { _id: 'w1', title: 'Draft the pre-mortem article (v2)', ownerName: 'Shay', status: 'working', dueAt: daysFromNow(1) },
     { _id: 'w2', title: 'Decide: publish the F1–F8 taxonomy?', status: 'needsHuman', kind: 'decision', humanQuestion: 'Publish it?' },
     { _id: 'w3', title: 'Arlington Town Day merch table', status: 'queued' },
     { _id: 'w4', title: 'Newsletter: pre-mortem teaser', status: 'queued' },
     { _id: 'w5', title: 'Pin the kit on LinkedIn', status: 'queued' },
-    { _id: 'w6', title: 'Fix the offer page', ownerName: 'Juhan', status: 'blocked', blocker: 'Waiting on copy', dueAt: daysFromNow(-3) },
+    { _id: 'w6', title: 'Fix the offer page', ownerName: 'Jules', status: 'blocked', blocker: 'Waiting on copy', dueAt: daysFromNow(-3) },
     { _id: 'w7', title: 'Get the booth permit', status: 'blocked', blocker: 'No reply from the town' },
   ]
-  /** Eric is away the week of Mon 21 Sep. */
+  /** Ezra is away the week of Mon 21 Sep. */
   const AWAY_TEAM: TeamMemberAvailability[] = [
-    { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available' },
-    { ownerName: 'Shirley', slackUserId: 'USHIRLEY', status: 'available' },
-    { ownerName: 'Eric', slackUserId: 'UERIC', status: 'away', from: '2026-09-21', until: '2026-09-27' },
+    { ownerName: 'Jules', slackUserId: 'UJULES', status: 'available' },
+    { ownerName: 'Shay', slackUserId: 'USHAY', status: 'available' },
+    { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'away', from: '2026-09-21', until: '2026-09-27' },
   ]
 
   it('"week": yours first, the team’s in one line, who is away, then work nobody has — stuck work included', async () => {
@@ -1166,12 +1166,12 @@ describe('the new answers', () => {
     const head = String(reply.blocks![0].text.text)
     expect(head).toContain('7 open tasks across the team')
     expect(head).toContain('4 nobody has taken · 1 decision waiting')
-    expect(head).toContain(':palm_tree: Away this week: Eric')
+    expect(head).toContain(':palm_tree: Away this week: Ezra')
     const cards = reply.blocks!.filter((block) => String(block.block_id || '').startsWith('mq_task_') && !String(block.block_id).startsWith('mq_task_actions_'))
     // Three cards, never the decision (answered, not taken), and never a name to ask.
     expect(cards).toHaveLength(3)
     expect(JSON.stringify(cards)).not.toContain('taxonomy')
-    expect(JSON.stringify(cards)).not.toContain('Eric')
+    expect(JSON.stringify(cards)).not.toContain('Ezra')
     expect(JSON.stringify(reply.blocks)).toContain('+1 more nobody has taken')
     expect(reply.blocks![reply.blocks!.length - 1]).toMatchObject({ type: 'actions', elements: [{ text: { text: 'Open This week' } }] })
     expectValidSlackBlocks(reply.blocks!)
@@ -1182,13 +1182,13 @@ describe('the new answers', () => {
       ...JANE,
       warmth: 'warm',
       status: 'contacted',
-      owner: 'Shirley',
+      owner: 'Shay',
       followUpAt: '2026-09-22T14:00:00Z',
       interactions: [{ at: '2026-09-15T14:00:00Z', statusAfter: 'contacted', channel: 'phone' }],
     }
     routeOutreach({ prep: prepData([jane, ATT]) })
     const reply = await ask('<@UBOT> who’s Jane Doe')
-    expect(reply.text).toBe('*Jane Doe* — CMIO, Acme Health · warm · last: Contacted on 15 Sep · follow-up Tue 22 Sep (overdue) · owner Shirley')
+    expect(reply.text).toBe('*Jane Doe* — CMIO, Acme Health · warm · last: Contacted on 15 Sep · follow-up Tue 22 Sep (overdue) · owner Shay')
     expect(buttonsIn(reply.blocks).map((element) => element.text.text)).toEqual(['Prep', 'Log it…'])
     // Never the email or the phone.
     expect(JSON.stringify(reply)).not.toMatch(/jane\.doe@|555-0142/)
@@ -1266,8 +1266,8 @@ describe('the new answers', () => {
       week: WEEK,
       availability: AWAY_TEAM,
       logContact: { ...JANE, _rev: 'r', interactions: [] },
-      mine: { tasks: [{ _id: 't1', title: 'Write the case study', ownerName: 'Juhan', status: 'queued' }], contacts: [] },
-      prep: prepData([JANE, { ...ATT, owner: 'Juhan', status: 'contacted', followUpAt: daysFromNow(-1) }]),
+      mine: { tasks: [{ _id: 't1', title: 'Write the case study', ownerName: 'Jules', status: 'queued' }], contacts: [] },
+      prep: prepData([JANE, { ...ATT, owner: 'Jules', status: 'contacted', followUpAt: daysFromNow(-1) }]),
       heartbeat: { tick: null, checkin: null },
     })
     const kinds: Record<string, string> = {
@@ -1330,40 +1330,40 @@ describe('the events route', () => {
 
   it('answers 200 before the conversation runs, then posts reply → thread → ephemeral in one thread', async () => {
     answer.mockResolvedValueOnce(REPLY)
-    const response = await post({ channel: 'C1', user: 'UJUHAN', text: '<@UBOT> prep Jane', ts: '100.1' })
+    const response = await post({ channel: 'C1', user: 'UJULES', text: '<@UBOT> prep Jane', ts: '100.1' })
     expect(response.status).toBe(200)
     expect(answer).not.toHaveBeenCalled()
     expect(mocks.afterQueue).toHaveLength(1)
 
     await runAfter()
     expect(answer).toHaveBeenCalledWith(
-      expect.objectContaining({ text: '<@UBOT> prep Jane', slackUserId: 'UJUHAN', channel: 'C1', ts: '100.1', botUserId: 'UBOT' }),
+      expect.objectContaining({ text: '<@UBOT> prep Jane', slackUserId: 'UJULES', channel: 'C1', ts: '100.1', botUserId: 'UBOT' }),
     )
     expect(mocks.postSlackMessage).toHaveBeenCalledTimes(2)
     expect(mocks.postSlackMessage.mock.calls[0][0]).toMatchObject({ channel: 'C1', threadTs: '100.1', blocks: REPLY.blocks, username: 'Marqueta' })
     expect(mocks.postSlackMessage.mock.calls[1][0]).toMatchObject({ channel: 'C1', threadTs: '100.1', blocks: REPLY.thread!.blocks })
     expect(mocks.postSlackEphemeral).toHaveBeenCalledWith(
-      expect.objectContaining({ channel: 'C1', user: 'UJUHAN', threadTs: '100.1', text: REPLY.ephemeral }),
+      expect.objectContaining({ channel: 'C1', user: 'UJULES', threadTs: '100.1', text: REPLY.ephemeral }),
     )
   })
 
   it('threads under the parent when asked inside a thread', async () => {
     answer.mockResolvedValueOnce({ text: 'ok' })
-    await post({ channel: 'C1', user: 'UJUHAN', text: 'Marqueta, runway?', ts: '200.2', thread_ts: '150.0' })
+    await post({ channel: 'C1', user: 'UJULES', text: 'Marqueta, runway?', ts: '200.2', thread_ts: '150.0' })
     await runAfter()
     expect(mocks.postSlackMessage.mock.calls[0][0].threadTs).toBe('150.0')
   })
 
   it('never sends an empty blocks array', async () => {
     answer.mockResolvedValueOnce({ text: 'Nothing open.', blocks: [] })
-    await post({ channel: 'C1', user: 'UJUHAN', text: '<@UBOT> week', ts: '100.1' })
+    await post({ channel: 'C1', user: 'UJULES', text: '<@UBOT> week', ts: '100.1' })
     await runAfter()
     expect(mocks.postSlackMessage.mock.calls[0][0]).not.toHaveProperty('blocks')
   })
 
   it('in a DM, replies where the person wrote and threads the follow-up under her own reply', async () => {
     answer.mockResolvedValueOnce({ ...REPLY, ephemeral: undefined })
-    await post({ channel: 'D1', user: 'UJUHAN', text: 'prep Jane', ts: '300.3' })
+    await post({ channel: 'D1', user: 'UJULES', text: 'prep Jane', ts: '300.3' })
     await runAfter()
     expect(mocks.postSlackMessage.mock.calls[0][0].threadTs).toBeUndefined()
     expect(mocks.postSlackMessage.mock.calls[1][0].threadTs).toBe('1727182900.000200')
@@ -1372,16 +1372,16 @@ describe('the events route', () => {
 
   it('says a failure to the asker alone — nothing in the room, in the thread they asked in', async () => {
     answer.mockResolvedValueOnce({ text: '', ephemeral: 'Couldn’t look that up — nothing changed. The Studio still has the real answer.' })
-    await post({ channel: 'C1', user: 'UJUHAN', text: '<@UBOT> runway', ts: '100.1' })
+    await post({ channel: 'C1', user: 'UJULES', text: '<@UBOT> runway', ts: '100.1' })
     await runAfter()
     expect(mocks.postSlackMessage).not.toHaveBeenCalled()
     expect(mocks.postSlackEphemeral).toHaveBeenCalledWith(
-      expect.objectContaining({ channel: 'C1', user: 'UJUHAN', threadTs: '100.1', text: expect.stringMatching(/^Couldn’t look that up/) }),
+      expect.objectContaining({ channel: 'C1', user: 'UJULES', threadTs: '100.1', text: expect.stringMatching(/^Couldn’t look that up/) }),
     )
 
     // In a DM the room is already private: it is simply the reply.
     answer.mockResolvedValueOnce({ text: '', ephemeral: 'Couldn’t look that up — nothing changed.' })
-    await post({ channel: 'D1', user: 'UJUHAN', text: 'runway', ts: '300.3' })
+    await post({ channel: 'D1', user: 'UJULES', text: 'runway', ts: '300.3' })
     await runAfter()
     expect(mocks.postSlackMessage).toHaveBeenCalledTimes(1)
     expect(mocks.postSlackMessage.mock.calls[0][0]).toMatchObject({ channel: 'D1', text: 'Couldn’t look that up — nothing changed.' })
@@ -1392,25 +1392,25 @@ describe('the events route', () => {
   it('posts nothing more when the reply itself failed', async () => {
     answer.mockResolvedValueOnce(REPLY)
     mocks.postSlackMessage.mockResolvedValueOnce(null)
-    await post({ channel: 'C1', user: 'UJUHAN', text: '<@UBOT> prep Jane', ts: '100.1' })
+    await post({ channel: 'C1', user: 'UJULES', text: '<@UBOT> prep Jane', ts: '100.1' })
     await runAfter()
     expect(mocks.postSlackMessage).toHaveBeenCalledTimes(1)
     expect(mocks.postSlackEphemeral).not.toHaveBeenCalled()
   })
 
   it('skips only a retry Slack sent because it timed out waiting', async () => {
-    await post({ channel: 'C1', user: 'UJUHAN', text: '<@UBOT> week', ts: '100.1' }, { 'x-slack-retry-num': '1', 'x-slack-retry-reason': 'http_timeout' })
+    await post({ channel: 'C1', user: 'UJULES', text: '<@UBOT> week', ts: '100.1' }, { 'x-slack-retry-num': '1', 'x-slack-retry-reason': 'http_timeout' })
     expect(mocks.afterQueue).toHaveLength(0)
 
     answer.mockResolvedValueOnce({ text: 'ok' })
-    await post({ channel: 'C1', user: 'UJUHAN', text: '<@UBOT> week', ts: '100.1' }, { 'x-slack-retry-num': '1', 'x-slack-retry-reason': 'http_error' })
+    await post({ channel: 'C1', user: 'UJULES', text: '<@UBOT> week', ts: '100.1' }, { 'x-slack-retry-num': '1', 'x-slack-retry-reason': 'http_error' })
     expect(mocks.afterQueue).toHaveLength(1)
     await runAfter()
     expect(mocks.postSlackMessage).toHaveBeenCalledTimes(1)
   })
 
   it('does not answer a message that only mentions her name in passing', async () => {
-    await post({ channel: 'CRANDOM', user: 'UJUHAN', text: 'Marqueta caught two ideas this week', ts: '100.1' })
+    await post({ channel: 'CRANDOM', user: 'UJULES', text: 'Marqueta caught two ideas this week', ts: '100.1' })
     expect(mocks.afterQueue).toHaveLength(0)
   })
 
@@ -1423,10 +1423,10 @@ describe('the events route', () => {
     it('captures silently, storing the text as it was typed — decoded once', async () => {
       mocks.captureFromMessage.mockResolvedValue({ ok: true, kind: 'idea', idea: { title: 'x', category: 'event' } })
       const raw = 'We should do a co-branded R&amp;D webinar with AT&amp;T for <https://acme.org|Acme> folks'
-      await post({ channel: 'CMKT', user: 'UJUHAN', text: raw, ts: '400.4' })
+      await post({ channel: 'CMKT', user: 'UJULES', text: raw, ts: '400.4' })
       // Not "R&amp;D" on the board: Slack's escaping is taken off before anything reads it.
       expect(mocks.captureFromMessage).toHaveBeenCalledWith(
-        expect.objectContaining({ text: 'We should do a co-branded R&D webinar with AT&T for Acme folks', channel: 'CMKT', ts: '400.4', personName: 'Juhan Sonin' }),
+        expect.objectContaining({ text: 'We should do a co-branded R&D webinar with AT&T for Acme folks', channel: 'CMKT', ts: '400.4', personName: 'Jules Soren' }),
       )
       expect(mocks.afterQueue).toHaveLength(0)
       // Captured in a human channel, and said nothing there.
@@ -1437,7 +1437,7 @@ describe('the events route', () => {
       mocks.captureFromMessage.mockResolvedValue({ ok: true, kind: 'draft', draft: { title: 'Here’s a draft', contentType: 'newsletter' } })
       process.env.MARKETING_PUBLIC_BASE_URL = 'https://www.goinvo.com'
       const delivered = 'Here’s a draft:\n&gt; Look across a parking lot.\n&gt; A bruise on our brains.'
-      await post({ channel: 'CBOT', user: 'UJUHAN', text: delivered, ts: '410.4' })
+      await post({ channel: 'CBOT', user: 'UJULES', text: delivered, ts: '410.4' })
       const [call] = mocks.captureFromMessage.mock.calls
       expect(call[0].text).toBe('Here’s a draft:\n> Look across a parking lot.\n> A bruise on our brains.')
       // Said in her own room: the notification says what happened, and the link opens the Calendar.
@@ -1450,27 +1450,27 @@ describe('the events route', () => {
     it('files an idea in her own room with the question in the notification', async () => {
       mocks.captureFromMessage.mockResolvedValue({ ok: true, kind: 'idea', idea: { title: 'Stickers & a tote', category: 'growth' } })
       process.env.MARKETING_PUBLIC_BASE_URL = 'https://www.goinvo.com'
-      await post({ channel: 'CBOT', user: 'UJUHAN', text: 'we should do a merch table at Arlington Town Day, stickers and a tote', ts: '411.4' })
+      await post({ channel: 'CBOT', user: 'UJULES', text: 'we should do a merch table at Arlington Town Day, stickers and a tote', ts: '411.4' })
       const posted = mocks.postSlackMessage.mock.calls[0][0]
       expect(posted.text).toBe('Filed as an idea: Stickers &amp; a tote — keep it?')
       expect(JSON.stringify(posted.blocks)).toContain('view=thisWeek&focus=caught')
     })
 
     it('stays silent when thanked', async () => {
-      await post({ channel: 'CBOT', user: 'UJUHAN', text: '<@UBOT> thanks!', ts: '412.4' })
+      await post({ channel: 'CBOT', user: 'UJULES', text: '<@UBOT> thanks!', ts: '412.4' })
       await runAfter()
       expect(mocks.postSlackMessage).not.toHaveBeenCalled()
     })
 
     it('does not look anybody up for chatter the filter turns away', async () => {
-      await post({ channel: 'CMKT', user: 'UJUHAN', text: 'lunch at noon?', ts: '401.4' })
+      await post({ channel: 'CMKT', user: 'UJULES', text: 'lunch at noon?', ts: '401.4' })
       expect(mocks.captureFromMessage).not.toHaveBeenCalled()
       expect(mocks.getSlackUserDisplayName).not.toHaveBeenCalled()
     })
 
     it('answers instead of capturing when she is addressed by name', async () => {
       answer.mockResolvedValueOnce({ text: 'ok' })
-      await post({ channel: 'CMKT', user: 'UJUHAN', text: 'Marqueta, we should do stickers for Town Day', ts: '402.4' })
+      await post({ channel: 'CMKT', user: 'UJULES', text: 'Marqueta, we should do stickers for Town Day', ts: '402.4' })
       expect(mocks.captureFromMessage).not.toHaveBeenCalled()
       expect(mocks.afterQueue).toHaveLength(1)
     })

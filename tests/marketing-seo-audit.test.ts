@@ -38,7 +38,7 @@ const CLEAN_HTML = `<!doctype html><html><head>
   <meta property="og:image" content="https://www.goinvo.com/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"Article","headline":"Healthcare Data Visualization","author":{"@type":"Person","name":"Juhan Sonin"},"datePublished":"2024-01-01"}
+    {"@context":"https://schema.org","@type":"Article","headline":"Healthcare Data Visualization","author":{"@type":"Person","name":"Jules Soren"},"datePublished":"2024-01-01"}
   </script>
 </head><body>
   <h1>Healthcare Data Visualization</h1>
@@ -195,7 +195,7 @@ describe('auditStructuredData', () => {
 
   it('flags a missing FAQPage schema on FAQ-like content', () => {
     const html =
-      '<html><head></head><body><h2>What is GoInvo?</h2><p>A studio.</p><h2>Where is GoInvo?</h2><p>Boston.</p><h2>Who runs GoInvo?</h2><p>Juhan.</p></body></html>'
+      '<html><head></head><body><h2>What is GoInvo?</h2><p>A studio.</p><h2>Where is GoInvo?</h2><p>Boston.</p><h2>Who runs GoInvo?</h2><p>Jules.</p></body></html>'
     const findings = auditStructuredData('https://www.goinvo.com/about/', html)
     expect(idsOf(findings)).toContain('structured-data:schema-faqpage-missing')
   })
@@ -220,7 +220,7 @@ describe('auditStructuredData', () => {
 
   it('does NOT frame FAQPage as a rich-result win (it is demoted to GEO/AI extraction)', () => {
     const html =
-      '<html><head></head><body><h2>What is GoInvo?</h2><p>A studio.</p><h2>Where is GoInvo?</h2><p>Boston.</p><h2>Who runs GoInvo?</h2><p>Juhan.</p></body></html>'
+      '<html><head></head><body><h2>What is GoInvo?</h2><p>A studio.</p><h2>Where is GoInvo?</h2><p>Boston.</p><h2>Who runs GoInvo?</h2><p>Jules.</p></body></html>'
     const findings = auditStructuredData('https://www.goinvo.com/about/', html)
     const faq = findings.find((f) => f.id === 'structured-data:schema-faqpage-missing')
     expect(faq).toBeDefined()
@@ -618,7 +618,7 @@ describe('auditEeat (eeat findings)', () => {
   it('flags a content page with no authoritative citation', () => {
     const html =
       '<html><head><title>x</title></head><body><h1>Healthcare guidance</h1>' +
-      '<p class="byline">By Juhan Sonin</p>' +
+      '<p class="byline">By Jules Soren</p>' +
       `<p>${geoBodyText()}</p>` +
       '<p>See <a href="https://example.com/blog">this blog</a>.</p></body></html>'
     const findings = auditEeat('https://www.goinvo.com/vision/guidance/', html)
@@ -630,7 +630,7 @@ describe('auditEeat (eeat findings)', () => {
   it('does NOT flag missing citations when an authoritative source is linked', () => {
     const html =
       '<html><head><title>x</title></head><body><h1>Healthcare guidance</h1>' +
-      '<p class="byline">By Juhan Sonin</p>' +
+      '<p class="byline">By Jules Soren</p>' +
       `<p>${geoBodyText()}</p>` +
       '<p>Per <a href="https://pubmed.ncbi.nlm.nih.gov/12345/">PubMed</a>.</p></body></html>'
     const findings = auditEeat('https://www.goinvo.com/vision/guidance/', html)

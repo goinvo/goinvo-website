@@ -341,7 +341,7 @@ const HISTORY_CHANNEL_WORD: Record<string, string> = {
 }
 
 /**
- * One history row's lead line — "Thu 24 Sep — Shirley, phone" — in Slack's
+ * One history row's lead line — "Thu 24 Sep — Shay, phone" — in Slack's
  * date format and with the logger's first name, so a touch logged in Slack and
  * one logged here read the same way.
  */

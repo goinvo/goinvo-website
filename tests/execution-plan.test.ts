@@ -81,7 +81,7 @@ describe('plan month navigation', () => {
 
 describe('mergePlanEntries', () => {
   const operations: PlanOperation[] = [
-    op({ _id: 'op-due', dueAt: '2026-09-18T12:00:00Z', ownerName: 'Juhan' }),
+    op({ _id: 'op-due', dueAt: '2026-09-18T12:00:00Z', ownerName: 'Jules' }),
     op({ _id: 'op-overdue', dueAt: '2026-09-04T12:00:00Z', status: 'needsHuman' }),
     op({ _id: 'op-done', dueAt: '2026-09-02T12:00:00Z', status: 'done' }),
     op({ _id: 'op-undated', dueAt: undefined }),
@@ -280,7 +280,7 @@ describe('seed catalog invariants', () => {
   it('production-bound content is neutral: no crisis framing, names, or emails', () => {
     // The production dataset is world-readable; these strings become public the
     // moment the seed runs. Candid framing belongs in the outreach operations.
-    const forbidden = /stay afloat|demand shock|survival|runway|pivot|crisis|struggling|Juhan|Shirley/i
+    const forbidden = /stay afloat|demand shock|survival|runway|pivot|crisis|struggling|Jules|Shay/i
     const email = /[\w.+-]+@[\w-]+\.[\w.]+/
     for (const def of EXEC_PLAN_SEED_CALENDAR) {
       const text = `${def.title}\n${def.brief}`

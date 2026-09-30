@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => {
     if (query.includes('_type == "teamMember"')) {
       return [
         { name: 'Jen Patel', email: 'jen@goinvo.com', linkedinUrl: 'https://www.linkedin.com/in/jen-patel' },
-        { name: 'Eric Benoit' },
+        { name: 'Ezra Bennet' },
       ]
     }
     return null
@@ -354,11 +354,11 @@ describe('outreach intake API reliability boundary', () => {
   it('never lets external details bypass a name-only team record', async () => {
     const response = await POST(jsonRequest({
       contacts: [
-        { name: 'Eric Benoit', organization: 'Outside Health' },
+        { name: 'Ezra Bennet', organization: 'Outside Health' },
         {
-          name: 'Eric Benoit',
+          name: 'Ezra Bennet',
           organization: 'Independent Research Group',
-          linkedinUrl: 'https://www.linkedin.com/in/a-different-eric-benoit',
+          linkedinUrl: 'https://www.linkedin.com/in/a-different-ezra-benoit',
         },
       ],
       dryRun: true,

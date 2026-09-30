@@ -66,8 +66,8 @@ const digest = (input: Partial<DigestInput> = {}) =>
 
 describe('encode/decodeActionValue', () => {
   it('round-trips a task and owner', () => {
-    const value = encodeActionValue({ taskId: 'op1', ownerName: 'Juhan' })
-    expect(decodeActionValue(value)).toEqual({ taskId: 'op1', ownerName: 'Juhan', status: '' })
+    const value = encodeActionValue({ taskId: 'op1', ownerName: 'Jules' })
+    expect(decodeActionValue(value)).toEqual({ taskId: 'op1', ownerName: 'Jules', status: '' })
   })
 
   it('stays inside Slack’s value limit', () => {
@@ -126,8 +126,8 @@ describe('buildWeeklyDigestBlocks', () => {
   it('draws each task once: asked, away cover, asked twice, then at most two others — five cards, the rest counted', () => {
     const blocks = digest({
       needsOwner: {
-        asked: [card({ _id: 'a1' }, { ask: { slackUserId: 'U3', name: 'Eric', reason: 'suggested' } })],
-        away: [card({ _id: 'w1', ownerName: 'Eric' }, { context: 'away', awayNote: 'Eric is away · free this week: Juhan, Shirley' })],
+        asked: [card({ _id: 'a1' }, { ask: { slackUserId: 'U3', name: 'Ezra', reason: 'suggested' } })],
+        away: [card({ _id: 'w1', ownerName: 'Ezra' }, { context: 'away', awayNote: 'Ezra is away · free this week: Jules, Shay' })],
         exhausted: [card({ _id: 'x1' }, { context: 'exhausted' })],
         open: ['o1', 'o2', 'o3', 'a1'].map((id) => card({ _id: id })),
       },
@@ -142,7 +142,7 @@ describe('buildWeeklyDigestBlocks', () => {
   })
 
   it('never trims an ask, and asks come first', () => {
-    const asked = Array.from({ length: 5 }, (_, i) => card({ _id: `a${i}` }, { ask: { slackUserId: 'U2', name: 'Shirley' } }))
+    const asked = Array.from({ length: 5 }, (_, i) => card({ _id: `a${i}` }, { ask: { slackUserId: 'U2', name: 'Shay' } }))
     const blocks = digest({ needsOwner: { asked, open: [card({ _id: 'o1' })] } })
     const ids = blocks.filter((block) => String(block.block_id || '').startsWith('mq_task_actions_')).map((block) => block.block_id)
     expect(ids).toEqual(asked.map((entry) => `mq_task_actions_${entry.taskId}`))
@@ -164,12 +164,12 @@ describe('buildWeeklyDigestBlocks', () => {
   it('lists owned work as a roll call, alphabetical, and stuck work with what is in the way', () => {
     const blocks = digest({
       taken: [
-        { name: 'Shirley', slackUserId: 'U2', count: 1 },
-        { name: 'Juhan', slackUserId: 'U1', count: 2 },
+        { name: 'Shay', slackUserId: 'U2', count: 1 },
+        { name: 'Jules', slackUserId: 'U1', count: 2 },
         { name: 'Jen <x>', count: 1 },
       ],
       stuck: [
-        { title: 'Pin <the> kit', ownerName: 'Shirley', slackUserId: 'U2', blocker: 'need the <numbers>', url: `${BASE}/studio/marketing?view=thisWeek&task=t9` },
+        { title: 'Pin <the> kit', ownerName: 'Shay', slackUserId: 'U2', blocker: 'need the <numbers>', url: `${BASE}/studio/marketing?view=thisWeek&task=t9` },
         { title: 'Nobody’s thing' },
         { title: 'Third' },
       ],
@@ -285,13 +285,13 @@ describe('buildWeeklyDigestBlocks', () => {
     renewals: ['a', 'b', 'c'],
     lastWeek: 'Last week: 2 tasks done',
     needsOwner: {
-      asked: Array.from({ length: 3 }, (_, i) => card({ _id: `a${i}` }, { ask: { slackUserId: 'U2', name: 'Shirley' } })),
-      away: [card({ _id: 'w1', ownerName: 'Eric' }, { context: 'away' })],
+      asked: Array.from({ length: 3 }, (_, i) => card({ _id: `a${i}` }, { ask: { slackUserId: 'U2', name: 'Shay' } })),
+      away: [card({ _id: 'w1', ownerName: 'Ezra' }, { context: 'away' })],
       exhausted: [card({ _id: 'x1' }, { context: 'exhausted' })],
       open: Array.from({ length: 6 }, (_, i) => card({ _id: `o${i}` })),
     },
     decisions: ['d1', 'd2', 'd3', 'd4'].map(decision),
-    taken: [{ name: 'Juhan', slackUserId: 'U1', count: 2 }],
+    taken: [{ name: 'Jules', slackUserId: 'U1', count: 2 }],
     stuck: [{ title: 'Stuck one' }],
     followUps: Array.from({ length: 3 }, (_, i) => ({ label: `*Follow up with P${i}*`, detail: 'd', contactRef: `{"c":"c${i}"}` })),
     followUpsTotal: 30,
@@ -369,16 +369,16 @@ describe('digestNotificationText', () => {
 
 describe('buildIdentityPromptBlocks', () => {
   it('is one section with the choice beside it', () => {
-    const blocks = buildIdentityPromptBlocks(['Juhan', 'Shirley'])
+    const blocks = buildIdentityPromptBlocks(['Jules', 'Shay'])
     expectValidSlackBlocks(blocks)
     expect(blocks).toHaveLength(1)
     expect(blocks[0].accessory.action_id).toBe(MARKETING_ACTION.linkIdentity)
-    expect(blocks[0].accessory.options.map((option: Block) => option.value)).toEqual(['Juhan', 'Shirley'])
+    expect(blocks[0].accessory.options.map((option: Block) => option.value)).toEqual(['Jules', 'Shay'])
   })
 
   it('states what is stored before anyone presses anything', () => {
     // The asking IS the consent, so the prompt has to say what it keeps — and that it keeps nothing else.
-    expect(sectionText(buildIdentityPromptBlocks(['Juhan'])[0])).toBe(
+    expect(sectionText(buildIdentityPromptBlocks(['Jules'])[0])).toBe(
       '*One-time setup:* which name on the list is yours? I’ll store your Slack ID against it so I can ' +
         '@-mention you on your own tasks — nothing else.',
     )
@@ -471,10 +471,10 @@ describe('buildIdeaReviewBlocks', () => {
 describe('detailStatusWords', () => {
   it('says exactly what the card and the Studio pill say, for every status, owned or not, decision or not', () => {
     for (const status of [...MARKETING_OPERATION_STATUSES, 'garbage', undefined]) {
-      for (const ownerName of ['Juhan', '']) {
+      for (const ownerName of ['Jules', '']) {
         for (const shape of [
           { kind: 'decision', humanQuestion: 'Which?' },
-          { kind: 'content', humanQuestion: 'Eric passed on this — who should pick it up?' },
+          { kind: 'content', humanQuestion: 'Ezra passed on this — who should pick it up?' },
           { kind: 'outreach' },
         ]) {
           const task = { status, ownerName, ...shape } as Parameters<typeof taskStatusWords>[0]
@@ -517,8 +517,8 @@ describe('buildTaskDetailBlocks', () => {
   it('puts the facts in the card’s words, with a day, never an ISO date', () => {
     const blocks = buildTaskDetailBlocks(task, { now: NOW })
     expect(blocks[1].elements[0].text).toBe('Decision · Urgent · needs a decision · nobody has it · due Fri 25 Sep · ~20m')
-    const owned = buildTaskDetailBlocks({ ...task, kind: 'content', status: 'working', ownerName: 'Juhan & co', priority: 'normal' }, { now: NOW })
-    expect(owned[1].elements[0].text).toBe('Content · in progress · owner Juhan &amp; co · due Fri 25 Sep · ~20m')
+    const owned = buildTaskDetailBlocks({ ...task, kind: 'content', status: 'working', ownerName: 'Jules & co', priority: 'normal' }, { now: NOW })
+    expect(owned[1].elements[0].text).toBe('Content · in progress · owner Jules &amp; co · due Fri 25 Sep · ~20m')
     expect(json(blocks)).not.toMatch(/\d{4}-\d{2}-\d{2}/)
   })
 
@@ -619,36 +619,36 @@ describe('buildTaskAttachment (Monday plans posted before the blocks-only plan)'
     expect(labels(buildTaskAttachment(base))).toEqual([LABEL.TAKE, LABEL.DETAILS, LABEL.NOT_ME])
     // The owned card's button is the old decline — a pass, recorded as one —
     // so it says Not me. Hand back is handBackTask, which records no pass.
-    const owned = buildTaskAttachment({ ...base, ownerName: 'Juhan' })
+    const owned = buildTaskAttachment({ ...base, ownerName: 'Jules' })
     expect(labels(owned)).toEqual([LABEL.NOT_ME, LABEL.DETAILS])
     expect(ids(owned)).toEqual([MARKETING_ACTION.decline, MARKETING_ACTION.details])
     expect(labels(owned)).not.toContain(LABEL.HAND_BACK)
     // A passed task has nothing to pass on again — never a dead end, though.
     expect(labels(buildTaskAttachment({ ...base, status: 'needsHuman' }))).toEqual([LABEL.TAKE, LABEL.DETAILS])
     const retired = new Set<string>(RETIRED_LABELS)
-    for (const task of [base, { ...base, ownerName: 'Juhan' }]) {
+    for (const task of [base, { ...base, ownerName: 'Jules' }]) {
       for (const label of labels(buildTaskAttachment(task))) expect(retired.has(label)).toBe(false)
     }
   })
 
   it('never makes taking a colleague’s work the green button, and has no colour bar', () => {
-    const owned = buildTaskAttachment({ ...base, ownerName: 'Eric', slackUserId: 'UERIC' })
+    const owned = buildTaskAttachment({ ...base, ownerName: 'Ezra', slackUserId: 'UEZRA' })
     expect(owned.blocks.at(-1).elements.some((element: Block) => element.style === 'primary')).toBe(false)
     expect(owned.color).toBeUndefined()
-    expect(sectionText(owned.blocks[0])).toBe('*Call the &lt;top&gt; ten*\n*Urgent* · Taken by <@UERIC> · ~45m')
+    expect(sectionText(owned.blocks[0])).toBe('*Call the &lt;top&gt; ten*\n*Urgent* · Taken by <@UEZRA> · ~45m')
   })
 
   it('shows a suggestion or an ask as nobody having it', () => {
-    const suggested = buildTaskAttachment({ ...base, priority: 'normal', suggestedOwner: 'Juhan' })
+    const suggested = buildTaskAttachment({ ...base, priority: 'normal', suggestedOwner: 'Jules' })
     expectValidSlackBlocks(suggested.blocks)
-    expect(sectionText(suggested.blocks[0])).toBe('*Call the &lt;top&gt; ten*\nNobody has it · suggested Juhan · ~45m')
-    const asked = buildTaskAttachment({ ...base, priority: 'normal', askedName: 'Juhan <x>', suggestedOwner: 'Eric' })
-    expect(sectionText(asked.blocks[0])).toContain('Nobody has it · asked Juhan &lt;x&gt;')
+    expect(sectionText(suggested.blocks[0])).toBe('*Call the &lt;top&gt; ten*\nNobody has it · suggested Jules · ~45m')
+    const asked = buildTaskAttachment({ ...base, priority: 'normal', askedName: 'Jules <x>', suggestedOwner: 'Ezra' })
+    expect(sectionText(asked.blocks[0])).toContain('Nobody has it · asked Jules &lt;x&gt;')
     expect(json(asked)).not.toContain('suggested')
   })
 
   it('notes what just happened without hiding the task', () => {
-    const card = buildTaskAttachment({ ...base, ownerName: 'Juhan', note: '<@U1> picked it up.' })
+    const card = buildTaskAttachment({ ...base, ownerName: 'Jules', note: '<@U1> picked it up.' })
     expect(json(card)).toContain('picked it up')
     expect(json(card)).toContain('Call the &lt;top&gt; ten')
   })
@@ -661,8 +661,8 @@ describe('refreshTaskInAttachments', () => {
   ]
 
   it('re-renders only the task that changed, keeping its whole title', () => {
-    const next = refreshTaskInAttachments(attachments, 'op1', { _id: 'op1', title: 'Call MEDITECH', ownerName: 'Juhan', note: 'claimed' })
-    expect(json(next[0])).toContain('Taken by Juhan')
+    const next = refreshTaskInAttachments(attachments, 'op1', { _id: 'op1', title: 'Call MEDITECH', ownerName: 'Jules', note: 'claimed' })
+    expect(json(next[0])).toContain('Taken by Jules')
     expect(json(next[0])).not.toContain(LABEL.TAKE)
     expect(json(next[0])).toContain('Call MEDITECH')
     expect(next[1]).toEqual(attachments[1])
@@ -830,28 +830,28 @@ describe('every label means one action, in every message (rule 4)', () => {
   /** Every button each builder can draw, by builder, across the states it has. */
   const builders: Record<string, Block[]> = {
     'task card': [
-      ...drawn({ ownerName: 'Juhan', status: 'working' }),
-      ...drawn({ ownerName: 'Juhan', status: 'blocked', blocker: 'numbers' }),
-      ...drawn({ ownerName: 'Juhan', dueAt: past }),
-      ...drawn({ ownerName: 'Juhan' }, { mode: 'plan' }),
-      ...drawn({ ownerName: 'Eric' }, { mode: 'plan', context: 'away' }),
+      ...drawn({ ownerName: 'Jules', status: 'working' }),
+      ...drawn({ ownerName: 'Jules', status: 'blocked', blocker: 'numbers' }),
+      ...drawn({ ownerName: 'Jules', dueAt: past }),
+      ...drawn({ ownerName: 'Jules' }, { mode: 'plan' }),
+      ...drawn({ ownerName: 'Ezra' }, { mode: 'plan', context: 'away' }),
       ...drawn({}, { mode: 'plan' }),
-      ...drawn({}, { mode: 'plan', ask: { slackUserId: 'U3', name: 'Eric' } }),
+      ...drawn({}, { mode: 'plan', ask: { slackUserId: 'U3', name: 'Ezra' } }),
       ...drawn({}, { mode: 'plan', context: 'exhausted' }),
       ...drawn({ kind: 'decision', status: 'needsHuman', humanQuestion: 'Q?' }, { mode: 'plan' }),
-      ...drawn({ kind: 'decision', status: 'needsHuman', humanQuestion: 'Q?', ownerName: 'Juhan' }),
-      ...drawn({ status: 'done', ownerName: 'Juhan' }),
+      ...drawn({ kind: 'decision', status: 'needsHuman', humanQuestion: 'Q?', ownerName: 'Jules' }),
+      ...drawn({ status: 'done', ownerName: 'Jules' }),
       ...drawn({ status: 'dismissed' }),
     ],
     'Monday plan': digest({
-      needsOwner: { asked: [card({ _id: 'a1' }, { ask: { slackUserId: 'U2', name: 'Shirley' } })], open: [card({ _id: 'o1' })] },
+      needsOwner: { asked: [card({ _id: 'a1' }, { ask: { slackUserId: 'U2', name: 'Shay' } })], open: [card({ _id: 'o1' })] },
       followUps: [{ label: '*Follow up with Jane*', detail: 'd', contactRef: '{"c":"c1"}' }],
       callSheet: [{ organization: 'Acme', contacts: [{ _id: 'c1' }], signal: 's', quote: 'q', sourceUrl: '', opening: '', offer: null, context: '' } as never],
       money: buildMoneyAndDirectionBlocks({ now: NOW, runway, snapshot, strategyDue: due }),
     }),
     'legacy attachment': [
       ...buildTaskAttachment({ _id: 'op1', title: 'x' }).blocks,
-      ...buildTaskAttachment({ _id: 'op1', title: 'x', ownerName: 'Juhan' }).blocks,
+      ...buildTaskAttachment({ _id: 'op1', title: 'x', ownerName: 'Jules' }).blocks,
       ...buildTaskAttachment({ _id: 'op1', title: 'x', status: 'needsHuman' }).blocks,
     ],
     'idea capture': buildIdeaCaptureBlocks({ title: 'Merch', channel: 'C1', ts: '1.2', studioUrl: `${BASE}/studio/marketing?view=thisWeek` }),

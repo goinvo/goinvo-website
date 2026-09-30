@@ -13,7 +13,7 @@ import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
  * exposure + per-variant engagement beacon so we can see whether the section
  * repels visitors or helps them.
  *
- * Showing it is deliberately opt-in rather than opt-out (Shirley, 2026-08-10):
+ * Showing it is deliberately opt-in rather than opt-out (the studio, 2026-08-10):
  * with the old default, any visitor the experiment had not assigned, including
  * every visitor when the flags secret is unset, saw the section. That is not an
  * A/B test, it is a launch. Absent an assignment the homepage stays as it was.
@@ -32,7 +32,7 @@ const FLAG_KEY = 'home-shop-section-variant'
 const ALLOWED_VARIANTS = ['control', 'present']
 
 /**
- * The homepage is NOT changing yet (Shirley, 2026-08-10). The shop ships to
+ * The homepage is NOT changing yet (the studio, 2026-08-10). The shop ships to
  * production on its own; the homepage stays exactly as it is until the studio
  * says otherwise.
  *
@@ -49,7 +49,7 @@ const ALLOWED_VARIANTS = ['control', 'present']
 const LIVE_TO_ASSIGNED_COHORT = false
 
 /**
- * Shipped to everyone (Shirley, 2026-08-17). The studio decided the prints
+ * Shipped to everyone (the studio, 2026-08-17). The studio decided the prints
  * section stays, so it renders for 100% of visitors rather than a cohort.
  *
  * This short-circuits BEFORE the cookie effect, so the section and its

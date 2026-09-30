@@ -77,9 +77,8 @@ export function getFinancialPosture(id: string | null | undefined): FinancialPos
 }
 
 /**
- * The Outreach surface's guided flow was built for the demand-shock reality
- * (2026-07: ~2–3 months confident runway), so when no posture has been set the
- * suite assumes survival rather than pretending to know nothing.
+ * When no posture has been set, the suite assumes the tightest one rather than
+ * pretending to know nothing: the Outreach surface's guided flow is built for it.
  */
 export const DEFAULT_FINANCIAL_POSTURE_ID: FinancialPostureId = 'survival'
 

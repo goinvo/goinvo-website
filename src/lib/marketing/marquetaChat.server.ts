@@ -36,7 +36,7 @@
  *   send to the requester alone. They are never in `blocks` in a channel.
  * - **Whose name a write carries.** Availability and a logged call are written
  *   under the person's BOARD name (`resolvePresserName`), never their Slack
- *   display name — "Juhan Sonin" written where the board says "Juhan" splits
+ *   display name — "Jules Soren" written where the board says "Jules" splits
  *   one person into two lists. And a display name is never enough to BECOME a
  *   name on the board that is already linked to somebody else's Slack account
  *   (see `presser`).
@@ -234,7 +234,7 @@ const dmsWired = () => clean(process.env.SLACK_MARQUETA_DMS) === '1'
  * It also returns null for a NAMESAKE. `resolvePresserName` falls back to an
  * exact display-name match, and that match used to win even when the roster
  * record was already linked to a different Slack account — so anybody whose
- * display name read "Juhan" was Juhan: they saw his list, logged calls as him,
+ * display name read "Jules" was Jules: they saw his list, logged calls as him,
  * and "I'm away" relinked his record to their id and wiped his allocation. A
  * name linked to someone else is theirs; only the linked account may use it.
  * (`team.server.ts` carries the same guard for the button paths.)
@@ -441,7 +441,7 @@ function onThisWeek(label: string, params: { owner?: string; focus?: StudioFocus
  *
  *   *This week* — you have 2 open, 1 overdue · `Marqueta, my tasks`
  *   12 open across the team, about 6h · 3 nobody has taken · 1 decision waiting
- *   🌴 Away this week: Eric
+ *   🌴 Away this week: Ezra
  *   [up to three cards for work nobody has — I'll take it]
  *   +2 more on This week
  *   [Open This week]
@@ -826,7 +826,7 @@ function lastTouchOf(contact: PrepContact, now: Date): string {
  * do about it.
  *
  *   *Jane Doe* — CMIO, Mass General Brigham · warm · last: Contacted on 15 Sep
- *   · follow-up Tue 22 Sep (overdue) · owner Shirley            [Prep] [Log it…]
+ *   · follow-up Tue 22 Sep (overdue) · owner Shay            [Prep] [Log it…]
  *
  * Built from the enum and dates only — never a note — and never an email
  * address, which imported records keep in `name` and `organization`.
@@ -1124,7 +1124,7 @@ async function answerLogCall(input: {
  *
  * Only `statement` is ever written. The intent parser routes a message with a
  * time-off word here unless it is a question about one of her topics — "who's
- * away this week?" is the week — but "is Juhan away next week?" and "who is
+ * away this week?" is the week — but "is Jules away next week?" and "who is
  * out on PTO?" still arrive, and each of those used to mark the person ASKING
  * as away. Availability is the one answer that writes on the strength of a
  * keyword, so it is the one that has to be sure the sentence is the sender
@@ -1152,7 +1152,7 @@ const THIRD_PERSON =
  * The sender saying it about themselves, at the START of the sentence: "I'm
  * away…", "I'll be out…", "I'm taking Friday off", "I'm going on holiday",
  * "mark me away", "called in sick". The subject has to lead: "I heard Bob is
- * away" and "I'm sure Eric is out" contain an "I", and are about Bob and Eric.
+ * away" and "I'm sure Ezra is out" contain an "I", and are about Bob and Ezra.
  * Present and future only — "I was away last week" is not something to book.
  */
 const FIRST_PERSON_TIME_OFF = new RegExp(
@@ -1198,14 +1198,14 @@ export function readTimeOff(text: string, opts: { today: string; mentionsSomeone
 const escapeForRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /**
- * A colleague named in the message: "I'm away, and Eric is too" is partly
- * about Eric, and a sentence about two people is not one to book from.
+ * A colleague named in the message: "I'm away, and Ezra is too" is partly
+ * about Ezra, and a sentence about two people is not one to book from.
  *
- * A full name ("Eric Benoit") matches in any case. A single name only matches
+ * A full name ("Ezra Bennet") matches in any case. A single name only matches
  * CAPITALISED and not as the first word, because first names are ordinary
  * words often enough to matter — a colleague called Will or Mark would
  * otherwise make "I will be away" and "mark me away" unwritable for everyone.
- * Missing a lower-case "eric" costs nothing: the sentence still leads with the
+ * Missing a lower-case "ezra" costs nothing: the sentence still leads with the
  * sender saying it about themselves, and only they are written.
  */
 function namesSomeoneElse(text: string, me: string, entries: TeamMemberAvailability[]): boolean {

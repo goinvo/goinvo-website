@@ -81,8 +81,8 @@ const NOT_ON_BOARD = errorLine(NOT_ON_BOARD_VERB, 'Pick your name in the Monday 
 /**
  * The presser's name as the BOARD writes it.
  *
- * The interactions route hands these functions Slack's display name ("Juhan
- * Sonin"), and writing that as an owner splits one person into two: two
+ * The interactions route hands these functions Slack's display name ("Jules
+ * Soren"), and writing that as an owner splits one person into two: two
  * check-in groups, two loads when the digest decides whom to ask, and an
  * identity prompt that keeps offering a name nobody uses. So the linked roster
  * record decides (`resolvePresserName`), and a roster that cannot be read is a
@@ -217,7 +217,7 @@ export const AVAILABILITY_WRITE_QUERY = `*[_type == "${TEAM_AVAILABILITY_TYPE}" 
 /** Open work somebody owns (team.server.ts): what "your 2 open tasks" counts. */
 export { OWNED_OPEN_TASKS_QUERY }
 
-/** Every record already linked to one Slack account — how "you’re already linked as Eric" is known. */
+/** Every record already linked to one Slack account — how "you’re already linked as Ezra" is known. */
 export const LINKED_RECORDS_QUERY = `*[_type == "${TEAM_AVAILABILITY_TYPE}" && slackUserId == $uid && !(_id in path("drafts.**"))]{ _id, ownerName }`
 
 const BUSY = errorLine('save that', 'Someone was changing it at the same moment — try again.')
@@ -373,8 +373,8 @@ const nobodyOnTheBoard = (name: string) =>
  *     the board files open work under exactly that name (someone with tasks
  *     but no record yet) or it is on the marketing team (`marketingTeamNames`).
  *     Otherwise it is refused and pointed at the one-time setup, which lists
- *     the whole team: an unlinked Juhan whose Slack says "Juhan Sonin" would book a
- *     second "Juhan Sonin" off while the real "Juhan" kept getting work. A
+ *     the whole team: an unlinked Jules whose Slack says "Jules Soren" would book a
+ *     second "Jules Soren" off while the real "Jules" kept getting work. A
  *     roster that cannot be read is a refusal too.
  *   - **Patched, never replaced.** The record also holds the person's Slack
  *     link, their weekly-hours allocation and a note. The old button's
@@ -725,8 +725,8 @@ const boldName = (name: string) => `*${escapeSlackText(name).replace(/[*_~`]/g, 
  *     were that colleague to every button. A name linked to someone else is
  *     refused; the write is conditional on the revision read, so a link
  *     landing in between is not overwritten either.
- *   - **Never links one account to a SECOND name.** Pressing "Juhan" and then
- *     "Eric" on two old digests made one account both: the owner of Eric's
+ *   - **Never links one account to a SECOND name.** Pressing "Jules" and then
+ *     "Ezra" on two old digests made one account both: the owner of Ezra's
  *     tasks for Hand back, and a board name that flipped between the two
  *     depending on which record the roster read returned first.
  *   - **The first of two simultaneous presses wins, and the second is told.**

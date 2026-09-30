@@ -15,7 +15,7 @@ export type ShopOrderNotification = {
    * Flattened "name / line1 / city, state postal / country" for print orders.
    * Included so the alert is enough to fulfill from on its own — otherwise
    * whoever packs the order has to sign into Stripe with 2FA to find out where
-   * it goes (Eric, 2026-08-17). Absent for donation-only checkouts, which
+   * it goes (the studio, 2026-08-17). Absent for donation-only checkouts, which
    * collect no shipping details.
    */
   shippingAddress?: string

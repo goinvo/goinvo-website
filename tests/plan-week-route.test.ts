@@ -72,15 +72,15 @@ type Block = Record<string, any>
 const NOW = new Date('2026-09-21T13:00:00Z')
 
 const FOLLOW_UP_CONTACTS = [
-  { _id: 'c-jane', name: 'Jane Doe', email: 'jane@mgb.org', organization: 'MGB', owner: 'juhan', status: 'responded', warmth: 'warm', followUpAt: '2026-09-18T14:00:00Z', interactions: [{ at: '2026-09-11T14:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'responded' }] },
-  { _id: 'c-sam', name: 'sam.rivera@acme.org', email: 'sam.rivera@acme.org', organization: 'Acme', owner: 'Eric', status: 'contacted', warmth: 'cold', followUpAt: '2026-09-22T14:00:00Z', interactions: null },
-  { _id: 'c-3', name: 'Ada Park', email: 'ada@x.org', organization: 'X Health', owner: 'Juhan', status: 'contacted', warmth: 'warm', followUpAt: '2026-09-23T14:00:00Z', interactions: [] },
+  { _id: 'c-jane', name: 'Jane Doe', email: 'jane@mgb.org', organization: 'MGB', owner: 'jules', status: 'responded', warmth: 'warm', followUpAt: '2026-09-18T14:00:00Z', interactions: [{ at: '2026-09-11T14:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'responded' }] },
+  { _id: 'c-sam', name: 'sam.rivera@acme.org', email: 'sam.rivera@acme.org', organization: 'Acme', owner: 'Ezra', status: 'contacted', warmth: 'cold', followUpAt: '2026-09-22T14:00:00Z', interactions: null },
+  { _id: 'c-3', name: 'Ada Park', email: 'ada@x.org', organization: 'X Health', owner: 'Jules', status: 'contacted', warmth: 'warm', followUpAt: '2026-09-23T14:00:00Z', interactions: [] },
   { _id: 'c-4', name: 'Bo Chen 617-555-0123', email: 'bo@y.org', organization: 'Y Clinic', owner: '', status: 'meeting', warmth: 'hot', followUpAt: '2026-09-24T14:00:00Z', interactions: [] },
 ]
 
 const TEAM = [
-  { ownerName: 'Juhan', slackUserId: 'UJUHAN' },
-  { ownerName: 'Eric', slackUserId: 'UERIC' },
+  { ownerName: 'Jules', slackUserId: 'UJULES' },
+  { ownerName: 'Ezra', slackUserId: 'UEZRA' },
 ]
 
 // Four hours, and one 200-minute task due this week: it fits an empty week,
@@ -197,10 +197,10 @@ describe('plan-week reserves time for follow-ups', () => {
 
 describe('plan-week gives This week what it lays out', () => {
   const OPERATIONS = [
-    { ...BIG_TASK, _id: 'op-mine', title: 'Draft the pre-mortem article', estimatedMinutes: 30, ownerName: 'Shirley', status: 'working' },
-    { ...BIG_TASK, _id: 'op-stuck', title: 'Pin the kit', estimatedMinutes: 20, ownerName: 'Juhan', status: 'blocked', blocker: 'Waiting on the PDF' },
+    { ...BIG_TASK, _id: 'op-mine', title: 'Draft the pre-mortem article', estimatedMinutes: 30, ownerName: 'Shay', status: 'working' },
+    { ...BIG_TASK, _id: 'op-stuck', title: 'Pin the kit', estimatedMinutes: 20, ownerName: 'Jules', status: 'blocked', blocker: 'Waiting on the PDF' },
     { ...BIG_TASK, _id: 'op-decision', title: 'Publish the taxonomy?', kind: 'decision', estimatedMinutes: 20, status: 'needsHuman', humanQuestion: 'Should we publish F1–F8?' },
-    { ...BIG_TASK, _id: 'op-done', title: 'Old post', estimatedMinutes: 20, ownerName: 'Eric', status: 'done' },
+    { ...BIG_TASK, _id: 'op-done', title: 'Old post', estimatedMinutes: 20, ownerName: 'Ezra', status: 'done' },
     // The planner's own record of an earlier week: never planned, never listed.
     { ...BIG_TASK, _id: 'op-plan', title: 'Week of 2026-09-14', kind: 'update', status: 'working', sourceKey: 'weekly-plan/2026-W38' },
   ]
@@ -210,15 +210,15 @@ describe('plan-week gives This week what it lays out', () => {
     const body = await (await PLAN_WEEK_GET(planRequest('GET'))).json()
 
     expect(body.items).toEqual([
-      expect.objectContaining({ id: 'op-mine', owner: 'Shirley', status: 'working', blocker: null, kind: 'content' }),
+      expect.objectContaining({ id: 'op-mine', owner: 'Shay', status: 'working', blocker: null, kind: 'content' }),
     ])
     expect(body.decisions).toEqual([
       expect.objectContaining({ id: 'op-decision', owner: null, status: 'needsHuman', question: 'Should we publish F1–F8?', kind: 'decision' }),
     ])
     expect(body.deferred).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: 'op-stuck', owner: 'Juhan', status: 'blocked', blocker: 'Waiting on the PDF', reason: 'blocked' }),
-        expect.objectContaining({ id: 'op-done', owner: 'Eric', status: 'done', reason: 'already done' }),
+        expect.objectContaining({ id: 'op-stuck', owner: 'Jules', status: 'blocked', blocker: 'Waiting on the PDF', reason: 'blocked' }),
+        expect.objectContaining({ id: 'op-done', owner: 'Ezra', status: 'done', reason: 'already done' }),
       ]),
     )
     const everyId = [...body.items, ...body.decisions, ...body.deferred].map((row: Block) => row.id)
@@ -234,8 +234,8 @@ describe('plan-week gives This week what it lays out', () => {
       last: 'last: Responded on 11 Sep',
       temperature: 'they replied',
       overdue: true,
-      // "juhan" on the contact, "Juhan" on the board: one person.
-      ownerName: 'Juhan',
+      // "jules" on the contact, "Jules" on the board: one person.
+      ownerName: 'Jules',
     })
     expect(body.followUps).toHaveLength(body.followUpsDue)
   })
@@ -243,15 +243,15 @@ describe('plan-week gives This week what it lays out', () => {
   it('says how outreach is going this week, and which runway the week was planned against', async () => {
     const touched = {
       ...FOLLOW_UP_CONTACTS[2],
-      interactions: [{ at: '2026-09-21T12:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'contacted' }],
+      interactions: [{ at: '2026-09-21T12:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'contacted' }],
     }
     mocks.outreach.fetch.mockResolvedValue({ contacts: [FOLLOW_UP_CONTACTS[0], touched], team: TEAM })
-    routePlanWeek([BIG_TASK], { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-01T00:00:00Z' } })
+    routePlanWeek([BIG_TASK], { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-01T00:00:00Z' } })
 
     const body = await (await PLAN_WEEK_GET(planRequest('GET'))).json()
     expect(body.pulse).toMatch(/^Outreach this week: 1 touch \(1 person\)/)
-    // 11 Jan 2027 is 3.5 months from 21 Sep — the stored date, read on the day.
-    expect(body.runway).toBe('Rebuild — 3.5 months of certain runway (to 11 Jan 2027)')
+    // 25 Jan 2027 is 4 months from 21 Sep — the stored date, read on the day.
+    expect(body.runway).toBe('Rebuild — 4 months of certain runway (to 25 Jan 2027)')
     expect(body.posture).toBe('rebuild')
   })
 
@@ -308,9 +308,9 @@ describe('plan-week gives This week what it lays out', () => {
     routePlanWeek([BIG_TASK], {
       posture: 'survival',
       setAt: '2026-09-10T00:00:00Z',
-      runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-01T00:00:00Z' },
+      runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-01T00:00:00Z' },
     })
     const body = await (await PLAN_WEEK_GET(planRequest('GET'))).json()
-    expect(body.runway).toBe('Survival — 3.5 months of certain runway (to 11 Jan 2027) · posture set by hand')
+    expect(body.runway).toBe('Survival — 4 months of certain runway (to 25 Jan 2027) · posture set by hand')
   })
 })

@@ -18,14 +18,14 @@ import { HomeGoinvoAtHomeCta } from './HomeGoinvoAtHomeCta'
  *
  * One CTA, and the posters are assembled like the shop page's own hero spray
  * (full posters on cream mats, slight rotations) — the flat cropped-thumbnail
- * trio and the second button both got flagged (Juhan's feedback, 2026-08-07).
+ * trio and the second button both got flagged (the studio's feedback, 2026-08-07).
  * A single unanchored link also avoids the page-transition + anchor-jump
  * double hop the old "Download the files" button caused.
  */
 
 type HomePrint = { _id: string; title: string; imageUrl: string }
 
-// The same trio the shop hero leads with (Jon's picks) so clicking through
+// The same trio the shop hero leads with (the studio's picks) so clicking through
 // lands on a container that visibly continues this one.
 const FEATURED_PRINTS: HomePrint[] = [
   { _id: 'make-things', title: 'Make Things', imageUrl: '/images/features/posters/design-axiom-make-things.jpg' },

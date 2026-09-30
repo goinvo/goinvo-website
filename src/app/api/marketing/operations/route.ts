@@ -299,7 +299,7 @@ async function upsertReviewedHandoff(
  * surface recognises as them.
  *
  * The desk's owner select offers these rather than the website's team pages,
- * whose titles are full names ("Juhan Sonin"): an owner written that way is a
+ * whose titles are full names ("Jules Soren"): an owner written that way is a
  * second person to the check-in, `mine` and the digest's @-mentions. Names
  * only — the desk has no use for a Slack id. A failed read is an empty list:
  * the desk still works, it just offers the names already on the board.

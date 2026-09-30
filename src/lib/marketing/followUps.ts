@@ -343,7 +343,7 @@ export function listFollowUps(
 /**
  * Follow-ups by owner, keyed by the lowercased board name ('' for nobody), in
  * the order `listFollowUps` produced — the check-in groups tasks the same
- * case-insensitive way, so "Juhan" and "juhan" land in one person's list.
+ * case-insensitive way, so "Jules" and "jules" land in one person's list.
  *
  * The '' group is easy to lose: a renderer that walks named people never
  * reaches it. Hand it to `unownedFollowUpsText`.

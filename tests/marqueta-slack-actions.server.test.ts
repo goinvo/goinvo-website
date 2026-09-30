@@ -123,29 +123,29 @@ const askedBefore = (...ids: string[]) => ids.map((slackUserId) => ({ slackUserI
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
 const AVAILABILITY = [
-  { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available', weeklyHours: null },
-  { ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' },
-  { ownerName: 'Shirley', slackUserId: 'USHIRLEY', status: 'available' },
+  { ownerName: 'Jules', slackUserId: 'UJULES', status: 'available', weeklyHours: null },
+  { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'available' },
+  { ownerName: 'Shay', slackUserId: 'USHAY', status: 'available' },
 ]
 
 const OPERATIONS = [
-  { _id: 'op-call-mgb', title: 'Call MGB about the pilot', kind: 'outreach', priority: 'high', status: 'queued', suggestedOwner: 'Juhan', estimatedMinutes: 30, askHistory: null },
-  { _id: 'op-price', title: 'Price bands <5% & co', kind: 'outreach', priority: 'normal', status: 'queued', askHistory: askedBefore('UJUHAN', 'UERIC') },
-  // Owned by Eric, but carrying the id of whoever last claimed it in Slack.
-  { _id: 'op-eric', title: 'Follow the MEDITECH thread', kind: 'outreach', priority: 'normal', status: 'working', ownerName: 'Eric', ownerSlackUserId: 'USTALE' },
+  { _id: 'op-call-mgb', title: 'Call MGB about the pilot', kind: 'outreach', priority: 'high', status: 'queued', suggestedOwner: 'Jules', estimatedMinutes: 30, askHistory: null },
+  { _id: 'op-price', title: 'Price bands <5% & co', kind: 'outreach', priority: 'normal', status: 'queued', askHistory: askedBefore('UJULES', 'UEZRA') },
+  // Owned by Ezra, but carrying the id of whoever last claimed it in Slack.
+  { _id: 'op-ezra', title: 'Follow the MEDITECH thread', kind: 'outreach', priority: 'normal', status: 'working', ownerName: 'Ezra', ownerSlackUserId: 'USTALE' },
   { _id: 'op-post', title: 'Write the pre-mortem post', kind: 'content', priority: 'normal', status: 'queued', estimatedMinutes: 60 },
-  // Shirley pressed "Not me this week" on this one.
-  { _id: 'op-passed', title: 'Draft the kit email', kind: 'content', priority: 'normal', status: 'needsHuman', suggestedOwner: 'Shirley', estimatedMinutes: 20, humanQuestion: 'Shirley passed on this — who should pick it up?' },
+  // Shay pressed "Not me this week" on this one.
+  { _id: 'op-passed', title: 'Draft the kit email', kind: 'content', priority: 'normal', status: 'needsHuman', suggestedOwner: 'Shay', estimatedMinutes: 20, humanQuestion: 'Shay passed on this — who should pick it up?' },
   { _id: 'op-decision', title: 'Publish the taxonomy?', kind: 'decision', priority: 'high', status: 'needsHuman', humanQuestion: 'Should we publish F1–F8?' },
   { _id: 'op-plan', title: 'Week of 2026-09-21', kind: 'update', status: 'working', sourceKey: 'weekly-plan/2026-W39' },
 ]
 
 const FOLLOW_UP_CONTACTS = [
-  { _id: 'c-jane', name: 'Jane Doe', email: 'jane@mgb.org', organization: 'MGB', owner: 'juhan', status: 'responded', warmth: 'warm', followUpAt: '2026-09-18T14:00:00Z', interactions: [{ at: '2026-09-11T14:00:00Z', by: 'Juhan', statusAfter: 'responded' }] },
-  { _id: 'c-sam', name: 'sam.rivera@acme.org', email: 'sam.rivera@acme.org', organization: 'Acme', owner: 'Eric', status: 'contacted', warmth: 'cold', followUpAt: '2026-09-22T14:00:00Z', interactions: null },
-  { _id: 'c-3', name: 'Ada Park', email: 'ada@x.org', organization: 'X Health', owner: 'Juhan', status: 'contacted', warmth: 'warm', followUpAt: '2026-09-23T14:00:00Z', interactions: [] },
+  { _id: 'c-jane', name: 'Jane Doe', email: 'jane@mgb.org', organization: 'MGB', owner: 'jules', status: 'responded', warmth: 'warm', followUpAt: '2026-09-18T14:00:00Z', interactions: [{ at: '2026-09-11T14:00:00Z', by: 'Jules', statusAfter: 'responded' }] },
+  { _id: 'c-sam', name: 'sam.rivera@acme.org', email: 'sam.rivera@acme.org', organization: 'Acme', owner: 'Ezra', status: 'contacted', warmth: 'cold', followUpAt: '2026-09-22T14:00:00Z', interactions: null },
+  { _id: 'c-3', name: 'Ada Park', email: 'ada@x.org', organization: 'X Health', owner: 'Jules', status: 'contacted', warmth: 'warm', followUpAt: '2026-09-23T14:00:00Z', interactions: [] },
   { _id: 'c-4', name: 'Bo Chen 617-555-0123', email: 'bo@y.org', organization: 'Y Clinic', owner: '', status: 'meeting', warmth: 'hot', followUpAt: '2026-09-24T14:00:00Z', interactions: [] },
-  { _id: 'c-5', name: 'Cy Diaz', email: 'cy@z.org', organization: 'Z Labs', owner: 'Shirley', status: 'contacted', warmth: 'cool', followUpAt: '2026-09-25T14:00:00Z', interactions: [] },
+  { _id: 'c-5', name: 'Cy Diaz', email: 'cy@z.org', organization: 'Z Labs', owner: 'Shay', status: 'contacted', warmth: 'cool', followUpAt: '2026-09-25T14:00:00Z', interactions: [] },
 ]
 
 const RESEARCH = [
@@ -169,8 +169,8 @@ const CALL_SHEET_CONTACTS = [
 function digestData(overrides: Record<string, unknown> = {}) {
   return {
     operations: OPERATIONS,
-    // Eric's four hours are already spoken for this week.
-    owned: [{ ownerName: 'Eric', estimatedMinutes: 240, kind: 'outreach', priority: 'normal' }],
+    // Ezra's four hours are already spoken for this week.
+    owned: [{ ownerName: 'Ezra', estimatedMinutes: 240, kind: 'outreach', priority: 'normal' }],
     doneLastWeek: 3,
     availability: AVAILABILITY,
     research: RESEARCH,
@@ -191,11 +191,11 @@ function strategyLoad(now: Date = NOW) {
       status: 'responded',
       followUpAt: null,
       estimatedValue: null,
-      interactions: [{ at: '2026-09-15T15:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'responded' }],
+      interactions: [{ at: '2026-09-15T15:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'responded' }],
     },
   ]
   // Confirmed in August: stale, so the runway check-in is due.
-  const stored: StoredPosture = { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-01T00:00:00Z' } }
+  const stored: StoredPosture = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T00:00:00Z' } }
   const resolved = resolveRunwayPosture(stored, now)
   const runway = { stored, resolved, checkIn: runwayCheckIn(stored, now), summary: describeRunway(stored, now) }
   const thisMonth = summarizeOutreach(contacts, { ...monthWindow(now, 0), now })
@@ -271,7 +271,7 @@ async function commitRecord(record: PatchRecord): Promise<unknown> {
 
 const isTaskPatch = (record: PatchRecord) => !record.id.startsWith('marketingHeartbeat')
 const taskPatches = () => mocks.patches.filter(isTaskPatch)
-const ENV_KEYS = ['SLACK_BOT_TOKEN', 'SLACK_MARKETING_CHANNEL_ID', 'SLACK_CHANNEL_ID', 'MARKETING_PUBLIC_BASE_URL'] as const
+const ENV_KEYS = ['SLACK_BOT_TOKEN', 'SLACK_MARKETING_CHANNEL_ID', 'SLACK_CHANNEL_ID', 'MARKETING_PUBLIC_BASE_URL', 'MARKETING_TEAM_NAMES'] as const
 const saved: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>> = {}
 
 function digestRequest(query = '', body: Record<string, unknown> = {}) {
@@ -341,7 +341,7 @@ describe('answerMarketingTask', () => {
     store.tasks = [
       { _id: 'op-d', _rev: 'rev7', title: 'Publish the taxonomy?', ownerName: '', status: 'needsHuman', kind: 'decision', humanQuestion: 'Publish it?', activity: [] },
     ]
-    const result = await answerMarketingTask({ taskId: 'op-d', answer: 'Keep it internal.', personName: 'Juhan', slackUserId: 'UJUHAN' })
+    const result = await answerMarketingTask({ taskId: 'op-d', answer: 'Keep it internal.', personName: 'Jules', slackUserId: 'UJULES' })
     expect(result).toMatchObject({
       ok: true,
       changed: true,
@@ -352,7 +352,7 @@ describe('answerMarketingTask', () => {
     expect(record.id).toBe('op-d')
     expect(record.ops).toEqual(
       expect.arrayContaining([
-        ['set', expect.objectContaining({ humanResponse: 'Keep it internal.', status: 'queued', lastOutcome: 'Answered in Slack by Juhan' })],
+        ['set', expect.objectContaining({ humanResponse: 'Keep it internal.', status: 'queued', lastOutcome: 'Answered in Slack by Jules' })],
         ['ifRevisionId', 'rev7'],
       ]),
     )
@@ -374,7 +374,7 @@ describe('declineMarketingTask', () => {
   }
   const decline = async (
     task: Record<string, unknown> | null | Array<Record<string, unknown> | null>,
-    person: { personName: string; slackUserId?: string } = { personName: 'Eric', slackUserId: 'UERIC' },
+    person: { personName: string; slackUserId?: string } = { personName: 'Ezra', slackUserId: 'UEZRA' },
   ) => {
     store.tasks = Array.isArray(task) ? [...task] : [task]
     const result = await declineMarketingTask({ taskId: 'op-1', ...person })
@@ -386,32 +386,32 @@ describe('declineMarketingTask', () => {
   const appended = (record: PatchRecord | undefined) => opsNamed(record, 'insert').flatMap((op) => op[3] as Block[])
 
   it('clears the owner AND the stamped Slack id, asks who should pick it up — conditionally on the revision read', async () => {
-    const { result, record } = await decline({ ...TASK, ownerName: 'Eric', ownerSlackUserId: 'UERIC' })
+    const { result, record } = await decline({ ...TASK, ownerName: 'Ezra', ownerSlackUserId: 'UEZRA' })
     expect(result.ok).toBe(true)
     expect(setOf(record)).toMatchObject({
       ownerName: '',
       status: 'needsHuman',
-      humanQuestion: 'Eric passed on this — who should pick it up?',
-      lastOutcome: 'Declined in Slack by Eric',
+      humanQuestion: 'Ezra passed on this — who should pick it up?',
+      lastOutcome: 'Declined in Slack by Ezra',
     })
     expect(unsetOf(record)).toContain('ownerSlackUserId')
-    expect((setOf(record).activity as Block[]).at(-1)).toMatchObject({ action: 'Passed on in Slack', outcome: 'By Eric' })
+    expect((setOf(record).activity as Block[]).at(-1)).toMatchObject({ action: 'Passed on in Slack', outcome: 'By Ezra' })
     expect(opsNamed(record, 'ifRevisionId')[0][1]).toBe('rev1')
   })
 
   // Reviewer finding: the passer was excluded by the NAME parsed from the
-  // question, which is Slack's display name — so "Shirley Wu" was not matched
-  // to the roster's "Shirley", and was asked about the task she had just declined.
+  // question, which is Slack's display name — so "Shay Wu" was not matched
+  // to the roster's "Shay", and was asked about the task she had just declined.
   it('records the passer by Slack id and names them as the board does, whatever Slack calls them', async () => {
     const { result, record } = await decline(
-      { ...TASK, suggestedOwner: 'Shirley' },
-      { personName: 'Shirley Wu', slackUserId: 'USHIRLEY' },
+      { ...TASK, suggestedOwner: 'Shay' },
+      { personName: 'Shay Wu', slackUserId: 'USHAY' },
     )
     expect(result.ok).toBe(true)
-    expect(setOf(record).humanQuestion).toBe('Shirley passed on this — who should pick it up?')
+    expect(setOf(record).humanQuestion).toBe('Shay passed on this — who should pick it up?')
     expect(opsNamed(record, 'setIfMissing')[0][1]).toEqual({ askHistory: [] })
     const [entry] = appended(record)
-    expect(entry).toMatchObject({ slackUserId: 'USHIRLEY', kind: 'passed', week: WEEK, at: NOW.toISOString() })
+    expect(entry).toMatchObject({ slackUserId: 'USHAY', kind: 'passed', week: WEEK, at: NOW.toISOString() })
     expect(entry._key).toMatch(/^pass-/)
 
     // The next digest reads that entry — and does not ask her, even though
@@ -423,9 +423,9 @@ describe('declineMarketingTask', () => {
           title: 'Call MGB',
           kind: 'outreach',
           status: 'needsHuman',
-          suggestedOwner: 'Shirley',
+          suggestedOwner: 'Shay',
           // Written before the question used the board name: the parse cannot help.
-          humanQuestion: 'Shirley Wu passed on this — who should pick it up?',
+          humanQuestion: 'Shay Wu passed on this — who should pick it up?',
           askHistory: [entry],
         },
       ],
@@ -433,29 +433,29 @@ describe('declineMarketingTask', () => {
     })
     const body = await dryRun()
     expect(body.asks).toHaveLength(1)
-    expect(body.asks[0].slackUserId).not.toBe('USHIRLEY')
-    expect(json(body.blocks)).not.toContain('<@USHIRLEY>')
+    expect(body.asks[0].slackUserId).not.toBe('USHAY')
+    expect(json(body.blocks)).not.toContain('<@USHAY>')
   })
 
   it('appends nothing when that person already passed on this task', async () => {
-    const entry = askHistoryEntry({ taskId: 'op-1', slackUserId: 'UERIC', at: 'earlier', week: LAST_WEEK, kind: 'passed' })
+    const entry = askHistoryEntry({ taskId: 'op-1', slackUserId: 'UEZRA', at: 'earlier', week: LAST_WEEK, kind: 'passed' })
     const { result, record } = await decline({
       ...TASK,
       status: 'needsHuman',
-      humanQuestion: 'Juhan passed on this — who should pick it up?',
+      humanQuestion: 'Jules passed on this — who should pick it up?',
       askKeys: [entry._key],
     })
     expect(result.ok).toBe(true)
     expect(opsNamed(record, 'insert')).toHaveLength(0)
-    expect(setOf(record).humanQuestion).toBe('Eric passed on this — who should pick it up?')
+    expect(setOf(record).humanQuestion).toBe('Ezra passed on this — who should pick it up?')
   })
 
   it('is a no-op when the same person presses twice (a Slack retry)', async () => {
-    const entry = askHistoryEntry({ taskId: 'op-1', slackUserId: 'UERIC', at: 'earlier', week: WEEK, kind: 'passed' })
+    const entry = askHistoryEntry({ taskId: 'op-1', slackUserId: 'UEZRA', at: 'earlier', week: WEEK, kind: 'passed' })
     const { result } = await decline({
       ...TASK,
       status: 'needsHuman',
-      humanQuestion: 'Eric passed on this — who should pick it up?',
+      humanQuestion: 'Ezra passed on this — who should pick it up?',
       askKeys: [entry._key],
     })
     expect(result).toMatchObject({ ok: true, message: 'Already passed on.' })
@@ -465,15 +465,15 @@ describe('declineMarketingTask', () => {
   // Reviewer finding: "Hand it back" is on a card the whole channel sees, and
   // anybody could clear a colleague's name off their work.
   it('lets only the owner hand an owned task back', async () => {
-    const owned = { ...TASK, ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN' }
-    const { result } = await decline(owned, { personName: 'Eric', slackUserId: 'UERIC' })
-    expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/Juhan’s — only they can hand it back/) })
+    const owned = { ...TASK, ownerName: 'Jules', ownerSlackUserId: 'UJULES' }
+    const { result } = await decline(owned, { personName: 'Ezra', slackUserId: 'UEZRA' })
+    expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/Jules’s — only they can hand it back/) })
     expect(taskPatches()).toHaveLength(0)
 
     // The owner, under whatever Slack calls him, is recognised by the roster's id.
-    const mine = await decline(owned, { personName: 'Juhan Sonin', slackUserId: 'UJUHAN' })
+    const mine = await decline(owned, { personName: 'Jules Soren', slackUserId: 'UJULES' })
     expect(mine.result.ok).toBe(true)
-    expect(setOf(mine.record)).toMatchObject({ ownerName: '', humanQuestion: 'Juhan passed on this — who should pick it up?' })
+    expect(setOf(mine.record)).toMatchObject({ ownerName: '', humanQuestion: 'Jules passed on this — who should pick it up?' })
   })
 
   // Reviewer finding: the pass was a read-then-write with no revision check,
@@ -483,11 +483,11 @@ describe('declineMarketingTask', () => {
       throw conflict()
     })
     const { result } = await decline(
-      [TASK, { ...TASK, _rev: 'rev2', ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN' }],
-      { personName: 'Eric', slackUserId: 'UERIC' },
+      [TASK, { ...TASK, _rev: 'rev2', ownerName: 'Jules', ownerSlackUserId: 'UJULES' }],
+      { personName: 'Ezra', slackUserId: 'UEZRA' },
     )
-    // Juhan took it in the meantime: Eric's "not me" no longer clears anything.
-    expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/Juhan’s/) })
+    // Jules took it in the meantime: Ezra's "not me" no longer clears anything.
+    expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/Jules’s/) })
     expect(taskPatches()).toHaveLength(1)
     expect(opsNamed(taskPatches()[0], 'ifRevisionId')[0][1]).toBe('rev1')
   })
@@ -505,8 +505,8 @@ describe('declineMarketingTask', () => {
   })
 
   it('replaces an earlier "passed on this" with the latest person to pass', async () => {
-    const { record } = await decline({ ...TASK, status: 'needsHuman', kind: 'content', humanQuestion: 'Shirley passed on this — who should pick it up?' })
-    expect(setOf(record).humanQuestion).toBe('Eric passed on this — who should pick it up?')
+    const { record } = await decline({ ...TASK, status: 'needsHuman', kind: 'content', humanQuestion: 'Shay passed on this — who should pick it up?' })
+    expect(setOf(record).humanQuestion).toBe('Ezra passed on this — who should pick it up?')
   })
 
   it('refuses to drag a finished task back open, and writes nothing', async () => {
@@ -596,9 +596,9 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
     records.clear()
     transactions = []
     openTasks = 2
-    // Juhan's record carries everything the old createOrReplace used to wipe.
-    seed({ ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available', weeklyHours: 4, note: 'Calls on Tuesdays' })
-    seed({ ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' })
+    // Jules's record carries everything the old createOrReplace used to wipe.
+    seed({ ownerName: 'Jules', slackUserId: 'UJULES', status: 'available', weeklyHours: 4, note: 'Calls on Tuesdays' })
+    seed({ ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'available' })
     mocks.outreach.fetch.mockImplementation(async (query: string, params?: { id?: string; name?: string }) => {
       if (query === AVAILABILITY_WRITE_QUERY) {
         const doc = records.get(String(params?.id))
@@ -630,22 +630,22 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
   })
 
   const away = (input: Partial<Parameters<typeof setMarketingAvailability>[0]> = {}) =>
-    setMarketingAvailability({ personName: 'Juhan Sonin', slackUserId: 'UJUHAN', status: 'away', now: NOW, ...input })
+    setMarketingAvailability({ personName: 'Jules Soren', slackUserId: 'UJULES', status: 'away', now: NOW, ...input })
 
   it('patches status and dates onto the presser’s own record, and keeps the link, the hours and the note', async () => {
     const result = await away()
-    expect(result).toMatchObject({ ok: true, changed: true, ownerName: 'Juhan', status: 'away', from: '2026-09-21', until: '2026-09-27', openTasks: 2 })
+    expect(result).toMatchObject({ ok: true, changed: true, ownerName: 'Jules', status: 'away', from: '2026-09-21', until: '2026-09-27', openTasks: 2 })
     expect(result.message).toBe(
       'You’re away Mon 21 – Sun 27 Sep. I’ll leave you out of this week’s plan, and your 2 open tasks will show as needing someone.',
     )
     // The room's line for the same write: third person, a real mention, no pronoun guessed from a name.
-    expect(result.receipt).toBe(':palm_tree: <@UJUHAN> is away Mon 21 – Sun 27 Sep — I’ll leave them out of this week’s plan.')
+    expect(result.receipt).toBe(':palm_tree: <@UJULES> is away Mon 21 – Sun 27 Sep — I’ll leave them out of this week’s plan.')
     const [patch] = availabilityPatches()
-    expect(patch.id).toBe(idFor('Juhan'))
+    expect(patch.id).toBe(idFor('Jules'))
     expect(opsOf(patch, 'set')[0]).toEqual({ status: 'away', from: '2026-09-21', until: '2026-09-27', updatedAt: NOW.toISOString() })
     expect(opsOf(patch, 'ifRevisionId')[0]).toBe('r1')
     // Nothing that identifies or allocates the person is touched.
-    expect(record('Juhan')).toMatchObject({ ownerName: 'Juhan', slackUserId: 'UJUHAN', weeklyHours: 4, note: 'Calls on Tuesdays' })
+    expect(record('Jules')).toMatchObject({ ownerName: 'Jules', slackUserId: 'UJULES', weeklyHours: 4, note: 'Calls on Tuesdays' })
     expect(JSON.stringify(opsOf(patch, 'set'))).not.toMatch(/slackUserId|ownerName|weeklyHours|note/)
     expect(result.message).not.toMatch(/\d{4}-\d{2}-\d{2}/)
   })
@@ -683,11 +683,11 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
   })
 
   it('refuses a namesake: a display name matching someone else’s linked name books nothing', async () => {
-    const result = await away({ personName: 'Juhan', slackUserId: 'UIMPOSTOR' })
+    const result = await away({ personName: 'Jules', slackUserId: 'UIMPOSTOR' })
     expect(result.ok).toBe(false)
     expect(result.message).toMatch(/^Couldn’t tell which name on the team list is yours — nothing changed\./)
     expect(availabilityPatches()).toHaveLength(0)
-    expect(record('Juhan')?.status).toBe('available')
+    expect(record('Jules')?.status).toBe('available')
   })
 
   it('refuses a record that shares the id’s slug but is somebody else’s', async () => {
@@ -707,7 +707,7 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
   it('re-reads once on a conflict, and never overwrites what landed in between', async () => {
     mocks.commit.mockImplementationOnce(async () => {
       // Somebody set an allocation between the read and the write.
-      const doc = record('Juhan')!
+      const doc = record('Jules')!
       doc.weeklyHours = 2
       bump(doc)
       throw conflict()
@@ -717,7 +717,7 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
     const patches = availabilityPatches()
     expect(patches).toHaveLength(2)
     expect(opsOf(patches[1], 'ifRevisionId')[0]).toBe('r2')
-    expect(record('Juhan')).toMatchObject({ status: 'away', weeklyHours: 2 })
+    expect(record('Jules')).toMatchObject({ status: 'away', weeklyHours: 2 })
   })
 
   it('creates a record for someone with work on the board but no record yet, under the name the board uses', async () => {
@@ -737,7 +737,7 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
   // The record holds ONE range, and the press used to overwrite it whatever it held.
   describe('never cuts booked time off short', () => {
     it('changes nothing for someone already away for longer — pressed on Thursday, next week stays booked', async () => {
-      Object.assign(record('Juhan')!, { status: 'away', from: '2026-09-14', until: '2026-10-04' })
+      Object.assign(record('Jules')!, { status: 'away', from: '2026-09-14', until: '2026-10-04' })
       const result = await away({ now: new Date('2026-09-24T14:00:00Z') })
       expect(result).toMatchObject({ ok: true, changed: false, from: '2026-09-14', until: '2026-10-04' })
       expect(result.message).toBe('You’re already down as away Mon 14 Sep – Sun 4 Oct — nothing changed.')
@@ -752,34 +752,34 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
       const again = await away({ now: new Date('2026-09-23T14:00:00Z') })
       expect(again).toMatchObject({ ok: true, changed: false })
       expect(availabilityPatches()).toHaveLength(0)
-      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-09-27' })
+      expect(record('Jules')).toMatchObject({ from: '2026-09-21', until: '2026-09-27' })
     })
 
     it('joins time off it meets end to start, and Undo puts back exactly what was booked', async () => {
-      Object.assign(record('Juhan')!, { status: 'away', from: '2026-09-28', until: '2026-10-04' })
+      Object.assign(record('Jules')!, { status: 'away', from: '2026-09-28', until: '2026-10-04' })
       const result = await away()
       expect(result).toMatchObject({ ok: true, changed: true, from: '2026-09-21', until: '2026-10-04' })
       expect(result.message).toBe(
         'You’re away Mon 21 Sep – Sun 4 Oct (joined up with the time off you’d already booked). I’ll leave you out of those weeks’ plans, and your 2 open tasks will show as needing someone.',
       )
       expect(result.message).not.toContain('replaces')
-      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-10-04' })
-      await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
-      expect(record('Juhan')).toMatchObject({ status: 'away', from: '2026-09-28', until: '2026-10-04' })
+      expect(record('Jules')).toMatchObject({ from: '2026-09-21', until: '2026-10-04' })
+      await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJULES', now: NOW })
+      expect(record('Jules')).toMatchObject({ status: 'away', from: '2026-09-28', until: '2026-10-04' })
     })
 
     it('joins time off it overlaps', async () => {
-      Object.assign(record('Juhan')!, { status: 'away', from: '2026-09-24', until: '2026-10-02' })
+      Object.assign(record('Jules')!, { status: 'away', from: '2026-09-24', until: '2026-10-02' })
       const result = await away()
-      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-10-02' })
+      expect(record('Jules')).toMatchObject({ from: '2026-09-21', until: '2026-10-02' })
       expect(result.message).toMatch(/^You’re away Mon 21 Sep – Fri 2 Oct \(joined up/)
     })
 
     it('replaces time off that has already ended without a word — it is history, not a booking', async () => {
-      Object.assign(record('Juhan')!, { status: 'away', from: '2026-09-01', until: '2026-09-04' })
+      Object.assign(record('Jules')!, { status: 'away', from: '2026-09-01', until: '2026-09-04' })
       const result = await away()
       expect(result.message).not.toContain('replaces')
-      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-09-27' })
+      expect(record('Jules')).toMatchObject({ from: '2026-09-21', until: '2026-09-27' })
     })
   })
 
@@ -792,28 +792,29 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
   })
 
   describe('a name the board does not know', () => {
-    it('is refused, not booked as a second person — the unlinked Juhan whose Slack says "Juhan Sonin"', async () => {
-      store.availability = [{ ownerName: 'Juhan', status: 'available' }]
-      records.get(idFor('Juhan'))!.slackUserId = undefined
+    it('is refused, not booked as a second person — the unlinked Jules whose Slack says "Jules Soren"', async () => {
+      store.availability = [{ ownerName: 'Jules', status: 'available' }]
+      records.get(idFor('Jules'))!.slackUserId = undefined
       openTasks = 0
-      const result = await away({ personName: 'Juhan Sonin', slackUserId: 'UJUHAN' })
+      const result = await away({ personName: 'Jules Soren', slackUserId: 'UJULES' })
       expect(result).toEqual({
         ok: false,
         message:
-          'Couldn’t tell which name on the team list is yours — nothing changed. Nothing is filed under “Juhan Sonin”. If your work is filed under another name, pick it in the Monday plan’s one-time setup.',
+          'Couldn’t tell which name on the team list is yours — nothing changed. Nothing is filed under “Jules Soren”. If your work is filed under another name, pick it in the Monday plan’s one-time setup.',
       })
       expect(mocks.outreach.createIfNotExists).not.toHaveBeenCalled()
       expect(availabilityPatches()).toHaveLength(0)
-      expect(record('Juhan Sonin')).toBeUndefined()
+      expect(record('Jules Soren')).toBeUndefined()
     })
 
     // Somebody on the marketing team who owns nothing yet was refused and told
     // to use a setup that listed only people who already owned work.
     it('books a marketing teammate who owns nothing yet, under the team’s name for them', async () => {
       openTasks = 0
-      const result = await away({ personName: 'Jon', slackUserId: 'UJON' })
-      expect(result).toMatchObject({ ok: true, changed: true, ownerName: 'Jon', status: 'away' })
-      expect(record('Jon')).toMatchObject({ ownerName: 'Jon', status: 'away' })
+      process.env.MARKETING_TEAM_NAMES = 'Jules,Shay,Ezra,Joss'   // the deployment's list; the code has none (task_1008)
+      const result = await away({ personName: 'Joss', slackUserId: 'UJOSS' })
+      expect(result).toMatchObject({ ok: true, changed: true, ownerName: 'Joss', status: 'away' })
+      expect(record('Joss')).toMatchObject({ ownerName: 'Joss', status: 'away' })
     })
 
     it('is refused when the board’s work cannot be counted to prove it is somebody', async () => {
@@ -827,16 +828,16 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
   describe('Undo', () => {
     it('puts the record back exactly as it was — the link, the hours and the note never moved', async () => {
       const result = await away()
-      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJULES', now: NOW })
       expect(undo).toEqual({
         ok: true,
         changed: true,
         message: 'Undone — you’re available again.',
         // What the room's receipt is redrawn as: struck through, nothing left to press.
-        receipt: '~<@UJUHAN> away Mon 21 – Sun 27 Sep~ — undone by <@UJUHAN>.',
+        receipt: '~<@UJULES> away Mon 21 – Sun 27 Sep~ — undone by <@UJULES>.',
       })
-      const doc = record('Juhan')!
-      expect(doc).toMatchObject({ status: 'available', slackUserId: 'UJUHAN', weeklyHours: 4, note: 'Calls on Tuesdays' })
+      const doc = record('Jules')!
+      expect(doc).toMatchObject({ status: 'available', slackUserId: 'UJULES', weeklyHours: 4, note: 'Calls on Tuesdays' })
       expect(doc).not.toHaveProperty('from')
       expect(doc).not.toHaveProperty('until')
       const last = availabilityPatches().at(-1)
@@ -844,14 +845,14 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
     })
 
     it('restores an earlier holiday rather than clearing it', async () => {
-      Object.assign(record('Juhan')!, { status: 'away', from: '2026-10-05', until: '2026-10-09' })
+      Object.assign(record('Jules')!, { status: 'away', from: '2026-10-05', until: '2026-10-09' })
       const result = await away()
       // The record holds one range: a separate booking is replaced — out loud, never silently.
       expect(result.message).toMatch(/ This replaces your time off Mon 5 – Fri 9 Oct\.$/)
-      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJULES', now: NOW })
       expect(undo.message).toBe('Undone — you’re away Mon 5 – Fri 9 Oct again.')
-      expect(undo.receipt).toBe('~<@UJUHAN> away Mon 21 – Sun 27 Sep~ — undone by <@UJUHAN>. Back to away Mon 5 – Fri 9 Oct.')
-      expect(record('Juhan')).toMatchObject({ status: 'away', from: '2026-10-05', until: '2026-10-09', weeklyHours: 4 })
+      expect(undo.receipt).toBe('~<@UJULES> away Mon 21 – Sun 27 Sep~ — undone by <@UJULES>. Back to away Mon 5 – Fri 9 Oct.')
+      expect(record('Jules')).toMatchObject({ status: 'away', from: '2026-10-05', until: '2026-10-09', weeklyHours: 4 })
     })
 
     it('removes the record the press created — in one transaction with a revision check', async () => {
@@ -876,10 +877,10 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
     it('is only for the person who set it — the button sits in a thread the room can see', async () => {
       const result = await away()
       mocks.patches.length = 0
-      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UERIC', now: NOW })
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UEZRA', now: NOW })
       expect(undo).toMatchObject({ ok: false, message: expect.stringMatching(/^Couldn’t undo that — nothing changed\. Only the person/) })
       expect(availabilityPatches()).toHaveLength(0)
-      expect(record('Juhan')?.status).toBe('away')
+      expect(record('Jules')?.status).toBe('away')
     })
 
     it('never undoes a later change', async () => {
@@ -887,18 +888,18 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
       // Next week, on top of this week: joined into one range (see below).
       await away({ from: '2026-09-28', until: '2026-10-04' })
       mocks.patches.length = 0
-      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJULES', now: NOW })
       expect(undo.ok).toBe(false)
       expect(undo.message).toContain('`Marqueta, away next week`')
       expect(availabilityPatches()).toHaveLength(0)
-      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-10-04' })
+      expect(record('Jules')).toMatchObject({ from: '2026-09-21', until: '2026-10-04' })
     })
 
     it('pressed twice, says it is already undone and writes nothing more', async () => {
       const result = await away()
-      await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJULES', now: NOW })
       mocks.patches.length = 0
-      const again = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      const again = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJULES', now: NOW })
       expect(again).toEqual({ ok: true, changed: false, message: 'Already undone.' })
       expect(availabilityPatches()).toHaveLength(0)
 
@@ -911,15 +912,15 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
     })
 
     it('refuses a value it cannot read', async () => {
-      expect(await restoreMarketingAvailability({ undo: 'not json', slackUserId: 'UJUHAN', now: NOW })).toMatchObject({ ok: false })
+      expect(await restoreMarketingAvailability({ undo: 'not json', slackUserId: 'UJULES', now: NOW })).toMatchObject({ ok: false })
     })
   })
 })
 
 describe('the availability Undo value', () => {
   const undo: AvailabilityUndo = {
-    ownerName: 'Juhan',
-    slackUserId: 'UJUHAN',
+    ownerName: 'Jules',
+    slackUserId: 'UJULES',
     wrote: { status: 'away', from: '2026-09-21', until: '2026-09-27', weeklyHours: null },
     prior: { status: 'reduced', from: '2026-09-01', until: '', weeklyHours: 2 },
   }
@@ -955,8 +956,8 @@ describe('linkMarketingIdentity', () => {
     records.clear()
     steps = []
     hideRecordOnce = false
-    records.set(availabilityDocId('Juhan'), { _id: availabilityDocId('Juhan'), _rev: 'r1', ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'away' })
-    records.set(availabilityDocId('Shirley'), { _id: availabilityDocId('Shirley'), _rev: 'r1', ownerName: 'Shirley', status: 'away', from: '2026-09-21' })
+    records.set(availabilityDocId('Jules'), { _id: availabilityDocId('Jules'), _rev: 'r1', ownerName: 'Jules', slackUserId: 'UJULES', status: 'away' })
+    records.set(availabilityDocId('Shay'), { _id: availabilityDocId('Shay'), _rev: 'r1', ownerName: 'Shay', status: 'away', from: '2026-09-21' })
     mocks.outreach.fetch.mockImplementation(async (query: string, params?: { id?: string; uid?: string }) => {
       if (query === AVAILABILITY_WRITE_QUERY) {
         if (hideRecordOnce) {
@@ -1015,47 +1016,47 @@ describe('linkMarketingIdentity', () => {
   const linkedAs = (name: string) => `You’re linked as *${name}* — I’ll @-mention you on your own tasks from now on.`
 
   it('links an unlinked name — only the Slack id, on the revision it read, keeping the holiday already booked', async () => {
-    const result = await linkMarketingIdentity({ ownerName: 'Shirley', slackUserId: 'USHIRLEY' })
-    expect(result).toEqual({ ok: true, message: linkedAs('Shirley') })
+    const result = await linkMarketingIdentity({ ownerName: 'Shay', slackUserId: 'USHAY' })
+    expect(result).toEqual({ ok: true, message: linkedAs('Shay') })
     const patch = steps.find((step) => step[0] === 'patch')!
     const ops = patch[2] as Op[]
     // setIfMissing: an id that landed first is never overwritten.
-    expect(ops.find((op) => op[0] === 'setIfMissing')?.[1]).toEqual({ slackUserId: 'USHIRLEY' })
+    expect(ops.find((op) => op[0] === 'setIfMissing')?.[1]).toEqual({ slackUserId: 'USHAY' })
     expect(ops.find((op) => op[0] === 'set')?.[1]).toEqual({ updatedAt: expect.any(String) })
     expect(ops.find((op) => op[0] === 'ifRevisionId')?.[1]).toBe('r1')
-    expect(records.get(availabilityDocId('Shirley'))).toMatchObject({ slackUserId: 'USHIRLEY', status: 'away', from: '2026-09-21' })
+    expect(records.get(availabilityDocId('Shay'))).toMatchObject({ slackUserId: 'USHAY', status: 'away', from: '2026-09-21' })
   })
 
   it('never moves a name linked to someone else onto the presser (an old digest’s select)', async () => {
-    const result = await linkMarketingIdentity({ ownerName: 'Juhan', slackUserId: 'UIMPOSTOR' })
+    const result = await linkMarketingIdentity({ ownerName: 'Jules', slackUserId: 'UIMPOSTOR' })
     expect(result.ok).toBe(false)
-    expect(result.message).toMatch(/^Couldn’t link you as Juhan — nothing changed\./)
+    expect(result.message).toMatch(/^Couldn’t link you as Jules — nothing changed\./)
     expect(steps).toHaveLength(0)
   })
 
   it('is a no-op for someone already linked to that name', async () => {
-    expect(await linkMarketingIdentity({ ownerName: 'Juhan', slackUserId: 'UJUHAN' })).toEqual({ ok: true, message: linkedAs('Juhan') })
+    expect(await linkMarketingIdentity({ ownerName: 'Jules', slackUserId: 'UJULES' })).toEqual({ ok: true, message: linkedAs('Jules') })
     expect(steps).toHaveLength(0)
   })
 
   it('never links one account to a second name — they would own two people’s work', async () => {
-    const result = await linkMarketingIdentity({ ownerName: 'Shirley', slackUserId: 'UJUHAN' })
-    expect(result).toEqual({ ok: false, message: 'Couldn’t link you as Shirley — nothing changed. You’re already linked as Juhan.' })
+    const result = await linkMarketingIdentity({ ownerName: 'Shay', slackUserId: 'UJULES' })
+    expect(result).toEqual({ ok: false, message: 'Couldn’t link you as Shay — nothing changed. You’re already linked as Jules.' })
     expect(steps).toHaveLength(0)
-    expect(records.get(availabilityDocId('Shirley'))).not.toHaveProperty('slackUserId')
+    expect(records.get(availabilityDocId('Shay'))).not.toHaveProperty('slackUserId')
   })
 
   it('creates the record for a name with none, and tells only the first of two simultaneous presses it is theirs', async () => {
-    const first = await linkMarketingIdentity({ ownerName: 'Eric', slackUserId: 'UERIC' })
-    expect(first).toEqual({ ok: true, message: linkedAs('Eric') })
-    expect(records.get(availabilityDocId('Eric'))).toMatchObject({ ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' })
+    const first = await linkMarketingIdentity({ ownerName: 'Ezra', slackUserId: 'UEZRA' })
+    expect(first).toEqual({ ok: true, message: linkedAs('Ezra') })
+    expect(records.get(availabilityDocId('Ezra'))).toMatchObject({ ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'available' })
 
     // A second press that read "no record yet" before the first landed.
     steps = []
     hideRecordOnce = true
-    const second = await linkMarketingIdentity({ ownerName: 'Eric', slackUserId: 'UOTHER' })
-    expect(second).toEqual({ ok: false, message: 'Couldn’t link you as Eric — nothing changed. Someone else linked that name just now.' })
-    expect(records.get(availabilityDocId('Eric'))?.slackUserId).toBe('UERIC')
+    const second = await linkMarketingIdentity({ ownerName: 'Ezra', slackUserId: 'UOTHER' })
+    expect(second).toEqual({ ok: false, message: 'Couldn’t link you as Ezra — nothing changed. Someone else linked that name just now.' })
+    expect(records.get(availabilityDocId('Ezra'))?.slackUserId).toBe('UEZRA')
   })
 
   it('escapes a name that would otherwise be markup', async () => {
@@ -1068,7 +1069,7 @@ describe('claim and "Not me" refuse a namesake', () => {
   it('writes nothing for a presser whose display name is someone else’s linked name', async () => {
     store.tasks = [{ _id: 'op-1', _rev: 'rev1', title: 'Call MGB', ownerName: '', status: 'queued', kind: 'outreach', activity: [] }]
     for (const run of [claimMarketingTask, declineMarketingTask]) {
-      const result = await run({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UIMPOSTOR' })
+      const result = await run({ taskId: 'op-1', personName: 'Ezra', slackUserId: 'UIMPOSTOR' })
       expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/which name on the team list is yours/) })
     }
     expect(taskPatches()).toHaveLength(0)
@@ -1077,40 +1078,40 @@ describe('claim and "Not me" refuse a namesake', () => {
 
 // The legacy Monday plan's "I’ll take it" / "Take it over" stay in the channel for weeks.
 describe('claimMarketingTask takes a task only as its card showed it', () => {
-  const owned = () => ({ _id: 'op-1', _rev: 'rev1', title: 'Call MGB', ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN', status: 'queued', kind: 'outreach', activity: [] })
+  const owned = () => ({ _id: 'op-1', _rev: 'rev1', title: 'Call MGB', ownerName: 'Jules', ownerSlackUserId: 'UJULES', status: 'queued', kind: 'outreach', activity: [] })
   const setOf = (record: PatchRecord | undefined) => (record?.ops.find((op) => op[0] === 'set')?.[1] || {}) as Record<string, unknown>
 
   it('refuses, and writes nothing, when an unowned card’s task has been taken since', async () => {
     store.tasks = [owned()]
-    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UERIC', expectedOwner: '' })
-    expect(result).toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
+    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Ezra', slackUserId: 'UEZRA', expectedOwner: '' })
+    expect(result).toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Jules already has it.' })
     expect(taskPatches()).toHaveLength(0)
   })
 
   it('refuses a "Take it over" once someone else has it — never from whoever covered it first', async () => {
     store.tasks = [owned()]
-    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Shirley', slackUserId: 'USHIRLEY', expectedOwner: 'Eric' })
-    expect(result).toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
+    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Shay', slackUserId: 'USHAY', expectedOwner: 'Ezra' })
+    expect(result).toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Jules already has it.' })
     expect(taskPatches()).toHaveLength(0)
   })
 
-  // Never an away cover: Juhan is not away, and "Take it over" still takes it.
+  // Never an away cover: Jules is not away, and "Take it over" still takes it.
   it('takes it over while it is still the owner the card named, and returns the task to redraw', async () => {
     store.tasks = [owned()]
-    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UERIC', expectedOwner: 'Juhan' })
-    expect(result).toMatchObject({ ok: true, changed: true, task: { _id: 'op-1', ownerName: 'Eric', slackUserId: 'UERIC' } })
-    expect(setOf(taskPatches()[0])).toMatchObject({ ownerName: 'Eric', ownerSlackUserId: 'UERIC' })
+    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Ezra', slackUserId: 'UEZRA', expectedOwner: 'Jules' })
+    expect(result).toMatchObject({ ok: true, changed: true, task: { _id: 'op-1', ownerName: 'Ezra', slackUserId: 'UEZRA' } })
+    expect(setOf(taskPatches()[0])).toMatchObject({ ownerName: 'Ezra', ownerSlackUserId: 'UEZRA' })
   })
 
   it('without a card to go by, is the old unconditional take-over', async () => {
     store.tasks = [owned()]
-    await expect(claimMarketingTask({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UERIC' })).resolves.toMatchObject({ ok: true })
+    await expect(claimMarketingTask({ taskId: 'op-1', personName: 'Ezra', slackUserId: 'UEZRA' })).resolves.toMatchObject({ ok: true })
   })
 
   it('never makes an unlinked presser the owner under their Slack display name', async () => {
     store.tasks = [{ ...owned(), ownerName: '', ownerSlackUserId: '' }]
-    store.availability = [{ ownerName: 'Juhan', status: 'available' }]
-    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Juhan Sonin', slackUserId: 'UJUHAN', expectedOwner: '' })
+    store.availability = [{ ownerName: 'Jules', status: 'available' }]
+    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Jules Soren', slackUserId: 'UJULES', expectedOwner: '' })
     expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/which name on the team list is yours/) })
     expect(taskPatches()).toHaveLength(0)
   })

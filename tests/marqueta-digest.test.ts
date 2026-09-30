@@ -159,29 +159,29 @@ function phoneLines(blocks: Block[]): string[] {
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
 const AVAILABILITY = [
-  { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available', weeklyHours: null },
-  { ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' },
-  { ownerName: 'Shirley', slackUserId: 'USHIRLEY', status: 'available' },
+  { ownerName: 'Jules', slackUserId: 'UJULES', status: 'available', weeklyHours: null },
+  { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'available' },
+  { ownerName: 'Shay', slackUserId: 'USHAY', status: 'available' },
 ]
 
 const OPERATIONS = [
-  { _id: 'op-call-mgb', title: 'Call MGB about the pilot', kind: 'outreach', priority: 'high', status: 'queued', suggestedOwner: 'Juhan', estimatedMinutes: 30, askHistory: null },
-  { _id: 'op-price', title: 'Price bands <5% & co', kind: 'outreach', priority: 'normal', status: 'queued', askHistory: askedBefore('UJUHAN', 'UERIC') },
-  // Owned by Eric, but carrying the id of whoever last claimed it in Slack.
-  { _id: 'op-eric', title: 'Follow the MEDITECH thread', kind: 'outreach', priority: 'normal', status: 'working', ownerName: 'Eric', ownerSlackUserId: 'USTALE' },
+  { _id: 'op-call-mgb', title: 'Call MGB about the pilot', kind: 'outreach', priority: 'high', status: 'queued', suggestedOwner: 'Jules', estimatedMinutes: 30, askHistory: null },
+  { _id: 'op-price', title: 'Price bands <5% & co', kind: 'outreach', priority: 'normal', status: 'queued', askHistory: askedBefore('UJULES', 'UEZRA') },
+  // Owned by Ezra, but carrying the id of whoever last claimed it in Slack.
+  { _id: 'op-ezra', title: 'Follow the MEDITECH thread', kind: 'outreach', priority: 'normal', status: 'working', ownerName: 'Ezra', ownerSlackUserId: 'USTALE' },
   { _id: 'op-post', title: 'Write the pre-mortem post', kind: 'content', priority: 'normal', status: 'queued', estimatedMinutes: 60 },
-  // Shirley pressed "Not me" on this one.
-  { _id: 'op-passed', title: 'Draft the kit email', kind: 'content', priority: 'normal', status: 'needsHuman', suggestedOwner: 'Shirley', estimatedMinutes: 20, humanQuestion: 'Shirley passed on this — who should pick it up?' },
+  // Shay pressed "Not me" on this one.
+  { _id: 'op-passed', title: 'Draft the kit email', kind: 'content', priority: 'normal', status: 'needsHuman', suggestedOwner: 'Shay', estimatedMinutes: 20, humanQuestion: 'Shay passed on this — who should pick it up?' },
   { _id: 'op-decision', title: 'Publish the taxonomy?', kind: 'decision', priority: 'high', status: 'needsHuman', humanQuestion: 'Should we publish F1–F8?' },
   { _id: 'op-plan', title: 'Week of 2026-09-21', kind: 'update', status: 'working', sourceKey: 'weekly-plan/2026-W39' },
 ]
 
 const FOLLOW_UP_CONTACTS = [
-  { _id: 'c-jane', name: 'Jane Doe', email: 'jane@mgb.org', organization: 'MGB', owner: 'juhan', status: 'responded', warmth: 'warm', followUpAt: '2026-09-18T14:00:00Z', interactions: [{ at: '2026-09-11T14:00:00Z', by: 'Juhan', statusAfter: 'responded' }] },
-  { _id: 'c-sam', name: 'sam.rivera@acme.org', email: 'sam.rivera@acme.org', organization: 'Acme', owner: 'Eric', status: 'contacted', warmth: 'cold', followUpAt: '2026-09-22T14:00:00Z', interactions: null },
-  { _id: 'c-3', name: 'Ada Park', email: 'ada@x.org', organization: 'X Health', owner: 'Juhan', status: 'contacted', warmth: 'warm', followUpAt: '2026-09-23T14:00:00Z', interactions: [] },
+  { _id: 'c-jane', name: 'Jane Doe', email: 'jane@mgb.org', organization: 'MGB', owner: 'jules', status: 'responded', warmth: 'warm', followUpAt: '2026-09-18T14:00:00Z', interactions: [{ at: '2026-09-11T14:00:00Z', by: 'Jules', statusAfter: 'responded' }] },
+  { _id: 'c-sam', name: 'sam.rivera@acme.org', email: 'sam.rivera@acme.org', organization: 'Acme', owner: 'Ezra', status: 'contacted', warmth: 'cold', followUpAt: '2026-09-22T14:00:00Z', interactions: null },
+  { _id: 'c-3', name: 'Ada Park', email: 'ada@x.org', organization: 'X Health', owner: 'Jules', status: 'contacted', warmth: 'warm', followUpAt: '2026-09-23T14:00:00Z', interactions: [] },
   { _id: 'c-4', name: 'Bo Chen 617-555-0123', email: 'bo@y.org', organization: 'Y Clinic', owner: '', status: 'meeting', warmth: 'hot', followUpAt: '2026-09-24T14:00:00Z', interactions: [] },
-  { _id: 'c-5', name: 'Cy Diaz', email: 'cy@z.org', organization: 'Z Labs', owner: 'Shirley', status: 'contacted', warmth: 'cool', followUpAt: '2026-09-25T14:00:00Z', interactions: [] },
+  { _id: 'c-5', name: 'Cy Diaz', email: 'cy@z.org', organization: 'Z Labs', owner: 'Shay', status: 'contacted', warmth: 'cool', followUpAt: '2026-09-25T14:00:00Z', interactions: [] },
 ]
 
 const RESEARCH = [
@@ -205,8 +205,8 @@ const CALL_SHEET_CONTACTS = [
 function digestData(overrides: Record<string, unknown> = {}) {
   return {
     operations: OPERATIONS,
-    // Eric's four hours are already spoken for this week.
-    owned: [{ ownerName: 'Eric', estimatedMinutes: 240, kind: 'outreach', priority: 'normal' }],
+    // Ezra's four hours are already spoken for this week.
+    owned: [{ ownerName: 'Ezra', estimatedMinutes: 240, kind: 'outreach', priority: 'normal' }],
     doneLastWeek: 3,
     availability: AVAILABILITY,
     research: RESEARCH,
@@ -219,7 +219,7 @@ function digestData(overrides: Record<string, unknown> = {}) {
 }
 
 /** The runway and the strategy, as `loadStrategySnapshot` returns them. Both due by default. */
-function strategyLoad(now: Date = NOW, stored: StoredPosture = { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-20T00:00:00Z' } }, strategyDue = true) {
+function strategyLoad(now: Date = NOW, stored: StoredPosture = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-20T00:00:00Z' } }, strategyDue = true) {
   const contacts = [
     {
       _id: 'c-jane',
@@ -228,7 +228,7 @@ function strategyLoad(now: Date = NOW, stored: StoredPosture = { runway: { certa
       status: 'responded',
       followUpAt: null,
       estimatedValue: null,
-      interactions: [{ at: '2026-09-15T15:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'responded' }],
+      interactions: [{ at: '2026-09-15T15:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'responded' }],
     },
   ]
   const resolved = resolveRunwayPosture(stored, now)
@@ -447,14 +447,14 @@ describe('asks', () => {
   it('asks named people — never the full, never a decision, never someone who passed', async () => {
     const body = await dryRun()
     expect(body.asks).toEqual([
-      { taskId: 'op-call-mgb', name: 'Juhan', slackUserId: 'UJUHAN', reason: 'suggested' },
-      { taskId: 'op-post', name: 'Shirley', slackUserId: 'USHIRLEY', reason: 'open' },
-      { taskId: 'op-passed', name: 'Juhan', slackUserId: 'UJUHAN', reason: 'open' },
+      { taskId: 'op-call-mgb', name: 'Jules', slackUserId: 'UJULES', reason: 'suggested' },
+      { taskId: 'op-post', name: 'Shay', slackUserId: 'USHAY', reason: 'open' },
+      { taskId: 'op-passed', name: 'Jules', slackUserId: 'UJULES', reason: 'open' },
     ])
-    // Eric's week is full; the decision is a principal's; Shirley said no to op-passed.
-    expect(body.asks.some((ask) => ask.slackUserId === 'UERIC')).toBe(false)
+    // Ezra's week is full; the decision is a principal's; Shay said no to op-passed.
+    expect(body.asks.some((ask) => ask.slackUserId === 'UEZRA')).toBe(false)
     expect(body.asks.some((ask) => ask.taskId === 'op-decision')).toBe(false)
-    expect(body.asks.some((ask) => ask.taskId === 'op-passed' && ask.slackUserId === 'USHIRLEY')).toBe(false)
+    expect(body.asks.some((ask) => ask.taskId === 'op-passed' && ask.slackUserId === 'USHAY')).toBe(false)
   })
 
   it('puts each ask on its task’s card, first under "Needs an owner", and the mentions first in the notification', async () => {
@@ -463,11 +463,11 @@ describe('asks', () => {
     expect(heading).toBeGreaterThan(1)
     expect(cardIds(body.blocks).slice(0, 3)).toEqual(['op-call-mgb', 'op-post', 'op-passed'])
     const asked = cardFor(body.blocks, 'op-call-mgb')!
-    expect(sectionText(asked.section).split('\n')[1]).toBe('*Urgent* · <@UJUHAN>, could you take this one? · ~30m · the plan had you in mind')
+    expect(sectionText(asked.section).split('\n')[1]).toBe('*Urgent* · <@UJULES>, could you take this one? · ~30m · the plan had you in mind')
     expect(asked.actions.elements.map((element: Block) => element.text.text)).toEqual([LABEL.TAKE, LABEL.NOT_ME, LABEL.DETAILS])
     expect(asked.actions.elements[0].style).toBe('primary')
     // Slack builds the notification from `text` — the only place a phone looks.
-    expect(body.text).toBe('<@UJUHAN> <@USHIRLEY> — could you take a task each? · Monday plan: 4 tasks need an owner, 5 follow-ups due')
+    expect(body.text).toBe('<@UJULES> <@USHAY> — could you take a task each? · Monday plan: 4 tasks need an owner, 5 follow-ups due')
     // No capacity claims about colleagues.
     expect(json(body.blocks)).not.toMatch(/free time|most time|capacity/i)
   })
@@ -480,10 +480,10 @@ describe('asks', () => {
   it('lists owned work as a roll call, mentioning the roster’s id, not the stale one stamped on the task', async () => {
     const body = await dryRun()
     const text = json(body.blocks)
-    expect(text).toContain('Already taken: <@UERIC> 1 — ask `Marqueta, my tasks` for yours')
+    expect(text).toContain('Already taken: <@UEZRA> 1 — ask `Marqueta, my tasks` for yours')
     expect(text).not.toContain('USTALE')
     // Owned work gets no card on Monday: Thursday is its owner's list.
-    expect(cardIds(body.blocks)).not.toContain('op-eric')
+    expect(cardIds(body.blocks)).not.toContain('op-ezra')
   })
 
   it('offers a task two people were asked about as "still worth doing?", redrawable in place', async () => {
@@ -505,7 +505,7 @@ describe('asks', () => {
 
   it('lists an exhausted task in progress without a Drop button the board would refuse', async () => {
     store.data = digestData({
-      operations: [{ _id: 'op-live', title: 'Half-done thing', kind: 'outreach', status: 'working', askHistory: askedBefore('UJUHAN', 'USHIRLEY') }],
+      operations: [{ _id: 'op-live', title: 'Half-done thing', kind: 'outreach', status: 'working', askHistory: askedBefore('UJULES', 'USHAY') }],
     })
     const card = cardFor((await dryRun()).blocks, 'op-live')!
     expect(card).toBeTruthy()
@@ -547,21 +547,25 @@ describe('what else the digest says', () => {
     expect(body.blocks[2].elements[0].text).toBe('Last week: 3 tasks done · Outreach: 1 touch (1 person) · 1 reply.')
   })
 
-  // The setup offered only names that already owned open work — Juhan and
-  // Shirley, in the seeded quarter — and every other way onto the team list
+  // The setup offered only names that already owned open work — Jules and
+  // Shay, in the seeded quarter — and every other way onto the team list
   // was closed to somebody who owned nothing. Only people on it are ever asked.
   it('offers the whole team in the one-time setup, not only the names that own work', async () => {
-    delete process.env.MARKETING_TEAM_NAMES
+    // The team comes from the deployment's environment; no names live in this public repo (task_1008).
+    process.env.MARKETING_TEAM_NAMES = 'Jules,Shay,Ezra,Joss'
     store.data = digestData({ availability: [AVAILABILITY[0]] })
     const setupOf = (blocks: Block[]) => blocks.find((block) => block.accessory?.action_id === MARKETING_ACTION.linkIdentity)
     const options = (blocks: Block[]) => (setupOf(blocks)?.accessory.options || []).map((option: Block) => option.value)
-    // Juhan is linked; Shirley, Eric and Jon are not, whatever they own.
-    expect(options((await dryRun()).blocks)).toEqual(['Shirley', 'Eric', 'Jon'])
+    // Jules is linked; Shay, Ezra and Joss are not, whatever they own.
+    expect(options((await dryRun()).blocks)).toEqual(['Shay', 'Ezra', 'Joss'])
     // Configurable, and a name is offered once whatever its case.
-    process.env.MARKETING_TEAM_NAMES = 'juhan, Dana ,dana'
+    process.env.MARKETING_TEAM_NAMES = 'jules, Dana ,dana'
     expect(options((await dryRun()).blocks)).toEqual(['Dana'])
     // Set empty: the board's own unmapped owners only — none here, so no prompt.
     process.env.MARKETING_TEAM_NAMES = ''
+    expect(setupOf((await dryRun()).blocks)).toBeUndefined()
+    // Unset reads the same as empty: the code carries no default team.
+    delete process.env.MARKETING_TEAM_NAMES
     expect(setupOf((await dryRun()).blocks)).toBeUndefined()
   })
 
@@ -573,7 +577,7 @@ describe('what else the digest says', () => {
     await dryRun()
     const [query, params] = mocks.outreach.fetch.mock.calls.find(([candidate]) => String(candidate).includes('"owned"'))!
     const op = (id: string, dueAt?: string) => ({
-      _id: id, _type: 'marketingOperation', title: id, ownerName: 'Eric', status: 'queued', kind: 'content', ...(dueAt === undefined ? {} : { dueAt }),
+      _id: id, _type: 'marketingOperation', title: id, ownerName: 'Ezra', status: 'queued', kind: 'content', ...(dueAt === undefined ? {} : { dueAt }),
     })
     const dataset = [op('undated', ''), op('overdue', '2026-09-01T12:00:00.000Z'), op('missing'), op('this-week', '2026-09-24T12:00:00.000Z'), op('later', '2026-11-02T12:00:00.000Z')]
     const result = (await (await evaluate(parse(String(query)), { dataset, params: params as Record<string, unknown> })).get()) as {
@@ -645,12 +649,12 @@ describe('what else the digest says', () => {
   })
 
   it('asks the strategy when only it is due, and nothing about money when nothing is', async () => {
-    mocks.loadStrategySnapshot.mockResolvedValue(strategyLoad(NOW, { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-18T00:00:00Z' } }))
+    mocks.loadStrategySnapshot.mockResolvedValue(strategyLoad(NOW, { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-18T00:00:00Z' } }))
     const strategy = json((await dryRun()).blocks)
     expect(strategy).toContain(MARQUETA_ACTION.strategyConfirm)
     expect(strategy).not.toContain(MARKETING_ACTION.runwayConfirm)
 
-    mocks.loadStrategySnapshot.mockResolvedValue(strategyLoad(NOW, { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-18T00:00:00Z' } }, false))
+    mocks.loadStrategySnapshot.mockResolvedValue(strategyLoad(NOW, { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-18T00:00:00Z' } }, false))
     expect(json((await dryRun()).blocks)).not.toContain('mq_money')
   })
 
@@ -658,7 +662,7 @@ describe('what else the digest says', () => {
     mocks.loadStrategySnapshot.mockRejectedValue(new Error('outreach read timed out'))
     const body = await dryRun()
     const text = json(body.blocks)
-    expect(text).toContain('Still 3.5 months of certain runway (to 11 Jan 2027), or has that moved?')
+    expect(text).toContain('Still 4 months of certain runway (to 25 Jan 2027), or has that moved?')
     expect(text).not.toContain(MARQUETA_ACTION.strategyConfirm)
     // Without the call log there is no pulse to report — the line says only what it knows.
     expect(body.blocks[2].elements[0].text).toBe('Last week: 3 tasks done')
@@ -669,12 +673,12 @@ describe('what else the digest says', () => {
     store.data = digestData({
       operations: [
         ...OPERATIONS,
-        { _id: 'op-stuck', title: 'Case-study <numbers>', kind: 'content', status: 'blocked', ownerName: 'Shirley', blocker: 'Waiting on the client’s sign-off' },
+        { _id: 'op-stuck', title: 'Case-study <numbers>', kind: 'content', status: 'blocked', ownerName: 'Shay', blocker: 'Waiting on the client’s sign-off' },
       ],
     })
     const text = json((await dryRun()).blocks)
     expect(text).toContain(
-      `:warning: Stuck: <${BASE}/studio/marketing?view=calendar&task=op-stuck|Case-study <numbers>> (<@USHIRLEY>) — in the way: Waiting on the client’s sign-off`.replace(
+      `:warning: Stuck: <${BASE}/studio/marketing?view=calendar&task=op-stuck|Case-study <numbers>> (<@USHAY>) — in the way: Waiting on the client’s sign-off`.replace(
         '<numbers>',
         '&lt;numbers&gt;',
       ),
@@ -707,7 +711,7 @@ describe('what else the digest says', () => {
         kind: 'outreach',
         priority: 'urgent',
         status: 'queued',
-        askHistory: askedBefore('UJUHAN', 'USHIRLEY'),
+        askHistory: askedBefore('UJULES', 'USHAY'),
       })),
       ...Array.from({ length: 15 }, (_, i) => ({ _id: `op-dana-${i}`, title: `Dana's task ${i}`, kind: 'content', status: 'queued', ownerName: 'Dana' })),
       ...Array.from({ length: 6 }, (_, i) => ({ _id: `op-anon-${i}`, title: `Unmapped ${i}`, kind: 'content', status: 'queued', ownerName: `Person ${i}` })),
@@ -717,7 +721,7 @@ describe('what else the digest says', () => {
       _id: `c-many-${i}`,
       name: `Person ${i}`,
       organization: `Org ${i}`,
-      owner: 'Juhan',
+      owner: 'Jules',
       status: 'contacted',
       warmth: 'warm',
       followUpAt: '2026-09-22T14:00:00Z',
@@ -754,19 +758,19 @@ describe('what else the digest says', () => {
 
 describe('the busy week, as a phone shows it', () => {
   const BUSY_AVAILABILITY = [
-    { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available' },
-    { ownerName: 'Shirley', slackUserId: 'USHIRLEY', status: 'available' },
-    { ownerName: 'Eric', slackUserId: 'UERIC', status: 'away', from: '2026-09-21', until: '2026-09-27' },
+    { ownerName: 'Jules', slackUserId: 'UJULES', status: 'available' },
+    { ownerName: 'Shay', slackUserId: 'USHAY', status: 'available' },
+    { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'away', from: '2026-09-21', until: '2026-09-27' },
   ]
   const BUSY_OPERATIONS = [
-    { _id: 'op-article', title: 'Draft the pre-mortem article (v2)', kind: 'content', priority: 'normal', status: 'working', ownerName: 'Shirley', estimatedMinutes: 120 },
+    { _id: 'op-article', title: 'Draft the pre-mortem article (v2)', kind: 'content', priority: 'normal', status: 'working', ownerName: 'Shay', estimatedMinutes: 120 },
     { _id: 'op-taxonomy', title: 'Decide: publish the F1–F8 taxonomy?', kind: 'decision', priority: 'high', status: 'needsHuman', humanQuestion: 'Do we publish the F1–F8 taxonomy?', dueAt: '2026-09-25T16:00:00Z' },
-    { _id: 'op-townday', title: 'Arlington Town Day merch table', kind: 'content', priority: 'normal', status: 'queued', suggestedOwner: 'Juhan', estimatedMinutes: 45 },
-    { _id: 'op-teaser', title: 'Newsletter: pre-mortem teaser', kind: 'content', priority: 'normal', status: 'queued', suggestedOwner: 'Shirley', estimatedMinutes: 30 },
-    { _id: 'op-pin', title: 'Pin the kit on LinkedIn', kind: 'content', priority: 'low', status: 'queued', estimatedMinutes: 15, askHistory: askedBefore('UJUHAN', 'USHIRLEY') },
-    { _id: 'op-numbers', title: 'Case-study numbers for the kit', kind: 'content', priority: 'normal', status: 'blocked', ownerName: 'Juhan', blocker: 'Waiting on the client’s sign-off' },
-    { _id: 'op-slipping', title: 'Update the offer page', kind: 'content', priority: 'normal', status: 'queued', ownerName: 'Juhan', dueAt: '2026-09-01T16:00:00Z' },
-    { _id: 'op-beacon', title: 'Follow up with Beacon after the demo', kind: 'outreach', priority: 'high', status: 'queued', ownerName: 'Eric' },
+    { _id: 'op-townday', title: 'Arlington Town Day merch table', kind: 'content', priority: 'normal', status: 'queued', suggestedOwner: 'Jules', estimatedMinutes: 45 },
+    { _id: 'op-teaser', title: 'Newsletter: pre-mortem teaser', kind: 'content', priority: 'normal', status: 'queued', suggestedOwner: 'Shay', estimatedMinutes: 30 },
+    { _id: 'op-pin', title: 'Pin the kit on LinkedIn', kind: 'content', priority: 'low', status: 'queued', estimatedMinutes: 15, askHistory: askedBefore('UJULES', 'USHAY') },
+    { _id: 'op-numbers', title: 'Case-study numbers for the kit', kind: 'content', priority: 'normal', status: 'blocked', ownerName: 'Jules', blocker: 'Waiting on the client’s sign-off' },
+    { _id: 'op-slipping', title: 'Update the offer page', kind: 'content', priority: 'normal', status: 'queued', ownerName: 'Jules', dueAt: '2026-09-01T16:00:00Z' },
+    { _id: 'op-beacon', title: 'Follow up with Beacon after the demo', kind: 'outreach', priority: 'high', status: 'queued', ownerName: 'Ezra' },
     { _id: 'op-podcast', title: 'Book the podcast', kind: 'content', priority: 'normal', status: 'queued', ownerName: 'Jen' },
     // On the board, but not in this week's plan.
     { _id: 'op-later', title: 'Refresh the case-study page', kind: 'content', priority: 'low', status: 'queued', dueAt: '2026-10-20T16:00:00Z' },
@@ -783,7 +787,7 @@ describe('the busy week, as a phone shows it', () => {
       operations: BUSY_OPERATIONS,
       planned: BUSY_OPERATIONS.filter((operation) => [...PLAN.itemIds, ...PLAN.decisionIds].includes(operation._id)),
       availability: BUSY_AVAILABILITY,
-      owned: [{ ownerName: 'Shirley', estimatedMinutes: 120 }],
+      owned: [{ ownerName: 'Shay', estimatedMinutes: 120 }],
     })
     mocks.ideasNeedingReview.mockResolvedValue(['Town Day merch', 'Podcast guest list', 'Quick win: pin the kit', 'Webinar'].map((title, i) => ({ _id: `i${i}`, title })))
     return dryRun({ planRecorded: true, plan: PLAN, ...extra })
@@ -818,8 +822,8 @@ describe('the busy week, as a phone shows it', () => {
     expect(ids).not.toContain('op-later')
     // Unowned planned work: asked, away cover, asked twice.
     expect(ids).toEqual(['op-townday', 'op-teaser', 'op-beacon', 'op-pin', 'op-taxonomy'])
-    // Owned planned work is the roll call — Juhan's two, Shirley's one, Jen by name — and nothing is counted twice.
-    expect(json(body.blocks)).toContain('Already taken: Jen 1 · <@UJUHAN> 1 · <@USHIRLEY> 1 — ask `Marqueta, my tasks` for yours')
+    // Owned planned work is the roll call — Jules's two, Shay's one, Jen by name — and nothing is counted twice.
+    expect(json(body.blocks)).toContain('Already taken: Jen 1 · <@UJULES> 1 · <@USHAY> 1 — ask `Marqueta, my tasks` for yours')
     expect(body.needsOwnerCount).toBe(4)
   })
 
@@ -834,21 +838,21 @@ describe('the busy week, as a phone shows it', () => {
       priority: 'normal',
       status: 'needsHuman',
       estimatedMinutes: 20,
-      humanQuestion: 'Shirley passed on this — who should pick it up?',
-      askHistory: [{ slackUserId: 'USHIRLEY', week: LAST_WEEK, kind: 'passed' }],
+      humanQuestion: 'Shay passed on this — who should pick it up?',
+      askHistory: [{ slackUserId: 'USHAY', week: LAST_WEEK, kind: 'passed' }],
     }
     store.data = digestData({
       operations: [...BUSY_OPERATIONS, passed],
       planned: BUSY_OPERATIONS.filter((operation) => [...PLAN.itemIds, ...PLAN.decisionIds].includes(operation._id)),
       availability: BUSY_AVAILABILITY,
-      owned: [{ ownerName: 'Shirley', estimatedMinutes: 120 }],
+      owned: [{ ownerName: 'Shay', estimatedMinutes: 120 }],
     })
     const body = await dryRun({ planRecorded: true, plan: PLAN })
     expect(body.needsOwnerCount).toBe(5)
     expect(cardIds(body.blocks)).toContain('op-kit')
     // Asked of somebody who has not already said no.
     const ask = body.asks.find((entry) => entry.taskId === 'op-kit')
-    expect(ask?.slackUserId).toBe('UJUHAN')
+    expect(ask?.slackUserId).toBe('UJULES')
   })
 
   it('counts the decisions the plan left for later, rather than reading as though there were none', async () => {
@@ -859,7 +863,7 @@ describe('the busy week, as a phone shows it', () => {
       operations: [...BUSY_OPERATIONS, ...later],
       planned: BUSY_OPERATIONS.filter((operation) => [...PLAN.itemIds, ...PLAN.decisionIds].includes(operation._id)),
       availability: BUSY_AVAILABILITY,
-      owned: [{ ownerName: 'Shirley', estimatedMinutes: 120 }],
+      owned: [{ ownerName: 'Shay', estimatedMinutes: 120 }],
     })
     const body = await dryRun({ planRecorded: true, plan: PLAN })
     // One drawn (the plan's), three more counted.
@@ -867,17 +871,17 @@ describe('the busy week, as a phone shows it', () => {
     expect(json(body.blocks)).toContain('+3 more on <https://www.goinvo.com/studio/marketing?view=thisWeek&focus=decisions|This week>')
   })
 
-  it('never asks someone away — Eric’s own task is offered for cover, naming who is free', async () => {
+  it('never asks someone away — Ezra’s own task is offered for cover, naming who is free', async () => {
     const body = await busy()
-    expect(body.asks.map((ask) => ask.slackUserId)).not.toContain('UERIC')
+    expect(body.asks.map((ask) => ask.slackUserId)).not.toContain('UEZRA')
     const cover = cardFor(body.blocks, 'op-beacon')!
     // Free people from the team list only — Jen owns a task but has no team record.
-    expect(sectionText(cover.section)).toMatch(/:palm_tree: Eric is away · free this week: Juhan, Shirley$/)
+    expect(sectionText(cover.section)).toMatch(/:palm_tree: Ezra is away · free this week: Jules, Shay$/)
   })
 
   it('leads the notification with the asks', async () => {
     const body = await busy()
-    expect(body.text).toBe('<@UJUHAN> <@USHIRLEY> — could you take a task each? · Monday plan: 4 tasks need an owner, 5 follow-ups due')
+    expect(body.text).toBe('<@UJULES> <@USHAY> — could you take a task each? · Monday plan: 4 tasks need an owner, 5 follow-ups due')
     expect(body.text.indexOf('Monday plan')).toBeLessThan(90)
   })
 
@@ -929,7 +933,7 @@ describe('posting', () => {
     expect(mocks.postSlackMessage).toHaveBeenCalledTimes(1)
     const posted = mocks.postSlackMessage.mock.calls[0][0]
     expect(posted).toMatchObject({ channel: CHANNEL, username: 'Marqueta', iconEmoji: ':chart_with_upwards_trend:', unfurl: false })
-    expect(posted.text.startsWith('<@UJUHAN> <@USHIRLEY> — could you take a task each?')).toBe(true)
+    expect(posted.text.startsWith('<@UJULES> <@USHAY> — could you take a task each?')).toBe(true)
     expectValidSlackBlocks(posted.blocks)
     expect(posted.attachments).toBeUndefined()
 
@@ -941,7 +945,7 @@ describe('posting', () => {
     expect(first.ops[1][2]).toBe('askHistory[-1]')
     const [entry] = first.ops[1][3] as Block[]
     // Stamped with the week it was posted in: that is what makes a re-run harmless.
-    expect(entry).toMatchObject({ slackUserId: 'UJUHAN', at: NOW.toISOString(), week: WEEK, kind: 'asked' })
+    expect(entry).toMatchObject({ slackUserId: 'UJULES', at: NOW.toISOString(), week: WEEK, kind: 'asked' })
     expect(entry._key).toMatch(/^ask-[a-z0-9]+$/)
 
     // Claimed first, posted second, remembered third — and the week is marked
@@ -1051,9 +1055,9 @@ describe('a second digest in the same week', () => {
   it('forced, asks the SAME people, records nothing new, and the task is not exhausted next week', async () => {
     const first = await runOnce()
     expect(first.asks).toEqual([
-      { taskId: 'op-call-mgb', name: 'Juhan', slackUserId: 'UJUHAN', reason: 'suggested' },
-      { taskId: 'op-post', name: 'Shirley', slackUserId: 'USHIRLEY', reason: 'open' },
-      { taskId: 'op-passed', name: 'Juhan', slackUserId: 'UJUHAN', reason: 'open' },
+      { taskId: 'op-call-mgb', name: 'Jules', slackUserId: 'UJULES', reason: 'suggested' },
+      { taskId: 'op-post', name: 'Shay', slackUserId: 'USHAY', reason: 'open' },
+      { taskId: 'op-passed', name: 'Jules', slackUserId: 'UJULES', reason: 'open' },
     ])
     const afterRunOne = withRecordedAsks(OPERATIONS)
     store.data = digestData({ operations: afterRunOne })
@@ -1069,13 +1073,13 @@ describe('a second digest in the same week', () => {
 
     // Next Monday: one person was asked about op-call-mgb and op-post, so
     // neither is "still worth doing?" (the bug made both look asked twice).
-    // op-passed really has two answers — Shirley passed, and Juhan was asked.
+    // op-passed really has two answers — Shay passed, and Jules was asked.
     vi.setSystemTime(new Date('2026-09-28T13:00:00Z'))
     const nextWeek = await dryRun()
     expect(nextWeek.exhausted).toEqual(['op-price', 'op-passed'])
-    expect(nextWeek.asks.find((ask) => ask.taskId === 'op-post')).toMatchObject({ slackUserId: 'UJUHAN' })
-    // Never re-asked: Juhan was asked about op-call-mgb last week.
-    expect(nextWeek.asks.some((ask) => ask.taskId === 'op-call-mgb' && ask.slackUserId === 'UJUHAN')).toBe(false)
+    expect(nextWeek.asks.find((ask) => ask.taskId === 'op-post')).toMatchObject({ slackUserId: 'UJULES' })
+    // Never re-asked: Jules was asked about op-call-mgb last week.
+    expect(nextWeek.asks.some((ask) => ask.taskId === 'op-call-mgb' && ask.slackUserId === 'UJULES')).toBe(false)
   })
 
   it('of two runs racing for the week, the one that loses the claim posts nothing', async () => {
@@ -1105,17 +1109,17 @@ describe('a second digest in the same week', () => {
 
   it('reads the week out of the ask history, not just the people', () => {
     const history = [
-      { slackUserId: 'UERIC', week: LAST_WEEK, kind: 'asked' },
-      { slackUserId: 'UJUHAN', week: WEEK, kind: 'asked' },
+      { slackUserId: 'UEZRA', week: LAST_WEEK, kind: 'asked' },
+      { slackUserId: 'UJULES', week: WEEK, kind: 'asked' },
       { slackUserId: 'not-an-id', week: WEEK, kind: 'asked' },
-      { slackUserId: 'UERIC' },
+      { slackUserId: 'UEZRA' },
     ]
-    expect(readAskHistory(history, WEEK)).toEqual({ answeredIds: ['UERIC', 'UJUHAN'], askedThisWeek: 'UJUHAN' })
+    expect(readAskHistory(history, WEEK)).toEqual({ answeredIds: ['UEZRA', 'UJULES'], askedThisWeek: 'UJULES' })
     // Asked this week and then passed: not shown the same ask again.
-    const passed = [...history, { slackUserId: 'UJUHAN', week: WEEK, kind: 'passed' }]
-    expect(readAskHistory(passed, WEEK)).toEqual({ answeredIds: ['UERIC', 'UJUHAN'] })
+    const passed = [...history, { slackUserId: 'UJULES', week: WEEK, kind: 'passed' }]
+    expect(readAskHistory(passed, WEEK)).toEqual({ answeredIds: ['UEZRA', 'UJULES'] })
     // Legacy entries (no week, no kind) are asks from an earlier week.
-    expect(readAskHistory([{ slackUserId: 'UERIC' }], WEEK)).toEqual({ answeredIds: ['UERIC'] })
+    expect(readAskHistory([{ slackUserId: 'UEZRA' }], WEEK)).toEqual({ answeredIds: ['UEZRA'] })
     expect(askHistoryEntry({ taskId: 't', slackUserId: 'U1', at: 'x', week: WEEK, kind: 'passed' })._key).toMatch(/^pass-/)
   })
 })
@@ -1125,23 +1129,23 @@ describe('a second digest in the same week', () => {
 describe('asks and absences', () => {
   // "I'm away this week" files the record under Slack's display name, beside
   // the linked record the roster knows her by.
-  const shirleyAway = { ownerName: 'Shirley Wu', slackUserId: 'USHIRLEY', status: 'away', from: '2026-09-21', until: '2026-09-27' }
+  const shayAway = { ownerName: 'Shay Wu', slackUserId: 'USHAY', status: 'away', from: '2026-09-21', until: '2026-09-27' }
 
   it('never asks someone away, matched by Slack id when the record carries their display name', async () => {
     store.data = digestData({
-      availability: [...AVAILABILITY, shirleyAway],
+      availability: [...AVAILABILITY, shayAway],
       operations: [
         ...OPERATIONS,
-        { _id: 'op-shirley', title: 'Shirley’s draft', kind: 'content', priority: 'normal', status: 'queued', ownerName: 'Shirley' },
+        { _id: 'op-shay', title: 'Shay’s draft', kind: 'content', priority: 'normal', status: 'queued', ownerName: 'Shay' },
       ],
     })
     const body = await dryRun()
-    expect(body.asks.some((ask) => ask.slackUserId === 'USHIRLEY')).toBe(false)
+    expect(body.asks.some((ask) => ask.slackUserId === 'USHAY')).toBe(false)
     expect(body.asks.length).toBeGreaterThan(0)
     // Her own task is surfaced for cover, under the board's name.
-    const cover = cardFor(body.blocks, 'op-shirley')!
-    expect(sectionText(cover.section)).toContain(':palm_tree: Shirley is away · free this week:')
-    expect(sectionText(cover.section)).not.toMatch(/free this week:.*Shirley/)
+    const cover = cardFor(body.blocks, 'op-shay')!
+    expect(sectionText(cover.section)).toContain(':palm_tree: Shay is away · free this week:')
+    expect(sectionText(cover.section)).not.toMatch(/free this week:.*Shay/)
   })
 })
 
@@ -1149,7 +1153,7 @@ describe('asks and absences', () => {
 
 describe('claimMarketingTask', () => {
   const TASK: Record<string, unknown> = { _id: 'op-1', _rev: 'rev1', title: 'Call MGB', ownerName: '', status: 'queued', kind: 'outreach', activity: [] }
-  const claim = async (task: Record<string, unknown> | null, person = { personName: 'Juhan Sonin', slackUserId: 'UJUHAN' }) => {
+  const claim = async (task: Record<string, unknown> | null, person = { personName: 'Jules Soren', slackUserId: 'UJULES' }) => {
     store.tasks = [task]
     const result = await claimMarketingTask({ taskId: 'op-1', ...person })
     return { result, record: taskPatches().at(-1) }
@@ -1158,17 +1162,17 @@ describe('claimMarketingTask', () => {
   const unsetOf = (record: PatchRecord | undefined) => (record?.ops.find((op) => op[0] === 'unset')?.[1] || []) as string[]
 
   // Reviewer finding: the card wrote Slack's display name as the owner, which
-  // split Juhan into "Juhan" and "Juhan Sonin" — two loads, a mention that
+  // split Jules into "Jules" and "Jules Soren" — two loads, a mention that
   // never resolved, and an identity prompt that kept coming back.
   it('writes the BOARD name, with the revision it read', async () => {
     const { result, record } = await claim(TASK)
     expect(result.ok).toBe(true)
-    expect(setOf(record)).toMatchObject({ ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN', lastOutcome: 'Taken in Slack by Juhan' })
+    expect(setOf(record)).toMatchObject({ ownerName: 'Jules', ownerSlackUserId: 'UJULES', lastOutcome: 'Taken in Slack by Jules' })
     expect(record?.ops.find((op) => op[0] === 'ifRevisionId')?.[1]).toBe('rev1')
   })
 
   it('moves a passed-on task back to queued and clears the stale question', async () => {
-    const { record } = await claim({ ...TASK, status: 'needsHuman', humanQuestion: 'Eric passed on this — who should pick it up?' })
+    const { record } = await claim({ ...TASK, status: 'needsHuman', humanQuestion: 'Ezra passed on this — who should pick it up?' })
     expect(setOf(record).status).toBe('queued')
     expect(unsetOf(record)).toContain('humanQuestion')
   })
@@ -1188,10 +1192,10 @@ describe('claimMarketingTask', () => {
   })
 
   it('a legacy take on a colleague’s task puts the presser’s own name on it and says whose it was', async () => {
-    const { result, record } = await claim({ ...TASK, ownerName: 'Eric', ownerSlackUserId: 'UERIC' })
+    const { result, record } = await claim({ ...TASK, ownerName: 'Ezra', ownerSlackUserId: 'UEZRA' })
     expect(result.ok).toBe(true)
-    expect(setOf(record)).toMatchObject({ ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN', lastOutcome: 'Taken over from Eric in Slack by Juhan' })
-    expect((setOf(record).activity as Block[]).at(-1)).toMatchObject({ action: 'Taken over in Slack', outcome: 'By Juhan, from Eric' })
+    expect(setOf(record)).toMatchObject({ ownerName: 'Jules', ownerSlackUserId: 'UJULES', lastOutcome: 'Taken over from Ezra in Slack by Jules' })
+    expect((setOf(record).activity as Block[]).at(-1)).toMatchObject({ action: 'Taken over in Slack', outcome: 'By Jules, from Ezra' })
   })
 
   it('refuses a presser it cannot name, and a roster it cannot read, writing nothing', async () => {

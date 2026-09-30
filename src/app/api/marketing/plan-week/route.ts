@@ -67,8 +67,8 @@ const OPERATIONS_QUERY = `*[_type == "marketingOperation" && !(_id in path("draf
  * call note is read at all: the log is projected down to when, who, how and
  * the status it left, which is all the pulse counts.
  *
- * The roster maps a contact's owner ("juhan") onto the board's name
- * ("Juhan"), the same way the digest and the check-in do, so filtering This
+ * The roster maps a contact's owner ("jules") onto the board's name
+ * ("Jules"), the same way the digest and the check-in do, so filtering This
  * week to one person finds their follow-ups as well as their tasks.
  */
 const OUTREACH_CONTEXT_QUERY = `{
@@ -139,7 +139,7 @@ function weekPulse(contacts: PulseContact[], followUps: Array<{ overdue: boolean
 }
 
 /**
- * "Rebuild — 4.5 months of certain runway (to 11 Jan 2027)": the posture this
+ * "Rebuild — 5 months of certain runway (to 25 Jan 2027)": the posture this
  * week was planned against, and the fact it came from.
  *
  * From the same read that chose the posture, so the header can never name a

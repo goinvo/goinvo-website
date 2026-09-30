@@ -68,9 +68,9 @@ describe('buildWarmStartSuggestions', () => {
         {
           text: [
             'Jen Patel',
-            'Eric Benoit',
+            'Ezra Bennet',
             'Sharon Lee',
-            'Juhan Sonin',
+            'Jules Soren',
             'Huahua Zhu',
             'GoInvo team',
             'Jane Buyer',
@@ -81,9 +81,9 @@ describe('buildWarmStartSuggestions', () => {
       ],
       teamMembers: [
         { name: 'Jen Patel' },
-        { name: 'Eric Benoit' },
+        { name: 'Ezra Bennet' },
         { name: 'Sharon Lee' },
-        { name: 'Juhan Sonin' },
+        { name: 'Jules Soren' },
         { name: 'Huahua Zhu' },
       ],
     })

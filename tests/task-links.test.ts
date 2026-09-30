@@ -38,7 +38,7 @@ describe('resolveTaskView', () => {
   })
 
   it('does not treat a task somebody passed on as a decision', () => {
-    const passed = { kind: 'outreach', status: 'needsHuman', humanQuestion: 'Eric passed on this — who should pick it up?', targetView: 'outreach' }
+    const passed = { kind: 'outreach', status: 'needsHuman', humanQuestion: 'Ezra passed on this — who should pick it up?', targetView: 'outreach' }
     expect(isDecisionTask(passed)).toBe(false)
     expect(resolveTaskView(passed)).toBe('outreach')
   })
@@ -61,9 +61,9 @@ describe('studioViewUrl', () => {
       [MARKETING_CONTACT_QUERY_PARAM]: 'marketingContact.jane',
       [MARKETING_CONTACT_ACTION_QUERY_PARAM]: 'log',
     })
-    expect(params(studioViewUrl(BASE, 'thisWeek', { owner: 'Juhan', focus: 'followUps' }))).toEqual({
+    expect(params(studioViewUrl(BASE, 'thisWeek', { owner: 'Jules', focus: 'followUps' }))).toEqual({
       view: 'thisWeek',
-      [MARKETING_OWNER_QUERY_PARAM]: 'Juhan',
+      [MARKETING_OWNER_QUERY_PARAM]: 'Jules',
       [MARKETING_FOCUS_QUERY_PARAM]: 'followUps',
     })
   })

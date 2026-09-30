@@ -266,9 +266,9 @@ export type CheckInTeamMember = { ownerName: string; slackUserId?: string }
  * A task's id is the least trustworthy thing on it. Claiming in Slack sets
  * `ownerSlackUserId`; nothing ever clears it. Reassign the task in the Studio
  * (which has no field for the id) or decline it in the digest, and the record
- * says "Eric" next to Juhan's id. Trusting that id put Eric's work in Juhan's
- * group, under Eric's name, and pinged Juhan about it in a shared channel —
- * while Eric, who is on the roster, was never mentioned at all. A wrong
+ * says "Ezra" next to Jules's id. Trusting that id put Ezra's work in Jules's
+ * group, under Ezra's name, and pinged Jules about it in a shared channel —
+ * while Ezra, who is on the roster, was never mentioned at all. A wrong
  * mention is the one mistake this message cannot afford: a missing one costs
  * a notification, a wrong one tells a colleague in front of the room that
  * someone else's work is theirs.
@@ -279,14 +279,14 @@ export type CheckInTeamMember = { ownerName: string; slackUserId?: string }
  *      disagrees with the roster, and the roster wins.
  *   2. A task's id counts only for a name the roster has no id for, and only
  *      if the roster does not give that id to somebody else — an id the roster
- *      says is Juhan's, on a task owned by an unmapped "Eric", is the stale
- *      shape above, not evidence that Eric is Juhan.
+ *      says is Jules's, on a task owned by an unmapped "Ezra", is the stale
+ *      shape above, not evidence that Ezra is Jules.
  *   3. When the evidence for a name disagrees with itself (two roster records,
  *      or two tasks, naming different ids) there is no id: the person is
  *      listed by name and mentioned by nobody's id rather than possibly the
  *      wrong one.
  *
- * Names still merge when the evidence agrees — "Juhan" and "Juhan Sonin" that
+ * Names still merge when the evidence agrees — "Jules" and "Jules Soren" that
  * the roster (or, absent a roster, their tasks) link to the same id are one
  * person, and mentioning them twice is the noise this message exists to avoid.
  */
@@ -580,7 +580,7 @@ export type TaskCardOptions = {
   ask?: TaskCardAsk
   /** `away`: the owner is away and the work needs covering. `exhausted`: asked twice, nobody took it. */
   context?: 'away' | 'exhausted'
-  /** For `away`: "Eric is away · free this week: Juhan, Shirley" (names, not mentions). */
+  /** For `away`: "Ezra is away · free this week: Jules, Shay" (names, not mentions). */
   awayNote?: string
   /** The italic state note a press leaves (`stateNote`). */
   note?: string
@@ -638,7 +638,7 @@ function cardState(task: CheckInTask, opts: TaskCardOptions): CardState {
  *   owned, stuck (plan)    Taken by <@U> · … · stuck · in the way  Hand back
  *   unowned                Nobody has it · due … · ~30m            I’ll take it★ · Details…
  *   unowned, asked         <@U>, could you take this one? · ~30m   I’ll take it★ · Not me · Details…
- *   away cover             🌴 Eric is away · free this week: …     I’ll take it · Details…
+ *   away cover             🌴 Ezra is away · free this week: …     I’ll take it · Details…
  *   exhausted              Asked twice, nobody took it — …         I’ll take it · Drop it · Details…
  *   decision               Needs a decision · due …                Answer…★
  *   decision, own (mine)   Needs a decision · due …                Answer…★ · Done · Hand back
@@ -894,7 +894,7 @@ function workingDaysLeft(now: Date): number {
   return weekday === 0 || weekday === 6 ? 0 : 6 - weekday
 }
 
-/** "*<@U1>*" for a person Slack knows, "*Jon*" for one it does not — bold either way, and unable to end the bold early. */
+/** "*<@U1>*" for a person Slack knows, "*Joss*" for one it does not — bold either way, and unable to end the bold early. */
 const boldPerson = (mention: string) => `*${mention.startsWith('<@') ? mention : mention.replace(/[*_~`]/g, ' ').trim() || 'Someone'}*`
 
 /** "2 tasks, 1 follow-up" — only the parts that are not zero. */
@@ -947,9 +947,9 @@ type CheckInLayout = {
  *   Week of Mon 21 Sep · 2 working days left
  *   Outreach this week: 3 touches (2 people) · 1 reply.
  *   ──
- *   *@Juhan* · 2 tasks, 1 follow-up
+ *   *@Jules* · 2 tasks, 1 follow-up
  *     [cards: Done★ · Stuck… · Hand back]      [follow-ups: Prep · Log it…]
- *     +2 more — on This week                    (a link to This week, filtered to Juhan)
+ *     +2 more — on This week                    (a link to This week, filtered to Jules)
  *   ──
  *   *Nobody has taken*
  *     [up to three cards: I’ll take it★ · Details…]

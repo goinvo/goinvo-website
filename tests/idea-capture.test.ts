@@ -286,8 +286,8 @@ describe('ideaCategoryFrom', () => {
 
 describe('ideaDocIdForMessage', () => {
   it('is deterministic, so a Slack retry cannot double-post the idea', () => {
-    const first = ideaDocIdForMessage({ channel: 'C0BSFACJY6T', ts: '1756300000.123456' })
-    const second = ideaDocIdForMessage({ channel: 'C0BSFACJY6T', ts: '1756300000.123456' })
+    const first = ideaDocIdForMessage({ channel: 'C0MKTBOT000', ts: '1756300000.123456' })
+    const second = ideaDocIdForMessage({ channel: 'C0MKTBOT000', ts: '1756300000.123456' })
     expect(first).toBe(second)
     expect(first).toMatch(/^marketingIdea\.slack-/)
   })
@@ -316,8 +316,8 @@ describe('messageProse', () => {
 
 describe('slackPermalink', () => {
   it('points back at the conversation', () => {
-    expect(slackPermalink({ workspace: 'goinvo', channel: 'C0BSFACJY6T', ts: '1756300000.123456' })).toBe(
-      'https://goinvo.slack.com/archives/C0BSFACJY6T/p1756300000123456',
+    expect(slackPermalink({ workspace: 'goinvo', channel: 'C0MKTBOT000', ts: '1756300000.123456' })).toBe(
+      'https://goinvo.slack.com/archives/C0MKTBOT000/p1756300000123456',
     )
   })
 
@@ -330,7 +330,7 @@ describe('buildCapturedIdea', () => {
   const idea = buildCapturedIdea({
     text: 'we should do a reel about the Heard project before the intern leaves',
     personName: 'Ada',
-    channel: 'C0BSFACJY6T',
+    channel: 'C0MKTBOT000',
     ts: '1756300000.123456',
     workspace: 'goinvo',
   })

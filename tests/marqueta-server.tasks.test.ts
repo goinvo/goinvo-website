@@ -96,8 +96,8 @@ const daysFromNow = (days: number) => new Date(NOW.getTime() + days * 86_400_000
 const conflict = () => Object.assign(new Error('Document has been modified since the revision given'), { statusCode: 409 })
 
 const TEAM: TeamMemberAvailability[] = [
-  { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available' },
-  { ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' },
+  { ownerName: 'Jules', slackUserId: 'UJULES', status: 'available' },
+  { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'available' },
 ]
 
 // ── Fixture routing ──────────────────────────────────────────────────────────
@@ -178,11 +178,11 @@ afterEach(() => {
 
 describe('team identity', () => {
   it('reads a task owner’s Slack id from the roster first, never a stale stamped one', () => {
-    expect(slackIdForOwner(TEAM, 'Juhan', 'UERIC')).toBe('UJUHAN')
-    expect(slackIdForOwner(TEAM, 'juhan', undefined)).toBe('UJUHAN')
+    expect(slackIdForOwner(TEAM, 'Jules', 'UEZRA')).toBe('UJULES')
+    expect(slackIdForOwner(TEAM, 'jules', undefined)).toBe('UJULES')
     // Unmapped name: the task's id only when the roster does not give it to someone else.
-    expect(slackIdForOwner(TEAM, 'Shirley', 'UERIC')).toBeUndefined()
-    expect(slackIdForOwner(TEAM, 'Shirley', 'USHIRLEY')).toBe('USHIRLEY')
+    expect(slackIdForOwner(TEAM, 'Shay', 'UEZRA')).toBeUndefined()
+    expect(slackIdForOwner(TEAM, 'Shay', 'USHAY')).toBe('USHAY')
     // Contradictory roster: nobody's id rather than possibly the wrong one.
     const split: TeamMemberAvailability[] = [
       { ownerName: 'Sam', slackUserId: 'USAM1', status: 'available' },
@@ -192,28 +192,28 @@ describe('team identity', () => {
   })
 
   it('resolves a presser to their board name without asking Slack when they are linked', async () => {
-    await expect(resolvePresserName({ slackUserId: 'UJUHAN', entries: TEAM })).resolves.toBe('Juhan')
+    await expect(resolvePresserName({ slackUserId: 'UJULES', entries: TEAM })).resolves.toBe('Jules')
     expect(mocks.getSlackUserDisplayName).not.toHaveBeenCalled()
 
     // An exact match on a record nobody has linked yet is still that name.
-    const roster: TeamMemberAvailability[] = [...TEAM, { ownerName: 'Shirley', status: 'available' }]
-    mocks.getSlackUserDisplayName.mockResolvedValue('shirley')
-    await expect(resolvePresserName({ slackUserId: 'UNEW', entries: roster })).resolves.toBe('Shirley')
-    mocks.getSlackUserDisplayName.mockResolvedValue('Juhan Sonin')
-    await expect(resolvePresserName({ slackUserId: 'UNEW', entries: TEAM })).resolves.toBe('Juhan Sonin')
+    const roster: TeamMemberAvailability[] = [...TEAM, { ownerName: 'Shay', status: 'available' }]
+    mocks.getSlackUserDisplayName.mockResolvedValue('shay')
+    await expect(resolvePresserName({ slackUserId: 'UNEW', entries: roster })).resolves.toBe('Shay')
+    mocks.getSlackUserDisplayName.mockResolvedValue('Jules Soren')
+    await expect(resolvePresserName({ slackUserId: 'UNEW', entries: TEAM })).resolves.toBe('Jules Soren')
   })
 
   // Reviewer finding: the display-name match won even when that board name was
   // linked to a DIFFERENT Slack account — so anybody whose display name read
-  // "Eric" took, passed and booked time off as Eric.
+  // "Ezra" took, passed and booked time off as Ezra.
   it('treats a namesake as nobody: a name linked to someone else is only theirs', async () => {
-    mocks.getSlackUserDisplayName.mockResolvedValue('eric')
+    mocks.getSlackUserDisplayName.mockResolvedValue('ezra')
     await expect(resolvePresserName({ slackUserId: 'UNEW', entries: TEAM })).resolves.toBe('Someone')
-    await expect(resolvePresserName({ slackUserId: 'UNEW', displayName: 'Juhan', entries: TEAM })).resolves.toBe('Someone')
+    await expect(resolvePresserName({ slackUserId: 'UNEW', displayName: 'Jules', entries: TEAM })).resolves.toBe('Someone')
     // No Slack id at all proves nothing about a linked name either.
-    await expect(resolvePresserName({ displayName: 'Juhan', entries: TEAM })).resolves.toBe('Someone')
+    await expect(resolvePresserName({ displayName: 'Jules', entries: TEAM })).resolves.toBe('Someone')
     // The linked account itself, under any display name, is still that person.
-    await expect(resolvePresserName({ slackUserId: 'UERIC', displayName: 'Eric B', entries: TEAM })).resolves.toBe('Eric')
+    await expect(resolvePresserName({ slackUserId: 'UEZRA', displayName: 'Ezra B', entries: TEAM })).resolves.toBe('Ezra')
     // A name with two records is theirs if either record is linked to them.
     const split: TeamMemberAvailability[] = [
       { ownerName: 'Sam', slackUserId: 'USAM1', status: 'available' },
@@ -225,38 +225,38 @@ describe('team identity', () => {
 
   it('throws rather than guessing when the roster cannot be read', async () => {
     routeOutreach({ availability: new Error('down') })
-    await expect(resolvePresserName({ slackUserId: 'UJUHAN' })).rejects.toThrow('down')
+    await expect(resolvePresserName({ slackUserId: 'UJULES' })).rejects.toThrow('down')
   })
 
-  // Reviewer finding: an unlinked Juhan whose Slack says "Juhan Sonin" pressed
-  // Take and became the owner "Juhan Sonin". Once he linked as "Juhan" the task
+  // Reviewer finding: an unlinked Jules whose Slack says "Jules Soren" pressed
+  // Take and became the owner "Jules Soren". Once he linked as "Jules" the task
   // was nobody's — Hand back refused him, `mine` did not list it, and the setup
   // kept offering a name he could no longer pick.
   describe('the name a write files something under', () => {
-    const unlinkedJuhan: TeamMemberAvailability[] = [{ ownerName: 'Juhan', status: 'available' }]
+    const unlinkedJuhan: TeamMemberAvailability[] = [{ ownerName: 'Jules', status: 'available' }]
 
     it('never files work under a display name the team list does not know', async () => {
       routeOutreach({ availability: unlinkedJuhan, openTasks: 0 })
-      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJUHAN', displayName: 'Juhan Sonin' })).resolves.toBe('Someone')
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJULES', displayName: 'Jules Soren' })).resolves.toBe('Someone')
       // resolvePresserName itself is unchanged: fine for a sentence, never for an owner.
-      await expect(resolvePresserName({ slackUserId: 'UJUHAN', displayName: 'Juhan Sonin', entries: unlinkedJuhan })).resolves.toBe('Juhan Sonin')
+      await expect(resolvePresserName({ slackUserId: 'UJULES', displayName: 'Jules Soren', entries: unlinkedJuhan })).resolves.toBe('Jules Soren')
     })
 
     it('uses the name when they are linked, on the team list, on the marketing team, or already own open work', async () => {
       routeOutreach({ availability: TEAM })
-      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJUHAN', displayName: 'Juhan Sonin' })).resolves.toBe('Juhan')
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJULES', displayName: 'Jules Soren' })).resolves.toBe('Jules')
       routeOutreach({ availability: unlinkedJuhan, openTasks: 0 })
-      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'juhan' })).resolves.toBe('Juhan')
-      // Jon owns nothing and has no record, but he is on the marketing team.
-      delete process.env.MARKETING_TEAM_NAMES
-      expect(marketingTeamNames()).toEqual(['Juhan', 'Shirley', 'Eric', 'Jon'])
-      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJON', displayName: 'Jon' })).resolves.toBe('Jon')
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'jules' })).resolves.toBe('Jules')
+      // Joss owns nothing and has no record, but he is on the marketing team (the deployment's list, task_1008).
+      process.env.MARKETING_TEAM_NAMES = 'Jules,Shay,Ezra,Joss'
+      expect(marketingTeamNames()).toEqual(['Jules', 'Shay', 'Ezra', 'Joss'])
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJOSS', displayName: 'Joss' })).resolves.toBe('Joss')
       // Somebody new with work already filed under exactly their name.
       routeOutreach({ availability: unlinkedJuhan, openTasks: 2 })
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UDANA', displayName: 'Dana' })).resolves.toBe('Dana')
       // A namesake is still nobody.
       routeOutreach({ availability: TEAM })
-      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'Eric' })).resolves.toBe('Someone')
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'Ezra' })).resolves.toBe('Someone')
     })
 
     it('throws rather than guessing when the open work cannot be counted', async () => {
@@ -273,14 +273,14 @@ describe('team identity', () => {
     routeOutreach({
       availability: TEAM,
       cards: [
-        { _id: 'op-a', title: 'Task A', ownerName: 'Juhan', ownerSlackUserId: 'USTALE', status: 'done' },
+        { _id: 'op-a', title: 'Task A', ownerName: 'Jules', ownerSlackUserId: 'USTALE', status: 'done' },
         { _id: 'op-b', title: 'Task B', status: 'queued' },
       ],
     })
     const records = await readTaskCardRecords(['op-a', 'op-b', 'op-a', ''])
     expect([...records.keys()]).toEqual(['op-a', 'op-b'])
     // The roster's id, never the stamped one.
-    expect(records.get('op-a')).toMatchObject({ ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'done' })
+    expect(records.get('op-a')).toMatchObject({ ownerName: 'Jules', slackUserId: 'UJULES', status: 'done' })
     const call = mocks.outreach.fetch.mock.calls.find(([query]) => query === TASK_CARDS_QUERY)!
     expect(call[1]).toEqual({ ids: ['op-a', 'op-b'] })
 
@@ -291,25 +291,25 @@ describe('team identity', () => {
 
   it('turns GROQ nulls into absent fields, so a missing allocation is the default week, not zero hours', () => {
     const [row] = tidyAvailability([
-      { ownerName: ' Juhan ', slackUserId: 'UJUHAN', status: 'available', from: null, until: null, weeklyHours: null, note: null },
+      { ownerName: ' Jules ', slackUserId: 'UJULES', status: 'available', from: null, until: null, weeklyHours: null, note: null },
     ])
-    expect(row).toEqual({ ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available' })
-    expect(hoursForWeek({ entries: [row], ownerName: 'Juhan', dateKey: '2026-09-24', defaultHours: 4 })).toBe(4)
-    expect(tidyAvailability([{ ownerName: 'Eric', slackUserId: 'not-an-id', status: 'weird', weeklyHours: 2 }])).toEqual([
-      { ownerName: 'Eric', status: 'available', weeklyHours: 2 },
+    expect(row).toEqual({ ownerName: 'Jules', slackUserId: 'UJULES', status: 'available' })
+    expect(hoursForWeek({ entries: [row], ownerName: 'Jules', dateKey: '2026-09-24', defaultHours: 4 })).toBe(4)
+    expect(tidyAvailability([{ ownerName: 'Ezra', slackUserId: 'not-an-id', status: 'weird', weeklyHours: 2 }])).toEqual([
+      { ownerName: 'Ezra', status: 'available', weeklyHours: 2 },
     ])
   })
 
   it('lists askable teammates once per Slack id, in name order', () => {
     const team = askableTeam([
-      { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available' },
-      { ownerName: 'Juhan Sonin', slackUserId: 'UJUHAN', status: 'available' },
-      { ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' },
+      { ownerName: 'Jules', slackUserId: 'UJULES', status: 'available' },
+      { ownerName: 'Jules Soren', slackUserId: 'UJULES', status: 'available' },
+      { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'available' },
       { ownerName: 'Nobody', status: 'available' },
     ])
     expect(team).toEqual([
-      { name: 'Eric', slackUserId: 'UERIC' },
-      { name: 'Juhan', slackUserId: 'UJUHAN' },
+      { name: 'Ezra', slackUserId: 'UEZRA' },
+      { name: 'Jules', slackUserId: 'UJULES' },
     ])
   })
 })
@@ -323,39 +323,39 @@ const task = (extra: Record<string, unknown> = {}) => ({
   _createdAt: '2026-09-01T00:00:00Z',
   _updatedAt: '2026-09-10T00:00:00Z',
   title: 'Write the case study',
-  ownerName: 'Juhan',
-  // Stale: claimed once by Eric's id, then reassigned in the Studio.
-  ownerSlackUserId: 'UERIC',
+  ownerName: 'Jules',
+  // Stale: claimed once by Ezra's id, then reassigned in the Studio.
+  ownerSlackUserId: 'UEZRA',
   status: 'queued',
   kind: 'content',
   dueAt: '2026-09-20T00:00:00Z',
   activity: [],
   ...extra,
 })
-const juhan = { taskId: TASK_ID, personName: 'Juhan', slackUserId: 'UJUHAN', now: NOW }
-const eric = { taskId: TASK_ID, personName: 'Eric', slackUserId: 'UERIC', now: NOW }
+const jules = { taskId: TASK_ID, personName: 'Jules', slackUserId: 'UJULES', now: NOW }
+const ezra = { taskId: TASK_ID, personName: 'Ezra', slackUserId: 'UEZRA', now: NOW }
 
 describe('task actions', () => {
   it('Done: moves to done through the status rules, and returns the fresh card with the roster’s id', async () => {
     routeOutreach({ task: task(), availability: TEAM })
-    const result = await markTaskDone(juhan)
+    const result = await markTaskDone(jules)
     expect(result).toMatchObject({ ok: true, changed: true })
     const [patch] = patchesFor(TASK_ID)
-    expect(setOf(patch)).toMatchObject({ status: 'done', completedAt: NOW.toISOString(), lastOutcome: 'Done — said in Slack by Juhan' })
+    expect(setOf(patch)).toMatchObject({ status: 'done', completedAt: NOW.toISOString(), lastOutcome: 'Done — said in Slack by Jules' })
     expect(setOf(patch).activity).toHaveLength(1)
     expect(opsOf(patch, 'ifRevisionId')[0][0]).toBe('rev1')
-    expect(result.task).toMatchObject({ _id: TASK_ID, status: 'done', ownerName: 'Juhan', slackUserId: 'UJUHAN', updatedAt: NOW.toISOString() })
+    expect(result.task).toMatchObject({ _id: TASK_ID, status: 'done', ownerName: 'Jules', slackUserId: 'UJULES', updatedAt: NOW.toISOString() })
   })
 
   it('Done on a done task changes nothing', async () => {
     routeOutreach({ task: task({ status: 'done' }), availability: TEAM })
-    await expect(markTaskDone(juhan)).resolves.toMatchObject({ ok: true, changed: false })
+    await expect(markTaskDone(jules)).resolves.toMatchObject({ ok: true, changed: false })
     expect(mocks.patches).toHaveLength(0)
   })
 
   it('Unstuck: blocked goes back to working and the blocker is cleared', async () => {
     routeOutreach({ task: task({ status: 'blocked', blocker: 'Waiting on numbers' }), availability: TEAM })
-    const result = await markTaskUnstuck(juhan)
+    const result = await markTaskUnstuck(jules)
     const [patch] = patchesFor(TASK_ID)
     expect(setOf(patch).status).toBe('working')
     expect(unsetOf(patch)).toContain('blocker')
@@ -364,7 +364,7 @@ describe('task actions', () => {
 
   it('Unstuck never moves a task waiting on a decision to working', async () => {
     routeOutreach({ task: task({ status: 'needsHuman', humanQuestion: 'Which offer leads?' }), availability: TEAM })
-    const result = await markTaskUnstuck(juhan)
+    const result = await markTaskUnstuck(jules)
     const [patch] = patchesFor(TASK_ID)
     expect(setOf(patch).status).toBe('needsHuman')
     expect(unsetOf(patch)).not.toContain('humanQuestion')
@@ -373,18 +373,18 @@ describe('task actions', () => {
 
   it('Stuck: blocked with what is in the way, and refuses an empty blocker', async () => {
     routeOutreach({ task: task(), availability: TEAM })
-    const result = await markTaskStuck({ ...juhan, blocker: '  Need the case-study numbers  ' })
+    const result = await markTaskStuck({ ...jules, blocker: '  Need the case-study numbers  ' })
     expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ status: 'blocked', blocker: 'Need the case-study numbers' })
     expect(result.task?.status).toBe('blocked')
 
     mocks.patches.length = 0
-    await expect(markTaskStuck({ ...juhan, blocker: '   ' })).resolves.toMatchObject({ ok: false })
+    await expect(markTaskStuck({ ...jules, blocker: '   ' })).resolves.toMatchObject({ ok: false })
     expect(mocks.patches).toHaveLength(0)
   })
 
   it('Reopen: done goes back to queued and completedAt is removed', async () => {
     routeOutreach({ task: task({ status: 'done', completedAt: '2026-09-23T00:00:00Z' }), availability: TEAM })
-    const result = await reopenTask(juhan)
+    const result = await reopenTask(jules)
     const [patch] = patchesFor(TASK_ID)
     expect(setOf(patch).status).toBe('queued')
     expect(unsetOf(patch)).toContain('completedAt')
@@ -396,7 +396,7 @@ describe('task actions', () => {
       task: task({ status: 'needsHuman', humanQuestion: 'Which client story do we lead with?' }),
       availability: TEAM,
     })
-    const result = await handBackTask(juhan)
+    const result = await handBackTask(jules)
     const [patch] = patchesFor(TASK_ID)
     expect(unsetOf(patch)).toEqual(expect.arrayContaining(['ownerName', 'ownerSlackUserId']))
     expect(unsetOf(patch)).not.toContain('humanQuestion')
@@ -409,7 +409,7 @@ describe('task actions', () => {
 
   it('Hand back refuses to clear a colleague’s name off their work', async () => {
     routeOutreach({ task: task(), availability: TEAM })
-    await expect(handBackTask(eric)).resolves.toMatchObject({ ok: false })
+    await expect(handBackTask(ezra)).resolves.toMatchObject({ ok: false })
     expect(mocks.patches).toHaveLength(0)
   })
 
@@ -418,11 +418,11 @@ describe('task actions', () => {
       task: task({ ownerName: '', ownerSlackUserId: '', status: 'needsHuman', humanQuestion: 'Jen passed on this — who should pick it up?' }),
       availability: TEAM,
     })
-    const result = await takeTask(eric)
+    const result = await takeTask(ezra)
     const [patch] = patchesFor(TASK_ID)
-    expect(setOf(patch)).toMatchObject({ status: 'queued', ownerName: 'Eric', ownerSlackUserId: 'UERIC' })
+    expect(setOf(patch)).toMatchObject({ status: 'queued', ownerName: 'Ezra', ownerSlackUserId: 'UEZRA' })
     expect(unsetOf(patch)).toContain('humanQuestion')
-    expect(result.task).toMatchObject({ status: 'queued', ownerName: 'Eric', slackUserId: 'UERIC' })
+    expect(result.task).toMatchObject({ status: 'queued', ownerName: 'Ezra', slackUserId: 'UEZRA' })
     expect(result.task?.humanQuestion).toBeUndefined()
   })
 
@@ -431,7 +431,7 @@ describe('task actions', () => {
       task: task({ ownerName: '', ownerSlackUserId: '', kind: 'decision', status: 'needsHuman', humanQuestion: 'Which offer leads?' }),
       availability: TEAM,
     })
-    await takeTask(eric)
+    await takeTask(ezra)
     const [patch] = patchesFor(TASK_ID)
     expect(setOf(patch).status).toBe('needsHuman')
     expect(unsetOf(patch)).not.toContain('humanQuestion')
@@ -439,13 +439,13 @@ describe('task actions', () => {
 
   it('Take refuses a presser nobody could name, rather than filing it under "Someone"', async () => {
     routeOutreach({ task: task({ ownerName: '', ownerSlackUserId: '' }), availability: TEAM })
-    await expect(takeTask({ ...eric, personName: 'Someone' })).resolves.toMatchObject({ ok: false })
+    await expect(takeTask({ ...ezra, personName: 'Someone' })).resolves.toMatchObject({ ok: false })
     expect(mocks.patches).toHaveLength(0)
   })
 
   it('Take does not take a task somebody else owns', async () => {
     routeOutreach({ task: task(), availability: TEAM })
-    await expect(takeTask(eric)).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
+    await expect(takeTask(ezra)).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Jules already has it.' })
     expect(mocks.patches).toHaveLength(0)
   })
 
@@ -453,12 +453,12 @@ describe('task actions', () => {
   // that nothing changed, and where to do it instead.
   it('refuses in one shape — "Couldn’t … — nothing changed." — and never says it did something', async () => {
     const refusals: Array<[string, () => Promise<{ ok: boolean; message?: string }>]> = [
-      ['closed', async () => (routeOutreach({ task: task({ status: 'done' }), availability: TEAM }), handBackTask(juhan))],
-      ['someone else’s', async () => (routeOutreach({ task: task(), availability: TEAM }), handBackTask(eric))],
-      ['in progress', async () => (routeOutreach({ task: task({ status: 'working' }), availability: TEAM }), dropTask(juhan))],
-      ['no blocker', async () => (routeOutreach({ task: task(), availability: TEAM }), markTaskStuck({ ...juhan, blocker: '  ' }))],
-      ['gone', async () => (routeOutreach({ task: null, availability: TEAM }), markTaskDone(juhan))],
-      ['no task id', async () => markTaskDone({ ...juhan, taskId: '' })],
+      ['closed', async () => (routeOutreach({ task: task({ status: 'done' }), availability: TEAM }), handBackTask(jules))],
+      ['someone else’s', async () => (routeOutreach({ task: task(), availability: TEAM }), handBackTask(ezra))],
+      ['in progress', async () => (routeOutreach({ task: task({ status: 'working' }), availability: TEAM }), dropTask(jules))],
+      ['no blocker', async () => (routeOutreach({ task: task(), availability: TEAM }), markTaskStuck({ ...jules, blocker: '  ' }))],
+      ['gone', async () => (routeOutreach({ task: null, availability: TEAM }), markTaskDone(jules))],
+      ['no task id', async () => markTaskDone({ ...jules, taskId: '' })],
     ]
     for (const [name, run] of refusals) {
       const result = await run()
@@ -471,87 +471,87 @@ describe('task actions', () => {
 
   // The away cover: the one card whose Take may move a task off its owner.
   describe('Take as an away cover', () => {
-    const erics = () => task({ ownerName: 'Eric', ownerSlackUserId: 'UERIC' })
-    const shirley = { taskId: TASK_ID, personName: 'Shirley', slackUserId: 'USHIRLEY', now: NOW }
-    /** Eric away Mon 21 – Sun 27 Sep; NOW is the Thursday. */
-    const ericAway: TeamMemberAvailability[] = [
+    const erics = () => task({ ownerName: 'Ezra', ownerSlackUserId: 'UEZRA' })
+    const shay = { taskId: TASK_ID, personName: 'Shay', slackUserId: 'USHAY', now: NOW }
+    /** Ezra away Mon 21 – Sun 27 Sep; NOW is the Thursday. */
+    const ezraAway: TeamMemberAvailability[] = [
       TEAM[0],
-      { ownerName: 'Eric', slackUserId: 'UERIC', status: 'away', from: '2026-09-21', until: '2026-09-27' },
+      { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'away', from: '2026-09-21', until: '2026-09-27' },
     ]
 
     it('moves the task off the away owner it was drawn for, onto the presser, and names who it came from', async () => {
-      routeOutreach({ task: erics(), availability: ericAway })
-      const result = await takeTask({ ...juhan, coverFor: 'Eric' })
-      expect(result).toMatchObject({ ok: true, changed: true, message: 'It’s yours — taken over from Eric.' })
+      routeOutreach({ task: erics(), availability: ezraAway })
+      const result = await takeTask({ ...jules, coverFor: 'Ezra' })
+      expect(result).toMatchObject({ ok: true, changed: true, message: 'It’s yours — taken over from Ezra.' })
       const [patch] = patchesFor(TASK_ID)
       expect(setOf(patch)).toMatchObject({
-        ownerName: 'Juhan',
-        ownerSlackUserId: 'UJUHAN',
-        lastOutcome: 'Taken over from Eric in Slack by Juhan',
+        ownerName: 'Jules',
+        ownerSlackUserId: 'UJULES',
+        lastOutcome: 'Taken over from Ezra in Slack by Jules',
       })
       expect(opsOf(patch, 'ifRevisionId')[0][0]).toBe('rev1')
-      expect(result.task).toMatchObject({ ownerName: 'Juhan', slackUserId: 'UJUHAN' })
+      expect(result.task).toMatchObject({ ownerName: 'Jules', slackUserId: 'UJULES' })
     })
 
     // The card stays in the channel after the absence ends. Pressed then, it
-    // would take Eric's task from under him while he works on it.
+    // would take Ezra's task from under him while he works on it.
     it('refuses once the owner is back — the card was drawn while they were away, and nothing changes', async () => {
       routeOutreach({ task: erics(), availability: TEAM })
-      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({
+      await expect(takeTask({ ...jules, coverFor: 'Ezra' })).resolves.toMatchObject({
         ok: false,
-        message: 'Couldn’t take that — nothing changed. Eric is back — ask them before taking it.',
+        message: 'Couldn’t take that — nothing changed. Ezra is back — ask them before taking it.',
       })
       // Back after the time off ended, too: the day after his last day.
-      routeOutreach({ task: erics(), availability: [TEAM[0], { ...ericAway[1], from: '2026-09-14', until: '2026-09-23' }] })
-      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({ ok: false })
+      routeOutreach({ task: erics(), availability: [TEAM[0], { ...ezraAway[1], from: '2026-09-14', until: '2026-09-23' }] })
+      await expect(takeTask({ ...jules, coverFor: 'Ezra' })).resolves.toMatchObject({ ok: false })
       // A roster that cannot be read cannot say he is still away: refused, not guessed.
       routeOutreach({ task: erics(), availability: new Error('down') })
-      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({ ok: false })
+      await expect(takeTask({ ...jules, coverFor: 'Ezra' })).resolves.toMatchObject({ ok: false })
       expect(mocks.patches).toHaveLength(0)
     })
 
     it('never takes it from whoever covered it first — a stale cover card is refused', async () => {
-      // Juhan covered Eric's task; Shirley presses the same card later.
-      routeOutreach({ task: task({ ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN' }), availability: TEAM })
-      await expect(takeTask({ ...shirley, coverFor: 'Eric' })).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
+      // Jules covered Ezra's task; Shay presses the same card later.
+      routeOutreach({ task: task({ ownerName: 'Jules', ownerSlackUserId: 'UJULES' }), availability: TEAM })
+      await expect(takeTask({ ...shay, coverFor: 'Ezra' })).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Jules already has it.' })
       expect(mocks.patches).toHaveLength(0)
     })
 
     it('is only a cover for the owner named — without it, or for someone else, Take still refuses', async () => {
       routeOutreach({ task: erics(), availability: TEAM })
-      await expect(takeTask(juhan)).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Eric already has it.' })
-      await expect(takeTask({ ...juhan, coverFor: 'Shirley' })).resolves.toMatchObject({ ok: false })
-      await expect(takeTask({ ...juhan, coverFor: '' })).resolves.toMatchObject({ ok: false })
+      await expect(takeTask(jules)).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Ezra already has it.' })
+      await expect(takeTask({ ...jules, coverFor: 'Shay' })).resolves.toMatchObject({ ok: false })
+      await expect(takeTask({ ...jules, coverFor: '' })).resolves.toMatchObject({ ok: false })
       expect(mocks.patches).toHaveLength(0)
     })
 
     it('is an ordinary take when the task has come free since', async () => {
       routeOutreach({ task: task({ ownerName: '', ownerSlackUserId: '' }), availability: TEAM })
-      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({ ok: true, message: 'It’s yours.' })
-      expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ ownerName: 'Juhan', lastOutcome: 'Taken in Slack by Juhan' })
+      await expect(takeTask({ ...jules, coverFor: 'Ezra' })).resolves.toMatchObject({ ok: true, message: 'It’s yours.' })
+      expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ ownerName: 'Jules', lastOutcome: 'Taken in Slack by Jules' })
     })
   })
 
   it('Drop: dismissed with who dropped it, but not while in progress', async () => {
     routeOutreach({ task: task(), availability: TEAM })
-    const result = await dropTask(juhan)
-    expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ status: 'dismissed', lastOutcome: 'Dropped from Slack by Juhan' })
+    const result = await dropTask(jules)
+    expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ status: 'dismissed', lastOutcome: 'Dropped from Slack by Jules' })
     expect(result.task?.status).toBe('dismissed')
 
     mocks.patches.length = 0
     routeOutreach({ task: task({ status: 'working' }), availability: TEAM })
-    await expect(dropTask(juhan)).resolves.toMatchObject({ ok: false })
+    await expect(dropTask(jules)).resolves.toMatchObject({ ok: false })
     expect(mocks.patches).toHaveLength(0)
   })
 
   it('Snooze: seven days on from the later of today and the old date, once per press', async () => {
     routeOutreach({ task: task({ dueAt: daysFromNow(-20) }), availability: TEAM })
-    await snoozeTask(juhan)
+    await snoozeTask(jules)
     expect(setOf(patchesFor(TASK_ID)[0]).dueAt).toBe(daysFromNow(7))
 
     mocks.patches.length = 0
     routeOutreach({ task: task({ dueAt: daysFromNow(3) }), availability: TEAM })
-    await snoozeTask(juhan)
+    await snoozeTask(jules)
     expect(setOf(patchesFor(TASK_ID)[0]).dueAt).toBe(daysFromNow(10))
 
     // A double-tap is one press, not two weeks.
@@ -560,7 +560,7 @@ describe('task actions', () => {
       task: task({ activity: [{ _key: 'a1', at: minutesAgo(1), actor: 'person', action: 'Kept for next week in Slack' }] }),
       availability: TEAM,
     })
-    await expect(snoozeTask(juhan)).resolves.toMatchObject({ ok: true, changed: false })
+    await expect(snoozeTask(jules)).resolves.toMatchObject({ ok: true, changed: false })
     expect(mocks.patches).toHaveLength(0)
   })
 
@@ -569,7 +569,7 @@ describe('task actions', () => {
     mocks.commit.mockImplementationOnce(async () => {
       throw conflict()
     })
-    await expect(markTaskDone(juhan)).resolves.toMatchObject({ ok: true, changed: true })
+    await expect(markTaskDone(jules)).resolves.toMatchObject({ ok: true, changed: true })
     const writes = patchesFor(TASK_ID)
     expect(writes).toHaveLength(2)
     expect(opsOf(writes[1], 'ifRevisionId')[0][0]).toBe('rev2')
@@ -580,38 +580,38 @@ describe('task actions', () => {
     mocks.commit.mockImplementation(async () => {
       throw conflict()
     })
-    await expect(markTaskDone(juhan)).resolves.toMatchObject({ ok: false, message: expect.stringMatching(/at the same moment/) })
+    await expect(markTaskDone(jules)).resolves.toMatchObject({ ok: false, message: expect.stringMatching(/at the same moment/) })
     expect(patchesFor(TASK_ID)).toHaveLength(2)
   })
 
-  // The stale-id shape from team.server.ts: Eric claimed in Slack, the Studio
-  // reassigned the task to Juhan, and `ownerSlackUserId` still says UERIC.
-  // With no roster entry for Juhan to contradict it, that stamp used to count
-  // as proof that Eric owns the task.
+  // The stale-id shape from team.server.ts: Ezra claimed in Slack, the Studio
+  // reassigned the task to Jules, and `ownerSlackUserId` still says UEZRA.
+  // With no roster entry for Jules to contradict it, that stamp used to count
+  // as proof that Ezra owns the task.
   it('Hand back never trusts a stale stamped id when the roster cannot name the owner', async () => {
     routeOutreach({ task: task(), availability: [] })
-    await expect(handBackTask(eric)).resolves.toMatchObject({ ok: false, message: expect.stringMatching(/Juhan’s/) })
+    await expect(handBackTask(ezra)).resolves.toMatchObject({ ok: false, message: expect.stringMatching(/Jules’s/) })
     expect(mocks.patches).toHaveLength(0)
 
-    // A roster that names other people but not Juhan is the same situation.
-    routeOutreach({ task: task(), availability: [{ ownerName: 'Shirley', slackUserId: 'USHIRLEY', status: 'available' }] })
-    await expect(handBackTask(eric)).resolves.toMatchObject({ ok: false })
+    // A roster that names other people but not Jules is the same situation.
+    routeOutreach({ task: task(), availability: [{ ownerName: 'Shay', slackUserId: 'USHAY', status: 'available' }] })
+    await expect(handBackTask(ezra)).resolves.toMatchObject({ ok: false })
     expect(mocks.patches).toHaveLength(0)
   })
 
   it('Hand back refuses rather than guessing when the roster cannot be read', async () => {
     routeOutreach({ task: task(), availability: new Error('down') })
-    await expect(handBackTask(eric)).resolves.toMatchObject({ ok: false, message: expect.stringMatching(/couldn’t check who owns/) })
+    await expect(handBackTask(ezra)).resolves.toMatchObject({ ok: false, message: expect.stringMatching(/couldn’t check who owns/) })
     expect(mocks.patches).toHaveLength(0)
   })
 
   it('Take by the previous owner of a reassigned task is refused, never "already yours"', async () => {
     routeOutreach({ task: task(), availability: [] })
-    await expect(takeTask(eric)).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
+    await expect(takeTask(ezra)).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Jules already has it.' })
     expect(mocks.patches).toHaveLength(0)
 
     routeOutreach({ task: task(), availability: new Error('down') })
-    const unreadable = await takeTask(eric)
+    const unreadable = await takeTask(ezra)
     expect(unreadable).toMatchObject({ ok: false, message: expect.stringMatching(/couldn’t check who owns/) })
     expect(unreadable.message).not.toMatch(/already yours/)
     expect(mocks.patches).toHaveLength(0)
@@ -620,25 +620,25 @@ describe('task actions', () => {
   it('the owner is still the owner without a roster: by board name, and the stale id is replaced', async () => {
     // The name answers the question, so an unreadable roster does not block the real owner.
     routeOutreach({ task: task(), availability: new Error('down') })
-    await expect(handBackTask(juhan)).resolves.toMatchObject({ ok: true, changed: true })
+    await expect(handBackTask(jules)).resolves.toMatchObject({ ok: true, changed: true })
     expect(unsetOf(patchesFor(TASK_ID)[0])).toEqual(expect.arrayContaining(['ownerName', 'ownerSlackUserId']))
 
     mocks.patches.length = 0
     routeOutreach({ task: task(), availability: [] })
-    await expect(takeTask(juhan)).resolves.toMatchObject({ ok: true, changed: true })
-    expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN' })
+    await expect(takeTask(jules)).resolves.toMatchObject({ ok: true, changed: true })
+    expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ ownerName: 'Jules', ownerSlackUserId: 'UJULES' })
   })
 
   it('recognises a linked owner by the ROSTER’s id under a different name', async () => {
     routeOutreach({ task: task(), availability: TEAM })
-    await expect(handBackTask({ ...juhan, personName: 'Juhan Sonin' })).resolves.toMatchObject({ ok: true, changed: true })
+    await expect(handBackTask({ ...jules, personName: 'Jules Soren' })).resolves.toMatchObject({ ok: true, changed: true })
   })
 
   it('does not take a linked owner’s name as proof when the Slack id says it is someone else', async () => {
-    // An unlinked colleague whose display name happens to be "Juhan".
+    // An unlinked colleague whose display name happens to be "Jules".
     routeOutreach({ task: task(), availability: TEAM })
-    await expect(handBackTask({ ...juhan, slackUserId: 'UOTHER' })).resolves.toMatchObject({ ok: false })
-    await expect(takeTask({ ...juhan, slackUserId: 'UOTHER' })).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
+    await expect(handBackTask({ ...jules, slackUserId: 'UOTHER' })).resolves.toMatchObject({ ok: false })
+    await expect(takeTask({ ...jules, slackUserId: 'UOTHER' })).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Jules already has it.' })
     expect(mocks.patches).toHaveLength(0)
   })
 
@@ -646,7 +646,7 @@ describe('task actions', () => {
   // own targetView, not its kind's default tab.
   it('hands back the record’s own targetView, so a redrawn card links where it did before', async () => {
     routeOutreach({ task: task({ kind: 'content', targetView: 'seo' }), availability: TEAM })
-    const result = await markTaskDone(juhan)
+    const result = await markTaskDone(jules)
     expect(result.task).toMatchObject({ kind: 'content', targetView: 'seo' })
   })
 
@@ -656,49 +656,49 @@ describe('task actions', () => {
 
     it('saves the answer and moves a waiting decision to queued, keeping the question — conditional on the revision read', async () => {
       routeOutreach({ task: decision(), availability: TEAM })
-      const result = await answerTask({ ...juhan, answer: '  Keep it internal.\nRevisit in Q1.  ' })
+      const result = await answerTask({ ...jules, answer: '  Keep it internal.\nRevisit in Q1.  ' })
       expect(result).toMatchObject({ ok: true, changed: true })
       const [patch] = patchesFor(TASK_ID)
       expect(setOf(patch)).toMatchObject({
         status: 'queued',
         humanResponse: 'Keep it internal.\nRevisit in Q1.',
-        lastOutcome: 'Answered in Slack by Juhan',
+        lastOutcome: 'Answered in Slack by Jules',
         lastEvaluatedAt: NOW.toISOString(),
       })
-      expect(setOf(patch).activity).toEqual([expect.objectContaining({ action: 'Answered in Slack', outcome: 'By Juhan' })])
+      expect(setOf(patch).activity).toEqual([expect.objectContaining({ action: 'Answered in Slack', outcome: 'By Jules' })])
       expect(unsetOf(patch)).not.toContain('humanQuestion')
       expect(opsOf(patch, 'ifRevisionId')[0][0]).toBe('rev1')
       // The fresh card: no longer waiting, the question kept, the roster's id for the mention.
-      expect(result.task).toMatchObject({ status: 'queued', humanQuestion: 'Publish the taxonomy, or keep it internal?', slackUserId: 'UJUHAN' })
+      expect(result.task).toMatchObject({ status: 'queued', humanQuestion: 'Publish the taxonomy, or keep it internal?', slackUserId: 'UJULES' })
     })
 
     it('revises an answer without moving the work, and changes nothing for the same answer again', async () => {
       routeOutreach({ task: decision({ status: 'working', humanResponse: 'Publish it.' }), availability: TEAM })
-      await expect(answerTask({ ...juhan, answer: 'Keep it internal.' })).resolves.toMatchObject({ ok: true, changed: true })
+      await expect(answerTask({ ...jules, answer: 'Keep it internal.' })).resolves.toMatchObject({ ok: true, changed: true })
       expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ status: 'working', humanResponse: 'Keep it internal.' })
 
       mocks.patches.length = 0
       routeOutreach({ task: decision({ status: 'queued', humanResponse: 'Keep it internal.' }), availability: TEAM })
-      await expect(answerTask({ ...juhan, answer: 'Keep it internal.' })).resolves.toMatchObject({ ok: true, changed: false })
+      await expect(answerTask({ ...jules, answer: 'Keep it internal.' })).resolves.toMatchObject({ ok: true, changed: false })
       expect(mocks.patches).toHaveLength(0)
     })
 
     it('refuses a closed decision, and an empty answer, in the one error shape', async () => {
       routeOutreach({ task: decision({ status: 'done' }), availability: TEAM })
-      const closed = await answerTask({ ...juhan, answer: 'Yes.' })
+      const closed = await answerTask({ ...jules, answer: 'Yes.' })
       expect(closed).toMatchObject({ ok: false, message: 'Couldn’t save that answer — nothing changed. It’s already closed — press Reopen first.' })
       routeOutreach({ task: decision(), availability: TEAM })
-      await expect(answerTask({ ...juhan, answer: '   ' })).resolves.toMatchObject({ ok: false })
+      await expect(answerTask({ ...jules, answer: '   ' })).resolves.toMatchObject({ ok: false })
       expect(mocks.patches).toHaveLength(0)
     })
   })
 
   it('still writes when the roster cannot be read — only the card’s mention id is lost', async () => {
     routeOutreach({ task: task(), availability: new Error('down') })
-    const result = await markTaskDone(juhan)
+    const result = await markTaskDone(jules)
     expect(result.ok).toBe(true)
     // Without a roster the stamped id is all there is.
-    expect(result.task?.slackUserId).toBe('UERIC')
+    expect(result.task?.slackUserId).toBe('UEZRA')
   })
 })
 
@@ -710,9 +710,9 @@ const checkInData = (extra: Record<string, unknown> = {}) => ({
     {
       _id: 'marketingOperation.c1',
       title: 'Call three past clients',
-      ownerName: 'Juhan',
-      // Stale id: the roster must win, or Eric is pinged about Juhan's work.
-      ownerSlackUserId: 'UERIC',
+      ownerName: 'Jules',
+      // Stale id: the roster must win, or Ezra is pinged about Jules's work.
+      ownerSlackUserId: 'UEZRA',
       status: 'queued',
       dueAt: '2026-09-22T00:00:00Z',
       _createdAt: '2026-09-01T00:00:00Z',
@@ -721,7 +721,7 @@ const checkInData = (extra: Record<string, unknown> = {}) => ({
     {
       _id: 'marketingOperation.c2',
       title: 'Draft the newsletter',
-      ownerName: 'Eric',
+      ownerName: 'Ezra',
       status: 'working',
       _createdAt: '2026-09-01T00:00:00Z',
       _updatedAt: '2026-09-15T00:00:00Z',
@@ -734,10 +734,10 @@ const checkInData = (extra: Record<string, unknown> = {}) => ({
       _id: 'marketingContact.f1',
       name: 'Riley Replied',
       organization: 'Acme',
-      owner: 'juhan',
+      owner: 'jules',
       status: 'responded',
       followUpAt: '2026-09-23T14:00:00Z',
-      interactions: [{ at: '2026-09-21T14:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'responded' }],
+      interactions: [{ at: '2026-09-21T14:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'responded' }],
     },
   ],
   ...extra,
@@ -785,19 +785,19 @@ describe('runWeeklyCheckIn', () => {
     const post = mocks.postSlackMessage.mock.calls[0][0]
     expect(post).toMatchObject({ channel: 'CMKTBOT', username: 'Marqueta', iconEmoji: ':chart_with_upwards_trend:', unfurl: false })
     // The lock screen: mentions first, then what it is and how much.
-    expect(post.text).toBe('<@UERIC> <@UJUHAN> — Thursday check-in: 3 open tasks, 1 follow-up (1 overdue)')
+    expect(post.text).toBe('<@UEZRA> <@UJULES> — Thursday check-in: 3 open tasks, 1 follow-up (1 overdue)')
     const blocks: Block[] = post.blocks
     expectValidSlackBlocks(blocks, { maxBlocks: MAX_CHECK_IN_BLOCKS })
     expect(blocks[1].elements[0].text).toBe('Week of Mon 21 Sep · 2 working days left')
     expect(JSON.stringify(blocks)).not.toMatch(/2026-W39/)
-    const ericHeading = sectionIndex(blocks, (text) => text.startsWith('*<@UERIC>*'))
-    const juhanHeading = sectionIndex(blocks, (text) => text.startsWith('*<@UJUHAN>*'))
-    const juhanTask = sectionIndex(blocks, (text) => text.includes('Call three past clients'))
-    expect(ericHeading).toBeGreaterThan(-1)
-    // Juhan's task sits under Juhan, whatever id is stamped on it.
-    expect(juhanTask).toBeGreaterThan(juhanHeading)
-    expect(juhanHeading).toBeGreaterThan(ericHeading)
-    expect(blocks[juhanHeading].text.text).toBe('*<@UJUHAN>* · 1 task, 1 follow-up')
+    const ezraHeading = sectionIndex(blocks, (text) => text.startsWith('*<@UEZRA>*'))
+    const julesHeading = sectionIndex(blocks, (text) => text.startsWith('*<@UJULES>*'))
+    const julesTask = sectionIndex(blocks, (text) => text.includes('Call three past clients'))
+    expect(ezraHeading).toBeGreaterThan(-1)
+    // Jules's task sits under Jules, whatever id is stamped on it.
+    expect(julesTask).toBeGreaterThan(julesHeading)
+    expect(julesHeading).toBeGreaterThan(ezraHeading)
+    expect(blocks[julesHeading].text.text).toBe('*<@UJULES>* · 1 task, 1 follow-up')
     expect(JSON.stringify(blocks)).toContain('Follow up with Riley Replied')
     // The room's card for the work nobody has, linked into the Studio.
     const nobody = sectionIndex(blocks, (text) => text === '*Nobody has taken*')
@@ -823,7 +823,7 @@ describe('runWeeklyCheckIn', () => {
     const seoTask = {
       _id: 'marketingOperation.meta',
       title: 'Fix the meta descriptions',
-      ownerName: 'Juhan',
+      ownerName: 'Jules',
       kind: 'content',
       targetView: 'seo',
       status: 'working',

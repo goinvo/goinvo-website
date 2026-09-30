@@ -131,7 +131,7 @@ describe('Slack notification escaping', () => {
 
 describe('the money in the order alert', () => {
   /**
-   * Eric's real production order, SHOP-20260817-P0HKUFMR: one Own Your Health
+   * Ezra's real production order, SHOP-20260817-P0HKUFMR: one Own Your Health
    * Data comic at $9 plus $6 shipping, and Stripe collected $15.
    *
    * The alert used to print "Total: $15.00" and then "Additional shipping:
@@ -143,7 +143,7 @@ describe('the money in the order alert', () => {
     orderId: 'marketingOrder.stripe-cs_live_real',
     orderNumber: 'SHOP-20260817-P0HKUFMR',
     placedAt: '2026-08-17T15:55:48.000Z',
-    customerName: 'Eric Benoit',
+    customerName: 'Ezra Bennet',
     customerEmail: 'benwa02@gmail.com',
     items: [{ title: 'Own Your Health Data', quantity: 1 }],
     supportAmount: 0,

@@ -73,7 +73,7 @@ try {
     }
     const cards = [...document.querySelectorAll('[data-shop-print-card]')]
     // "Add to cart" is what the button does; it does not buy anything on its
-    // own (Shirley, 2026-08-11). A piece taken off sale in the CMS has no
+    // own (Shay, 2026-08-11). A piece taken off sale in the CMS has no
     // button at all.
     const cardButtons = [...document.querySelectorAll('[data-shop-print-card] button')]
     const addButtons = cardButtons.filter((button) => /^Add to cart/.test(button.textContent?.trim() || ''))
@@ -471,7 +471,7 @@ try {
   }
 
   // "Another amount" opens the checkout screen with the support editor.
-  // It must fire once and never again for this visitor (Shirley, 2026-08-11).
+  // It must fire once and never again for this visitor (Shay, 2026-08-11).
   await page.click('[data-shop-support-dialog] [data-shop-donate-trigger]')
   await page.waitForSelector('[data-shop-donation-panel]', { visible: true })
   await page.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
@@ -653,7 +653,7 @@ try {
   }
   await page.setViewport({ width: 1064, height: 900, deviceScaleFactor: 1 })
 
-  // The first popup breaks out shipping (Jon's feedback): "$30 + $6 shipping",
+  // The first popup breaks out shipping (Joss's feedback): "$30 + $6 shipping",
   // never a bare surprise total.
   const unit = desktop.posterPrice
   const ship = desktop.shippingLabel
@@ -1066,7 +1066,7 @@ try {
 
   // Homepage "bring GoInvo home" section: one CTA (no second "Download the
   // files" button → no anchor-jump double hop), the shop hero's matted poster
-  // spray, and the $30 fact line (Juhan's feedback, 2026-08-07).
+  // spray, and the $30 fact line (Jules's feedback, 2026-08-07).
   const homePage = await browser.newPage()
   await homePage.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 })
   // The homepage is not changing yet, so NO ordinary visitor may see the

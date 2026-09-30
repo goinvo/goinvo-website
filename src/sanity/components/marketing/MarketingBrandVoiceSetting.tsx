@@ -256,7 +256,7 @@ export function MarketingBrandVoiceSetting() {
                       style={styles.input}
                       maxLength={80}
                       value={voice.name}
-                      placeholder="Studio voice or Juhan"
+                      placeholder="Studio voice or Jules"
                       onChange={(event) => updateVoice(voice._key, 'name', event.currentTarget.value)}
                     />
                   </label>

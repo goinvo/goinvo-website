@@ -5,7 +5,7 @@ import { z } from 'zod'
 //
 // Back to $30 on 2026-08-17: an email already quoted $30, so that price is
 // honoured for a month rather than raised out from under anyone who received
-// it. The rise to $50 (Juhan) is scheduled for 2026-09-17 and tracked as an
+// it. The rise to $50 (the studio) is scheduled for 2026-09-17 and tracked as an
 // operation on the Outreach board so it is not quietly forgotten.
 // ($30 from 2026-08-07; $6 at launch.)
 //
@@ -73,7 +73,7 @@ export function shopPriceCentsFor(slug: string | undefined): number {
   return typeof override === 'number' ? override : SHOP_PRINT_PRICE_CENTS
 }
 // Flat standard-US rate shown to the buyer as its own shipping line (storefront
-// summary + Stripe checkout). $6 per Shirley, 2026-08-05.
+// summary + Stripe checkout). $6 per the studio, 2026-08-05.
 export const SHOP_SHIPPING_PRICE_CENTS = 600
 export const SHOP_MAX_CART_ITEMS = 50
 export const SHOP_MAX_DONATION_CENTS = 100_000

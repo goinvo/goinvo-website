@@ -981,7 +981,7 @@ const CLOSEST: Array<[RegExp, string]> = [
  *     ("called Jane, she's away until October") and that must not mark the
  *     person reporting it as away. Signed work ("we signed Acme") likewise.
  *  4. A QUESTION about one of her topics, when it also mentions time off: "what
- *     does the pipeline look like with Eric away?" is about the pipeline, and
+ *     does the pipeline look like with Ezra away?" is about the pipeline, and
  *     "who's away this week?" is about the week. Before availability, which
  *     would otherwise read the word "away" and answer about the asker's own
  *     time off.

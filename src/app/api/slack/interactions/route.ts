@@ -341,7 +341,7 @@ async function teamMember(userId: string): Promise<{ ok: true; name: string } | 
 }
 
 /**
- * The presser's name as the BOARD writes it — "Juhan", not whatever Slack's
+ * The presser's name as the BOARD writes it — "Jules", not whatever Slack's
  * display name is this month (`resolvePresserName`).
  *
  * `resolved: false` means the team list could not be read and the name is the
@@ -379,13 +379,13 @@ const notOnTheList = (verb: string) =>
 
 /**
  * The name a record says did something that is NOT ownership — "Confirmed by
- * Juhan" on the runway, "Answered in Slack by Juhan" on a decision.
+ * Jules" on the runway, "Answered in Slack by Jules" on a decision.
  *
  * A note rather than an owner, so the Slack display name will do when the
  * team list cannot be read (`resolved: false`). What it must never do is
  * write the display name when the list WAS read and named nobody: that is a
  * namesake — someone whose Slack name matches a board name linked to another
- * account — and "Confirmed by Juhan" from someone who is not Juhan is the
+ * account — and "Confirmed by Jules" from someone who is not Jules is the
  * impersonation the namesake guard (`resolvePresserName`) exists to stop.
  * Null means refuse (`notOnTheList`).
  */
@@ -1426,7 +1426,7 @@ export async function POST(request: NextRequest) {
           await tellPrivately(origin, userId, member.message)
           return
         }
-        // A note on the record ("Confirmed by Juhan"), not an owner — but never
+        // A note on the record ("Confirmed by Jules"), not an owner — but never
         // a namesake's display name (recordedName).
         const personName = await recordedName(userId, member, payload.user?.name)
         if (!personName) {
@@ -1670,7 +1670,7 @@ export async function POST(request: NextRequest) {
           await postSlackResponse(responseUrl, member.message)
           return
         }
-        // A note on the record ("Confirmed by Juhan"), not an owner — but never a namesake's display name (recordedName).
+        // A note on the record ("Confirmed by Jules"), not an owner — but never a namesake's display name (recordedName).
         const personName = await recordedName(userId, member, payload.user?.name)
         if (!personName) {
           await postSlackResponse(responseUrl, notOnTheList('confirm the runway'))

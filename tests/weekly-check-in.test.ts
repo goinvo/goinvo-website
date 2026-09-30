@@ -55,7 +55,7 @@ const HOSTILE = '<!here> & <5% of pilots > ' + 'x'.repeat(5000)
 const task = (overrides: Partial<CheckInTask> = {}): CheckInTask => ({
   _id: 't1',
   title: 'Write the pre-mortem post',
-  ownerName: 'Juhan',
+  ownerName: 'Jules',
   slackUserId: 'U1',
   status: 'queued',
   dueAt: '2026-09-25T12:00:00Z',
@@ -211,14 +211,14 @@ describe('groupCheckInTasks', () => {
   it('groups by person case-insensitively and by Slack id, so nobody is split in two', () => {
     const { groups } = groupCheckInTasks(
       [
-        task({ _id: 'a', ownerName: 'Juhan', slackUserId: 'U1' }),
-        task({ _id: 'b', ownerName: 'juhan', slackUserId: undefined }),
-        task({ _id: 'c', ownerName: 'Juhan Sonin', slackUserId: 'U1' }),
-        task({ _id: 'd', ownerName: 'Shirley', slackUserId: 'U2' }),
+        task({ _id: 'a', ownerName: 'Jules', slackUserId: 'U1' }),
+        task({ _id: 'b', ownerName: 'jules', slackUserId: undefined }),
+        task({ _id: 'c', ownerName: 'Jules Soren', slackUserId: 'U1' }),
+        task({ _id: 'd', ownerName: 'Shay', slackUserId: 'U2' }),
       ],
       { now: NOW },
     )
-    expect(groups.map((group) => group.ownerName)).toEqual(['Juhan', 'Shirley'])
+    expect(groups.map((group) => group.ownerName)).toEqual(['Jules', 'Shay'])
     expect(groups[0].slackUserId).toBe('U1')
     expect(groups[0].tasks.map((item) => item._id).sort()).toEqual(['a', 'b', 'c'])
   })
@@ -249,14 +249,14 @@ describe('groupCheckInTasks', () => {
   })
 
   it('attaches follow-ups by lower-cased owner, and gives a follow-up-only person a group', () => {
-    const { groups } = groupCheckInTasks([task({ _id: 'a', ownerName: 'Juhan' })], {
+    const { groups } = groupCheckInTasks([task({ _id: 'a', ownerName: 'Jules' })], {
       now: NOW,
-      followUpsByOwner: { juhan: [followUp('Jane')], shirley: [followUp('Sam')], '': [followUp('Nobody')] },
-      team: [{ ownerName: 'Shirley', slackUserId: 'U2' }],
+      followUpsByOwner: { jules: [followUp('Jane')], shay: [followUp('Sam')], '': [followUp('Nobody')] },
+      team: [{ ownerName: 'Shay', slackUserId: 'U2' }],
     })
     expect(groups.map((group) => [group.ownerName, group.slackUserId, group.followUps.length])).toEqual([
-      ['Juhan', 'U1', 1],
-      ['Shirley', 'U2', 1],
+      ['Jules', 'U1', 1],
+      ['Shay', 'U2', 1],
     ])
     expect(groups[1].tasks).toEqual([])
   })
@@ -267,21 +267,21 @@ describe('groupCheckInTasks', () => {
     const mentionsIn = (value: string) => value.match(/<@[UW][A-Z0-9]+>/g) || []
 
     it("never files one person's work under another's stale Slack id (the reviewed case)", () => {
-      // Juhan claimed task `a` in Slack, then it was reassigned to Eric in the
+      // Jules claimed task `a` in Slack, then it was reassigned to Ezra in the
       // Studio — which has no field for the id, so U1 stayed on the record.
       const tasks = [
-        task({ _id: 'a', ownerName: 'Eric', slackUserId: 'U1' }),
-        task({ _id: 'b', ownerName: 'Eric', slackUserId: undefined }),
-        task({ _id: 'c', ownerName: 'Juhan', slackUserId: 'U1' }),
+        task({ _id: 'a', ownerName: 'Ezra', slackUserId: 'U1' }),
+        task({ _id: 'b', ownerName: 'Ezra', slackUserId: undefined }),
+        task({ _id: 'c', ownerName: 'Jules', slackUserId: 'U1' }),
       ]
       const team = [
-        { ownerName: 'Juhan', slackUserId: 'U1' },
-        { ownerName: 'Eric', slackUserId: 'U3' },
+        { ownerName: 'Jules', slackUserId: 'U1' },
+        { ownerName: 'Ezra', slackUserId: 'U3' },
       ]
       const { groups } = groupCheckInTasks(tasks, { now: NOW, team })
       expect(summary(groups)).toEqual([
-        ['Eric', 'U3', ['a', 'b']],
-        ['Juhan', 'U1', ['c']],
+        ['Ezra', 'U3', ['a', 'b']],
+        ['Jules', 'U1', ['c']],
       ])
       expect(checkInFallbackText(groups)).toBe('<@U3> <@U1> — Thursday check-in: 3 open tasks')
 
@@ -290,75 +290,75 @@ describe('groupCheckInTasks', () => {
       const serialised = JSON.stringify(blocks)
       expect(count(serialised, '<@U1>')).toBe(1)
       expect(count(serialised, '<@U3>')).toBe(1)
-      // Juhan's line is followed by Juhan's task only.
-      const juhanAt = blocks.findIndex((block) => String(block.text?.text || '').startsWith('*<@U1>*'))
-      expect(blocks[juhanAt + 1].block_id).toBe(checkInTaskBlockId('c'))
+      // Jules's line is followed by Jules's task only.
+      const julesAt = blocks.findIndex((block) => String(block.text?.text || '').startsWith('*<@U1>*'))
+      expect(blocks[julesAt + 1].block_id).toBe(checkInTaskBlockId('c'))
     })
 
     it('ignores a task id the roster gives to someone else, even for a name the roster does not know', () => {
       const { groups } = groupCheckInTasks(
-        [task({ _id: 'a', ownerName: 'Eric', slackUserId: 'U1' }), task({ _id: 'c', ownerName: 'Juhan', slackUserId: 'U1' })],
-        { now: NOW, team: [{ ownerName: 'Juhan', slackUserId: 'U1' }] },
+        [task({ _id: 'a', ownerName: 'Ezra', slackUserId: 'U1' }), task({ _id: 'c', ownerName: 'Jules', slackUserId: 'U1' })],
+        { now: NOW, team: [{ ownerName: 'Jules', slackUserId: 'U1' }] },
       )
       expect(summary(groups)).toEqual([
-        ['Eric', undefined, ['a']],
-        ['Juhan', 'U1', ['c']],
+        ['Ezra', undefined, ['a']],
+        ['Jules', 'U1', ['c']],
       ])
-      // Eric is named, not mentioned; Juhan is mentioned once, for his own work.
+      // Ezra is named, not mentioned; Jules is mentioned once, for his own work.
       expect(mentionsIn(checkInFallbackText(groups))).toEqual(['<@U1>'])
     })
 
     it('ignores a task id that disagrees with the roster entry for its own owner', () => {
-      const { groups } = groupCheckInTasks([task({ _id: 'a', ownerName: 'juhan', slackUserId: 'U9' })], {
+      const { groups } = groupCheckInTasks([task({ _id: 'a', ownerName: 'jules', slackUserId: 'U9' })], {
         now: NOW,
-        team: [{ ownerName: 'Juhan', slackUserId: 'U1' }],
+        team: [{ ownerName: 'Jules', slackUserId: 'U1' }],
       })
-      expect(summary(groups)).toEqual([['Juhan', 'U1', ['a']]])
+      expect(summary(groups)).toEqual([['Jules', 'U1', ['a']]])
     })
 
     it('still merges names the roster links to one id', () => {
       const { groups } = groupCheckInTasks(
-        [task({ _id: 'a', ownerName: 'Juhan', slackUserId: undefined }), task({ _id: 'b', ownerName: 'Juhan Sonin', slackUserId: undefined })],
-        { now: NOW, team: [{ ownerName: 'Juhan', slackUserId: 'U1' }, { ownerName: 'Juhan Sonin', slackUserId: 'U1' }] },
+        [task({ _id: 'a', ownerName: 'Jules', slackUserId: undefined }), task({ _id: 'b', ownerName: 'Jules Soren', slackUserId: undefined })],
+        { now: NOW, team: [{ ownerName: 'Jules', slackUserId: 'U1' }, { ownerName: 'Jules Soren', slackUserId: 'U1' }] },
       )
-      expect(summary(groups)).toEqual([['Juhan', 'U1', ['a', 'b']]])
+      expect(summary(groups)).toEqual([['Jules', 'U1', ['a', 'b']]])
     })
 
     it('mentions nobody when the evidence for a name disagrees with itself', () => {
       // Two tasks, no roster, two ids for one name: at least one is stale.
       const fromTasks = groupCheckInTasks(
-        [task({ _id: 'a', ownerName: 'Eric', slackUserId: 'U5' }), task({ _id: 'b', ownerName: 'Eric', slackUserId: 'U6' })],
+        [task({ _id: 'a', ownerName: 'Ezra', slackUserId: 'U5' }), task({ _id: 'b', ownerName: 'Ezra', slackUserId: 'U6' })],
         { now: NOW },
       ).groups
-      expect(summary(fromTasks)).toEqual([['Eric', undefined, ['a', 'b']]])
+      expect(summary(fromTasks)).toEqual([['Ezra', undefined, ['a', 'b']]])
       expect(mentionsIn(checkInFallbackText(fromTasks))).toEqual([])
 
       // The roster disagreeing with itself is no better — and still outranks the task.
-      const fromRoster = groupCheckInTasks([task({ _id: 'a', ownerName: 'Eric', slackUserId: 'U5' })], {
+      const fromRoster = groupCheckInTasks([task({ _id: 'a', ownerName: 'Ezra', slackUserId: 'U5' })], {
         now: NOW,
-        team: [{ ownerName: 'Eric', slackUserId: 'U5' }, { ownerName: 'eric', slackUserId: 'U6' }],
+        team: [{ ownerName: 'Ezra', slackUserId: 'U5' }, { ownerName: 'ezra', slackUserId: 'U6' }],
       }).groups
-      expect(summary(fromRoster)).toEqual([['Eric', undefined, ['a']]])
+      expect(summary(fromRoster)).toEqual([['Ezra', undefined, ['a']]])
     })
 
     it('does not let a malformed id link two people', () => {
       const { groups } = groupCheckInTasks(
-        [task({ _id: 'a', ownerName: 'Eric', slackUserId: 'undefined' }), task({ _id: 'b', ownerName: 'Jen', slackUserId: 'undefined' })],
+        [task({ _id: 'a', ownerName: 'Ezra', slackUserId: 'undefined' }), task({ _id: 'b', ownerName: 'Jen', slackUserId: 'undefined' })],
         { now: NOW, team: [{ ownerName: 'Jen', slackUserId: '<!here>' }] },
       )
       expect(summary(groups)).toEqual([
-        ['Eric', undefined, ['a']],
+        ['Ezra', undefined, ['a']],
         ['Jen', undefined, ['b']],
       ])
     })
 
     it("uses the roster's id for someone with only follow-ups, never a task's", () => {
-      const { groups } = groupCheckInTasks([task({ _id: 'a', ownerName: 'Eric', slackUserId: 'U1', status: 'done' })], {
+      const { groups } = groupCheckInTasks([task({ _id: 'a', ownerName: 'Ezra', slackUserId: 'U1', status: 'done' })], {
         now: NOW,
-        followUpsByOwner: { eric: [followUp('Jane')] },
-        team: [{ ownerName: 'Eric', slackUserId: 'U3' }, { ownerName: 'Juhan', slackUserId: 'U1' }],
+        followUpsByOwner: { ezra: [followUp('Jane')] },
+        team: [{ ownerName: 'Ezra', slackUserId: 'U3' }, { ownerName: 'Jules', slackUserId: 'U1' }],
       })
-      expect(groups.map((group) => [group.ownerName, group.slackUserId, group.followUps.length])).toEqual([['Eric', 'U3', 1]])
+      expect(groups.map((group) => [group.ownerName, group.slackUserId, group.followUps.length])).toEqual([['Ezra', 'U3', 1]])
     })
   })
 
@@ -478,7 +478,7 @@ describe('buildCheckInTaskBlocks', () => {
 
   it('carries the task, owner and prior status in every button value', () => {
     for (const element of actionsOf(buildCheckInTaskBlocks(task({ status: 'working' }), { now: NOW }))) {
-      expect(decodeActionValue(element.value)).toEqual({ taskId: 't1', ownerName: 'Juhan', status: 'working' })
+      expect(decodeActionValue(element.value)).toEqual({ taskId: 't1', ownerName: 'Jules', status: 'working' })
     }
   })
 
@@ -547,7 +547,7 @@ describe('every state offers the action that reverses it', () => {
       after: { ...slipping, status: 'working', ownerName: undefined, slackUserId: undefined },
       reverse: MARQUETA_ACTION.taskTake,
     },
-    { name: 'Take ⇄ Hand back', press: MARQUETA_ACTION.taskTake, before: unowned, after: { ...unowned, ownerName: 'Juhan', slackUserId: 'U1' }, reverse: MARQUETA_ACTION.taskHandBack },
+    { name: 'Take ⇄ Hand back', press: MARQUETA_ACTION.taskTake, before: unowned, after: { ...unowned, ownerName: 'Jules', slackUserId: 'U1' }, reverse: MARQUETA_ACTION.taskHandBack },
     {
       // A slipping card in someone's own list is Done · Keep · Drop — its way
       // back is Drop/Keep, not Hand back. Taken from the room's view, the card
@@ -555,7 +555,7 @@ describe('every state offers the action that reverses it', () => {
       name: 'Take (slipping, plan view) ⇄ Hand back',
       press: MARQUETA_ACTION.taskTake,
       before: { ...slipping, ownerName: undefined },
-      after: { ...slipping, ownerName: 'Juhan' },
+      after: { ...slipping, ownerName: 'Jules' },
       reverse: MARQUETA_ACTION.taskHandBack,
       mode: 'plan',
     },
@@ -606,7 +606,7 @@ describe('buildWeeklyCheckInBlocks', () => {
   const unownedTask = (id: string, title = `Loose end ${id}`) => task({ _id: id, ownerName: '', slackUserId: undefined, title })
 
   it('reads in the order people act on it, and ends on Open This week', () => {
-    const blocks = buildWeeklyCheckInBlocks({ ...base, groups: [group('Juhan', 'U1', 2, 1)], unowned: [unownedTask('u1')] })
+    const blocks = buildWeeklyCheckInBlocks({ ...base, groups: [group('Jules', 'U1', 2, 1)], unowned: [unownedTask('u1')] })
     expectValidSlackBlocks(blocks)
     expect(blocks[0]).toEqual({ type: 'header', text: { type: 'plain_text', text: 'Thursday check-in', emoji: true } })
     expect(blocks[1]).toMatchObject({ type: 'context', elements: [{ text: 'Week of Mon 21 Sep · 2 working days left' }] })
@@ -625,33 +625,33 @@ describe('buildWeeklyCheckInBlocks', () => {
   })
 
   it('counts the working days left in words, and none at the weekend', () => {
-    const on = (now: Date) => buildWeeklyCheckInBlocks({ ...base, now, groups: [group('Juhan', 'U1', 1)] })[1].elements[0].text
+    const on = (now: Date) => buildWeeklyCheckInBlocks({ ...base, now, groups: [group('Jules', 'U1', 1)] })[1].elements[0].text
     expect(on(new Date('2026-09-21T14:00:00Z'))).toBe('Week of Mon 21 Sep · 5 working days left')
     expect(on(new Date('2026-09-25T14:00:00Z'))).toBe('Week of Mon 21 Sep · 1 working day left')
     expect(on(new Date('2026-09-26T14:00:00Z'))).toBe('Week of Mon 21 Sep')
   })
 
   it('gives follow-ups Prep and Log it… carrying the contact ref, and no Done', () => {
-    const blocks = buildWeeklyCheckInBlocks({ ...base, groups: [group('Juhan', 'U1', 0, 1)] })
+    const blocks = buildWeeklyCheckInBlocks({ ...base, groups: [group('Jules', 'U1', 0, 1)] })
     const actions = blocks.find((block) => block.type === 'actions' && block.elements.some((e: Block) => e.action_id === MARQUETA_ACTION.prepCall))!
     expect(actions.elements.map((element: Block) => element.action_id)).toEqual([MARQUETA_ACTION.prepCall, MARQUETA_ACTION.logCall])
     expect(actions.elements.map((element: Block) => element.text.text)).toEqual(['Prep', 'Log it…'])
-    expect(actions.elements[0].value).toBe(followUp('Juhan-0').contactRef)
+    expect(actions.elements[0].value).toBe(followUp('Jules-0').contactRef)
     expect(blocks.find((block) => String(block.text?.text || '').startsWith('*<@U1>*'))!.text.text).toBe('*<@U1>* · 1 follow-up')
   })
 
   it('shows at most three tasks and two follow-ups a person, and links the rest to This week filtered to them', () => {
-    const blocks = buildWeeklyCheckInBlocks({ ...base, groups: [group('Juhan', 'U1', 5, 4, 2)] })
+    const blocks = buildWeeklyCheckInBlocks({ ...base, groups: [group('Jules', 'U1', 5, 4, 2)] })
     expect(taskBlockCount(blocks)).toBe(3)
     expect(followUpLineCount(blocks)).toBe(2)
     expect(blocks.find((block) => String(block.text?.text || '').startsWith('*<@U1>*'))!.text.text).toBe('*<@U1>* · 7 tasks, 4 follow-ups')
-    expect(JSON.stringify(blocks)).toContain(`+4 more — <${STUDIO}&owner=Juhan|on This week> · 2 more follow-ups — ask \`Marqueta, my calls\``)
+    expect(JSON.stringify(blocks)).toContain(`+4 more — <${STUDIO}&owner=Jules|on This week> · 2 more follow-ups — ask \`Marqueta, my calls\``)
   })
 
   it('draws every task with the shared card, its title linked to the task in the Studio', () => {
-    const blocks = buildWeeklyCheckInBlocks({ ...base, groups: [group('Juhan', 'U1', 1)] })
+    const blocks = buildWeeklyCheckInBlocks({ ...base, groups: [group('Jules', 'U1', 1)] })
     const card = blocks.find((block) => block.block_id === checkInTaskBlockId('U1-0'))!
-    expect(card.text.text.split('\n')[0]).toBe(`*<${BASE}/studio/marketing?view=thisWeek&task=U1-0|Juhan task 0>*`)
+    expect(card.text.text.split('\n')[0]).toBe(`*<${BASE}/studio/marketing?view=thisWeek&task=U1-0|Jules task 0>*`)
     const buttons = blocks.find((block) => block.block_id === checkInTaskActionsBlockId('U1-0'))!.elements
     expect(buttons.map((element: Block) => element.text.text)).toEqual(['Done', 'Stuck…', 'Hand back'])
     expect(decodeTaskCardValue(buttons[0].value)?.mode).toBe('mine')
@@ -660,7 +660,7 @@ describe('buildWeeklyCheckInBlocks', () => {
   it('mentions each person exactly once, even if a caller split them into two groups', () => {
     const blocks = buildWeeklyCheckInBlocks({
       ...base,
-      groups: [group('Juhan', 'U1', 2, 2), group('Shirley', 'U2', 3, 1), { ...group('Juhan S', 'U1', 1), tasks: [task({ _id: 'x9' })] }],
+      groups: [group('Jules', 'U1', 2, 2), group('Shay', 'U2', 3, 1), { ...group('Jules S', 'U1', 1), tasks: [task({ _id: 'x9' })] }],
     })
     const serialised = JSON.stringify(blocks)
     expect(count(serialised, '<@U1>')).toBe(1)
@@ -669,7 +669,7 @@ describe('buildWeeklyCheckInBlocks', () => {
   })
 
   it('says how to log calls from people not on file when nothing is logged — as a phrase to type, never a mention of her', () => {
-    const blocks = buildWeeklyCheckInBlocks({ ...base, pulse: pulse(0), groups: [group('Juhan', 'U1', 1)] })
+    const blocks = buildWeeklyCheckInBlocks({ ...base, pulse: pulse(0), groups: [group('Jules', 'U1', 1)] })
     expect(blocks[2].elements[0].text).toBe('Outreach this week: no outreach logged yet.')
     // The outreach line has just said nothing was logged; the hint does not say it again.
     expect(texts(blocks).at(-2)).toBe(
@@ -679,19 +679,19 @@ describe('buildWeeklyCheckInBlocks', () => {
     // One line on how to talk to her, not two in a row: the hint takes the place of "Ask me".
     expect(JSON.stringify(blocks)).not.toContain('Ask me:')
     // With touches logged, no hint — and "Ask me" is back.
-    const logged = buildWeeklyCheckInBlocks({ ...base, groups: [group('Juhan', 'U1', 1)] })
+    const logged = buildWeeklyCheckInBlocks({ ...base, groups: [group('Jules', 'U1', 1)] })
     expect(JSON.stringify(logged)).not.toContain('not on file')
     expect(texts(logged).at(-2)).toBe('Ask me: `Marqueta, my tasks` · `Marqueta, my calls` · `Marqueta, help`')
   })
 
   it('never renders the per-person touch counts (that is a leaderboard)', () => {
-    const blocks = buildWeeklyCheckInBlocks({ ...base, pulse: pulse(4), groups: [group('Juhan', 'U1', 1)] })
+    const blocks = buildWeeklyCheckInBlocks({ ...base, pulse: pulse(4), groups: [group('Jules', 'U1', 1)] })
     expect(JSON.stringify(blocks)).not.toContain('Zebedee')
   })
 
   it('shows up to three cards nobody has taken — the room’s cards, I’ll take it first — and counts the rest', () => {
     const unowned = Array.from({ length: 5 }, (_, index) => unownedTask(`u${index}`, `Loose end ${index} & <co>`))
-    const blocks = buildWeeklyCheckInBlocks({ ...base, unowned, groups: [group('Juhan', 'U1', 1)] })
+    const blocks = buildWeeklyCheckInBlocks({ ...base, unowned, groups: [group('Jules', 'U1', 1)] })
     expectValidSlackBlocks(blocks)
     for (const id of ['u0', 'u1', 'u2']) {
       const buttons = blocks.find((block) => block.block_id === checkInTaskActionsBlockId(id))!.elements
@@ -708,13 +708,13 @@ describe('buildWeeklyCheckInBlocks', () => {
   })
 
   it('places the lines about work nobody is asked about, escaped, above the hints', () => {
-    const notes = ['Follow-ups nobody owns: Robin (Acme), overdue since Mon 21 Sep', ':palm_tree: Away, so not asked this week: Eric <!here> (1 task).']
-    const blocks = buildWeeklyCheckInBlocks({ ...base, notes, groups: [group('Juhan', 'U1', 1)] })
+    const notes = ['Follow-ups nobody owns: Robin (Acme), overdue since Mon 21 Sep', ':palm_tree: Away, so not asked this week: Ezra <!here> (1 task).']
+    const blocks = buildWeeklyCheckInBlocks({ ...base, notes, groups: [group('Jules', 'U1', 1)] })
     expectValidSlackBlocks(blocks)
     const holder = blocks.find((block) => block.type === 'context' && JSON.stringify(block).includes('Follow-ups nobody owns'))!
-    expect(holder.elements.map((element: Block) => element.text)).toEqual([notes[0], ':palm_tree: Away, so not asked this week: Eric &lt;!here&gt; (1 task).'])
+    expect(holder.elements.map((element: Block) => element.text)).toEqual([notes[0], ':palm_tree: Away, so not asked this week: Ezra &lt;!here&gt; (1 task).'])
     expect(blocks.indexOf(holder)).toBeLessThan(blocks.findIndex((block) => JSON.stringify(block).includes('Ask me:')))
-    // Set apart from Juhan's list, so it is not read as his.
+    // Set apart from Jules's list, so it is not read as his.
     expect(blocks[blocks.indexOf(holder) - 1]).toEqual({ type: 'divider' })
   })
 
@@ -725,19 +725,19 @@ describe('buildWeeklyCheckInBlocks', () => {
     const blocks = buildWeeklyCheckInBlocks({
       ...base,
       groups: [
-        { ownerName: 'Eric', slackUserId: 'U3', hidden: 0, tasks: [task({ _id: 'e1', ownerName: 'Eric', slackUserId: 'U3', title: 'Update the case study page', minutes: 45 })], followUps: [followUp('Leo Park')] },
+        { ownerName: 'Ezra', slackUserId: 'U3', hidden: 0, tasks: [task({ _id: 'e1', ownerName: 'Ezra', slackUserId: 'U3', title: 'Update the case study page', minutes: 45 })], followUps: [followUp('Leo Park')] },
         {
-          ownerName: 'Juhan',
+          ownerName: 'Jules',
           slackUserId: 'U1',
           hidden: 0,
           tasks: [task({ _id: 'j1', title: 'Send the kit to five CMIOs', dueAt: '2026-09-02T12:00:00Z', createdAt: '2026-08-20T00:00:00Z', updatedAt: '2026-08-21T00:00:00Z' })],
           followUps: [followUp('Jane Doe')],
         },
         {
-          ownerName: 'Shirley',
+          ownerName: 'Shay',
           slackUserId: 'U2',
           hidden: 0,
-          tasks: [task({ _id: 's1', ownerName: 'Shirley', slackUserId: 'U2', title: 'Fix the signup form', status: 'blocked', blocker: 'Need the API key' })],
+          tasks: [task({ _id: 's1', ownerName: 'Shay', slackUserId: 'U2', title: 'Fix the signup form', status: 'blocked', blocker: 'Need the API key' })],
           followUps: [],
         },
       ],
@@ -760,7 +760,7 @@ describe('buildWeeklyCheckInBlocks', () => {
   const personHeadings = (blocks: Block[]) => blocks.filter((block) => /^\*(<@U\w+>|[^*]+)\* · /.test(String(block.text?.text || '')))
 
   it('on a crowded week, gives up the dividers and each person’s extra follow-ups first — and never hides a person’s task for length', () => {
-    const groups = [group('Juhan', 'U1', 3, 2), group('Shirley', 'U2', 3, 2), group('Eric', 'U3', 2, 1)]
+    const groups = [group('Jules', 'U1', 3, 2), group('Shay', 'U2', 3, 2), group('Ezra', 'U3', 2, 1)]
     const unowned = [unownedTask('u1', 'Town Day merch table'), unownedTask('u2', 'Newsletter teaser'), unownedTask('u3', 'Pin the kit')]
     const blocks = buildWeeklyCheckInBlocks({ ...base, groups, unowned })
     expectValidSlackBlocks(blocks)
@@ -778,14 +778,14 @@ describe('buildWeeklyCheckInBlocks', () => {
   })
 
   it('makes the room’s cards one line — titles first, then only how many — when that brings it within two screens', () => {
-    const groups = [group('Juhan', 'U1', 3, 1), group('Shirley', 'U2', 2, 1), group('Eric', 'U3', 1)]
+    const groups = [group('Jules', 'U1', 3, 1), group('Shay', 'U2', 2, 1), group('Ezra', 'U3', 1)]
     const unowned = [unownedTask('u1', 'Town Day merch table'), unownedTask('u2', 'Newsletter teaser'), unownedTask('u3', 'Pin the kit')]
     const blocks = buildWeeklyCheckInBlocks({ ...base, groups, unowned })
     expectValidSlackBlocks(blocks)
     expect(checkInPhoneLines(blocks)).toBeLessThanOrEqual(MAX_CHECK_IN_PHONE_LINES)
     expect(blocks.some((block) => block.text?.text === '*Nobody has taken*')).toBe(false)
     expect(texts(blocks)).toContain(`*Nobody has taken:* Town Day merch table · Newsletter teaser · Pin the kit — <${STUDIO}|on This week>`)
-    // Set apart from Eric's list, so it is not read as his.
+    // Set apart from Ezra's list, so it is not read as his.
     const line = blocks.find((block) => JSON.stringify(block).includes('Nobody has taken:'))!
     expect(blocks[blocks.indexOf(line) - 1]).toEqual({ type: 'divider' })
     expect(taskBlockCount(blocks)).toBe(6)
@@ -793,35 +793,35 @@ describe('buildWeeklyCheckInBlocks', () => {
   })
 
   // §4's Thursday, as the gallery renders it from the real route: three
-  // people asked (Jon is on nobody's roster), a stuck task, a slipping one, two
+  // people asked (Joss is on nobody's roster), a stuck task, a slipping one, two
   // follow-ups, three tasks nobody has taken, nothing logged all week, and
-  // Eric away. It measured 55 lines before the budget above.
+  // Ezra away. It measured 55 lines before the budget above.
   it('fits the gallery’s Thursday in 45 phone lines — and still asks every person about every task', () => {
     const contactRef = (contactId: string, organization: string, name: string) => encodeContactRef({ contactId, organization, name })
     const galleryPulse = summarizeOutreach(
       [
-        { _id: 'jd', status: 'contacted', followUpAt: '2026-09-22T14:00:00Z', interactions: [{ at: '2026-09-15T15:00:00Z', by: 'Juhan', channel: 'email', statusAfter: 'contacted' }] },
-        { _id: 'pp', status: 'responded', followUpAt: '2026-09-25T14:00:00Z', interactions: [{ at: '2026-09-18T19:00:00Z', by: 'Shirley', channel: 'email', statusAfter: 'responded' }] },
+        { _id: 'jd', status: 'contacted', followUpAt: '2026-09-22T14:00:00Z', interactions: [{ at: '2026-09-15T15:00:00Z', by: 'Jules', channel: 'email', statusAfter: 'contacted' }] },
+        { _id: 'pp', status: 'responded', followUpAt: '2026-09-25T14:00:00Z', interactions: [{ at: '2026-09-18T19:00:00Z', by: 'Shay', channel: 'email', statusAfter: 'responded' }] },
       ],
       { from: '2026-09-21T00:00:00Z', to: '2026-09-28T00:00:00Z', now: NOW },
     )
     const op = (fields: Partial<CheckInTask> & { _id: string; title: string }): CheckInTask => ({ status: 'queued', kind: 'content', priority: 'normal', ...fields })
     const groups: CheckInGroup[] = [
       {
-        ownerName: 'Jon',
+        ownerName: 'Joss',
         hidden: 0,
         followUps: [],
-        tasks: [op({ _id: 'marketingOperation.offer-one-pager', title: 'Refresh the offer one-pager', ownerName: 'Jon', dueAt: '2026-10-02T16:00:00Z', minutes: 45 })],
+        tasks: [op({ _id: 'marketingOperation.offer-one-pager', title: 'Refresh the offer one-pager', ownerName: 'Joss', dueAt: '2026-10-02T16:00:00Z', minutes: 45 })],
       },
       {
-        ownerName: 'Juhan',
+        ownerName: 'Jules',
         slackUserId: 'U1',
         hidden: 0,
         tasks: [
           op({
             _id: 'marketingOperation.ipsos-numbers',
             title: 'Get the Ipsos adoption numbers approved for the case study',
-            ownerName: 'Juhan',
+            ownerName: 'Jules',
             slackUserId: 'U1',
             status: 'blocked',
             kind: 'outreach',
@@ -842,12 +842,12 @@ describe('buildWeeklyCheckInBlocks', () => {
         ],
       },
       {
-        ownerName: 'Shirley',
+        ownerName: 'Shay',
         slackUserId: 'U2',
         hidden: 0,
         tasks: [
-          op({ _id: 'marketingOperation.services-page', title: 'Rewrite the services page around the pre-mortem', ownerName: 'Shirley', slackUserId: 'U2', dueAt: '2026-09-08T16:00:00Z', minutes: 90, updatedAt: '2026-09-02T12:00:00Z' }),
-          op({ _id: 'marketingOperation.premortem-v2', title: 'Draft the pre-mortem article (v2)', ownerName: 'Shirley', slackUserId: 'U2', status: 'working', priority: 'high', dueAt: '2026-09-25T16:00:00Z', minutes: 180, updatedAt: '2026-09-22T15:00:00Z' }),
+          op({ _id: 'marketingOperation.services-page', title: 'Rewrite the services page around the pre-mortem', ownerName: 'Shay', slackUserId: 'U2', dueAt: '2026-09-08T16:00:00Z', minutes: 90, updatedAt: '2026-09-02T12:00:00Z' }),
+          op({ _id: 'marketingOperation.premortem-v2', title: 'Draft the pre-mortem article (v2)', ownerName: 'Shay', slackUserId: 'U2', status: 'working', priority: 'high', dueAt: '2026-09-25T16:00:00Z', minutes: 180, updatedAt: '2026-09-22T15:00:00Z' }),
         ],
         followUps: [
           {
@@ -863,7 +863,7 @@ describe('buildWeeklyCheckInBlocks', () => {
       op({ _id: 'marketingOperation.newsletter-teaser', title: 'Newsletter: pre-mortem teaser', dueAt: '2026-09-29T16:00:00Z', minutes: 60 }),
       op({ _id: 'marketingOperation.pin-kit-linkedin', title: 'Pin the kit on LinkedIn', priority: 'low', minutes: 15 }),
     ]
-    const notes = [':palm_tree: Away, so not asked this week: Eric (1 follow-up). That list is on This week if anything needs cover.']
+    const notes = [':palm_tree: Away, so not asked this week: Ezra (1 follow-up). That list is on This week if anything needs cover.']
     const blocks = buildWeeklyCheckInBlocks({ ...base, pulse: galleryPulse, groups, unowned, notes })
     expectValidSlackBlocks(blocks)
 
@@ -873,7 +873,7 @@ describe('buildWeeklyCheckInBlocks', () => {
     // Every person's every task and follow-up is still asked about, with its buttons.
     expect(taskBlockCount(blocks)).toBe(4)
     expect(followUpLineCount(blocks)).toBe(2)
-    expect(personHeadings(blocks).map((block) => block.text.text)).toEqual(['*Jon* · 1 task', '*<@U1>* · 1 task, 1 follow-up', '*<@U2>* · 2 tasks, 1 follow-up'])
+    expect(personHeadings(blocks).map((block) => block.text.text)).toEqual(['*Joss* · 1 task', '*<@U1>* · 1 task, 1 follow-up', '*<@U2>* · 2 tasks, 1 follow-up'])
     // What gave way: the dividers, the hint's second example, and the room's
     // cards — as a count, beside the away line, one link from This week.
     expect(texts(blocks)).toContain(`*Nobody has taken:* 3 tasks — <${STUDIO}|on This week> ${notes[0]}`)
@@ -937,7 +937,7 @@ describe('buildWeeklyCheckInBlocks', () => {
       ...base,
       groups: [
         {
-          ...group('Juhan', 'U1', 0),
+          ...group('Jules', 'U1', 0),
           followUps: [
             {
               label: '*Follow up with Jane (AT&amp;T)*',
@@ -956,7 +956,7 @@ describe('buildWeeklyCheckInBlocks', () => {
   })
 
   it('ignores a studio base that is not a web link: no links, no Open button, and no message Slack would refuse', () => {
-    const blocks = buildWeeklyCheckInBlocks({ ...base, studioBaseUrl: 'javascript:alert(1)', groups: [group('Juhan', 'U1', 1, 0, 2)] })
+    const blocks = buildWeeklyCheckInBlocks({ ...base, studioBaseUrl: 'javascript:alert(1)', groups: [group('Jules', 'U1', 1, 0, 2)] })
     expectValidSlackBlocks(blocks)
     expect(JSON.stringify(blocks)).not.toContain('javascript:')
     expect(texts(blocks)).toContain('+2 more — on This week')
@@ -984,7 +984,7 @@ describe('buildWeeklyCheckInBlocks', () => {
     const blocks = buildWeeklyCheckInBlocks({
       ...base,
       pulse: pulse(0),
-      groups: [group('Juhan', 'U1', 3, 3, 1), group('Shirley', 'U2', 1, 1)],
+      groups: [group('Jules', 'U1', 3, 3, 1), group('Shay', 'U2', 1, 1)],
       unowned: [unownedTask('u1'), unownedTask('u2')],
       notes: ['Follow-ups nobody owns: Robin (Acme), overdue since Mon 21 Sep'],
     })
@@ -995,10 +995,10 @@ describe('buildWeeklyCheckInBlocks', () => {
 
 describe('checkInFallbackText — the lock-screen line', () => {
   const people: CheckInGroup[] = [
-    { ownerName: 'Juhan', slackUserId: 'U1', tasks: [task(), task({ _id: 't2' })], hidden: 1, followUps: [{ ...followUp('A'), overdue: true }] },
-    { ownerName: 'Juhan S', slackUserId: 'U1', tasks: [], hidden: 0, followUps: [followUp('B')] },
+    { ownerName: 'Jules', slackUserId: 'U1', tasks: [task(), task({ _id: 't2' })], hidden: 1, followUps: [{ ...followUp('A'), overdue: true }] },
+    { ownerName: 'Jules S', slackUserId: 'U1', tasks: [], hidden: 0, followUps: [followUp('B')] },
     { ownerName: 'Jen & <Co>', tasks: [task({ _id: 't3' })], hidden: 0, followUps: [{ ...followUp('C'), overdue: true }, followUp('D')] },
-    { ownerName: 'Shirley', slackUserId: 'U2', tasks: [task({ _id: 't4' })], hidden: 0, followUps: [] },
+    { ownerName: 'Shay', slackUserId: 'U2', tasks: [task({ _id: 't4' })], hidden: 0, followUps: [] },
   ]
 
   it('leads with the mentions, once each, then what it is and how much', () => {
@@ -1012,7 +1012,7 @@ describe('checkInFallbackText — the lock-screen line', () => {
   })
 
   it('says only the counts that are not zero, and says so when there is nothing', () => {
-    expect(checkInFallbackText([{ ownerName: 'Juhan', slackUserId: 'U1', tasks: [], hidden: 0, followUps: [followUp('A')] }])).toBe(
+    expect(checkInFallbackText([{ ownerName: 'Jules', slackUserId: 'U1', tasks: [], hidden: 0, followUps: [followUp('A')] }])).toBe(
       '<@U1> — Thursday check-in: 1 follow-up',
     )
     expect(checkInFallbackText([], { unowned: 1 })).toBe('Thursday check-in: 1 open task')
@@ -1023,13 +1023,13 @@ describe('checkInFallbackText — the lock-screen line', () => {
 describe('replaceCheckInTask', () => {
   const groups: CheckInGroup[] = [
     {
-      ownerName: 'Juhan',
+      ownerName: 'Jules',
       slackUserId: 'U1',
       hidden: 1,
       tasks: [task({ _id: 'a', title: 'First' }), task({ _id: 'b', title: 'Second' }), task({ _id: 'c', title: 'Third' })],
       followUps: [followUp('Jane')],
     },
-    { ownerName: 'Shirley', slackUserId: 'U2', hidden: 0, tasks: [task({ _id: 'd', ownerName: 'Shirley', slackUserId: 'U2' })], followUps: [] },
+    { ownerName: 'Shay', slackUserId: 'U2', hidden: 0, tasks: [task({ _id: 'd', ownerName: 'Shay', slackUserId: 'U2' })], followUps: [] },
   ]
   const message = () =>
     buildWeeklyCheckInBlocks({
@@ -1129,15 +1129,15 @@ describe('putting back a card that lost a race', () => {
   const blocks = () => [
     { type: 'header', text: { type: 'plain_text', text: 'Thursday check-in' } },
     ...buildCheckInTaskBlocks(task({ _id: 'a', title: 'A', status: 'queued' }), { now: NOW }),
-    ...buildTaskCard(task({ _id: 'b', title: 'B', ownerName: '', status: 'queued' }), { now: NOW, mode: 'plan', ask: { slackUserId: 'U2', name: 'Shirley' } }),
+    ...buildTaskCard(task({ _id: 'b', title: 'B', ownerName: '', status: 'queued' }), { now: NOW, mode: 'plan', ask: { slackUserId: 'U2', name: 'Shay' } }),
     ...buildCheckInTaskBlocks(task({ _id: 'c', title: 'C', status: 'working' }), { now: NOW }),
   ]
 
   it('reads each card as it was drawn: its task, owner, status and mode', () => {
     expect(taskCardsOn(blocks()).map(({ taskId, ownerName, status, mode }) => ({ taskId, ownerName, status, mode }))).toEqual([
-      { taskId: 'a', ownerName: 'Juhan', status: 'queued', mode: 'mine' },
+      { taskId: 'a', ownerName: 'Jules', status: 'queued', mode: 'mine' },
       { taskId: 'b', ownerName: '', status: 'queued', mode: 'plan' },
-      { taskId: 'c', ownerName: 'Juhan', status: 'working', mode: 'mine' },
+      { taskId: 'c', ownerName: 'Jules', status: 'working', mode: 'mine' },
     ])
     // A legacy value never said its status: nothing to compare, so it is left out.
     const legacy = [{ type: 'actions', block_id: checkInTaskActionsBlockId('z'), elements: [{ type: 'button', value: JSON.stringify({ t: 'z', o: '' }) }] }]
@@ -1149,7 +1149,7 @@ describe('putting back a card that lost a race', () => {
     const before = blocks()
     const records = new Map<string, CheckInTask>([
       ['a', task({ _id: 'a', title: 'A', status: 'done' })],
-      ['b', task({ _id: 'b', title: 'B', ownerName: 'Eric', slackUserId: 'U3', status: 'queued' })],
+      ['b', task({ _id: 'b', title: 'B', ownerName: 'Ezra', slackUserId: 'U3', status: 'queued' })],
       ['c', task({ _id: 'c', title: 'C', status: 'working' })],
     ])
     const next = refreshStaleTaskCards(before, records, { now: NOW })
@@ -1171,8 +1171,8 @@ describe('putting back a card that lost a race', () => {
     expect(refreshStaleTaskCards(before, new Map(), { now: NOW })).toBe(before)
     const done = new Map<string, CheckInTask>([['a', task({ _id: 'a', status: 'done' })]])
     expect(refreshStaleTaskCards(before, done, { now: NOW, except: 'a' })).toBe(before)
-    // Owner names compare without case: "juhan" on the record is the card's "Juhan".
-    expect(refreshStaleTaskCards(before, new Map([['a', task({ _id: 'a', ownerName: 'juhan', status: 'queued' })]]), { now: NOW })).toBe(before)
+    // Owner names compare without case: "jules" on the record is the card's "Jules".
+    expect(refreshStaleTaskCards(before, new Map([['a', task({ _id: 'a', ownerName: 'jules', status: 'queued' })]]), { now: NOW })).toBe(before)
   })
 })
 
@@ -1274,21 +1274,21 @@ describe('buildTaskCard — one card for every message (§2.5)', () => {
       card: buildTaskCard(task({ ownerName: '', slackUserId: undefined, minutes: 30 }), {
         now: NOW,
         mode: 'plan',
-        ask: { slackUserId: 'U3', name: 'Eric', reason: 'suggested' },
+        ask: { slackUserId: 'U3', name: 'Ezra', reason: 'suggested' },
       }),
       labels: ['I’ll take it', 'Not me', 'Details…'],
       meta: '<@U3>, could you take this one? · ~30m · the plan had you in mind',
     },
     {
       name: 'away cover',
-      card: buildTaskCard(task({ ownerName: 'Eric', slackUserId: 'U3' }), {
+      card: buildTaskCard(task({ ownerName: 'Ezra', slackUserId: 'U3' }), {
         now: NOW,
         mode: 'plan',
         context: 'away',
-        awayNote: 'Eric is away · free this week: Juhan, Shirley',
+        awayNote: 'Ezra is away · free this week: Jules, Shay',
       }),
       labels: ['I’ll take it', 'Details…'],
-      meta: ':palm_tree: Eric is away · free this week: Juhan, Shirley',
+      meta: ':palm_tree: Ezra is away · free this week: Jules, Shay',
     },
     {
       name: 'exhausted (asked twice)',
@@ -1414,7 +1414,7 @@ describe('buildTaskCard — one card for every message (§2.5)', () => {
 
   it('marks only the away cover’s take as a cover, for the owner it was drawn for', () => {
     const cover = actionsOf(states.find((state) => state.name === 'away cover')!.card)[0]
-    expect(decodeTaskCardValue(cover.value)).toEqual({ taskId: 't1', ownerName: 'Eric', status: 'queued', mode: 'plan', cover: true })
+    expect(decodeTaskCardValue(cover.value)).toEqual({ taskId: 't1', ownerName: 'Ezra', status: 'queued', mode: 'plan', cover: true })
     for (const state of states.filter((item) => item.name !== 'away cover')) {
       for (const element of actionsOf(state.card)) expect(decodeTaskCardValue(element.value)?.cover, state.name).toBeUndefined()
     }
@@ -1429,7 +1429,7 @@ describe('buildTaskCard — one card for every message (§2.5)', () => {
   })
 
   it('treats a task somebody passed on as work looking for an owner, not a decision', () => {
-    const passed = task({ ownerName: '', slackUserId: undefined, status: 'needsHuman', humanQuestion: 'Eric passed on this — who should pick it up?' })
+    const passed = task({ ownerName: '', slackUserId: undefined, status: 'needsHuman', humanQuestion: 'Ezra passed on this — who should pick it up?' })
     const card = buildTaskCard(passed, { now: NOW, mode: 'plan', note: '_<@U3> passed — still needs someone_' })
     expect(labelsOf(card)).toEqual(['I’ll take it', 'Details…'])
     expect(metaOf(card)).toBe('Nobody has it · due tomorrow')
@@ -1470,8 +1470,8 @@ describe('buildTaskCard — one card for every message (§2.5)', () => {
   it('carries the card’s mode in every button, readable by the legacy decoder too', () => {
     for (const mode of ['plan', 'mine'] as const) {
       for (const element of actionsOf(buildTaskCard(task({ status: 'working' }), { now: NOW, mode }))) {
-        expect(decodeTaskCardValue(element.value)).toEqual({ taskId: 't1', ownerName: 'Juhan', status: 'working', mode })
-        expect(decodeActionValue(element.value)).toEqual({ taskId: 't1', ownerName: 'Juhan', status: 'working' })
+        expect(decodeTaskCardValue(element.value)).toEqual({ taskId: 't1', ownerName: 'Jules', status: 'working', mode })
+        expect(decodeActionValue(element.value)).toEqual({ taskId: 't1', ownerName: 'Jules', status: 'working' })
       }
     }
   })
@@ -1521,7 +1521,7 @@ describe('buildTaskCard — one card for every message (§2.5)', () => {
 })
 
 describe('taskStatusWords — one set of words for the Slack card and the Studio pill', () => {
-  const words = (overrides: Partial<CheckInTask>) => taskStatusWords({ ownerName: 'Juhan', ...overrides })
+  const words = (overrides: Partial<CheckInTask>) => taskStatusWords({ ownerName: 'Jules', ...overrides })
 
   it('names every status the plan’s table names', () => {
     expect(words({ status: 'queued' })).toBe('Not started')
@@ -1531,7 +1531,7 @@ describe('taskStatusWords — one set of words for the Slack card and the Studio
     expect(words({ status: 'waiting' })).toBe('Waiting on someone')
     expect(words({ status: 'needsHuman', humanQuestion: 'Publish it?' })).toBe('Needs a decision')
     expect(words({ status: 'needsHuman', kind: 'decision' })).toBe('Needs a decision')
-    expect(words({ status: 'needsHuman', ownerName: '', humanQuestion: 'Eric passed on this — who should pick it up?' })).toBe('Needs someone')
+    expect(words({ status: 'needsHuman', ownerName: '', humanQuestion: 'Ezra passed on this — who should pick it up?' })).toBe('Needs someone')
     expect(words({ status: 'dismissed' })).toBe('Dropped')
     expect(words({ status: 'done' })).toBe('Done')
     expect(words({ status: 'queued', ownerName: '' })).toBe('Nobody has it')

@@ -154,7 +154,7 @@ export function firstNameFor(contact: { name?: string | null; email?: string | n
  * sentence, so it is introduced rather than dropped in — otherwise it reads as
  * a fragment glued onto the news.
  */
-export function draftOutreachNote(entry: CallSheetEntry, senderName = 'Juhan'): string {
+export function draftOutreachNote(entry: CallSheetEntry, senderName = 'Jules'): string {
   const firstName = firstNameFor(entry.contacts[0] || {})
   const greeting = firstName ? 'Hi ' + firstName + ',' : 'Hi,'
   const signal = entry.signal.trim().replace(/\.$/, '')

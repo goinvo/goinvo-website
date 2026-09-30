@@ -258,7 +258,7 @@ describe('buildWeeklyPlan', () => {
       ...Array.from({ length: 5 }, (_, index) =>
         op({ sourceKey: `gate-${index}`, kind: 'decision', status: 'needsHuman', humanQuestion: 'Which way?', dueAt: new Date(2026, 7, 1 + index).toISOString() }),
       ),
-      op({ sourceKey: 'passed', kind: 'content', status: 'needsHuman', humanQuestion: 'Eric passed on this — who should pick it up?', estimatedMinutes: 30 }),
+      op({ sourceKey: 'passed', kind: 'content', status: 'needsHuman', humanQuestion: 'Ezra passed on this — who should pick it up?', estimatedMinutes: 30 }),
     ]
     const plan = buildWeeklyPlan({ operations, budgetMinutes: 240, now: NOW })
     expect(plan.decisions.map((entry) => entry.operation.sourceKey)).not.toContain('passed')
@@ -286,7 +286,7 @@ describe('buildWeeklyPlan', () => {
   it('shows the rethink filed on 28 Sep in the plan for Mon 5 Oct, over the seeded quarter’s overdue gates', () => {
     const filed = new Date('2026-09-28T13:20:00Z')
     const rethink = normalizeMarketingOperationInput(
-      buildStrategyDecisionOperation({ monthKey: '2026-09', personName: 'Juhan', now: filed, priorReview: null }),
+      buildStrategyDecisionOperation({ monthKey: '2026-09', personName: 'Jules', now: filed, priorReview: null }),
     )
     const operations = [...buildSeedOperationDocs(), rethink].map(
       (input) => ({ ...input, _id: input._id || input.sourceKey, _type: 'marketingOperation' }) as MarketingOperation,

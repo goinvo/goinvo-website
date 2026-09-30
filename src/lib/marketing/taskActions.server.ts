@@ -33,9 +33,9 @@
  *   posted before the shared card still carry the digest's "Take it over",
  *   `takeOverTask`, which keeps working for them.)
  * - **Who owns a task is decided by the board name and the roster, never by
- *   the Slack id stamped on the task.** That stamp goes stale (Eric claims in
- *   Slack, the Studio reassigns to Juhan, the task still says Eric's id), and
- *   trusting it would let Eric clear Juhan's name off Juhan's work. When the
+ *   the Slack id stamped on the task.** That stamp goes stale (Ezra claims in
+ *   Slack, the Studio reassigns to Jules, the task still says Ezra's id), and
+ *   trusting it would let Ezra clear Jules's name off Jules's work. When the
  *   answer depends on a roster that cannot be read, Take and Hand back refuse
  *   rather than guess.
  *
@@ -145,8 +145,8 @@ export const TASK_CARDS_QUERY = `*[_type == "${MARKETING_OPERATION_TYPE}" && _id
  * What a press decided: write this, or leave the task alone and say why.
  *
  * `append` adds entries to the end of an array field (created when missing) in
- * the SAME conditional write as the status change — so "Eric passed on this"
- * and "Eric is in the ask history" cannot land one without the other.
+ * the SAME conditional write as the status change — so "Ezra passed on this"
+ * and "Ezra is in the ask history" cannot land one without the other.
  */
 type Plan =
   | {
@@ -282,7 +282,7 @@ type Ownership = 'unowned' | 'presser' | 'someoneElse' | 'unknown'
 
 const couldNotCheck = errorLine('update that task', 'I couldn’t check who owns it just now — try again in a minute.')
 
-/** Someone else's task, refused by name: "Couldn’t hand that back — nothing changed. It’s Eric’s — only they can hand it back. Open This week." */
+/** Someone else's task, refused by name: "Couldn’t hand that back — nothing changed. It’s Ezra’s — only they can hand it back. Open This week." */
 const notYours = (task: StoredTask, verb: string) =>
   couldNot(`It’s ${text(task.ownerName)}’s — only they can hand it back.`, verb)
 
@@ -522,9 +522,9 @@ const unnamedMessage = errorLine(
  * the card has to ask for: an away cover (`coverFor`), drawn because the
  * owner is away, may move the task off THAT owner. The check is against the
  * task as it stands when the press lands, not as the card was drawn — so once
- * Juhan has covered Eric's task, Shirley pressing the same stale card is told
- * Juhan has it, instead of silently taking it from him. The same goes for the
- * absence itself: the card stays in the channel after Eric is back, and a
+ * Jules has covered Ezra's task, Shay pressing the same stale card is told
+ * Jules has it, instead of silently taking it from him. The same goes for the
+ * absence itself: the card stays in the channel after Ezra is back, and a
  * cover pressed then would take his task from under him while he works on it,
  * so it is refused unless the roster still has him away today.
  *
@@ -571,8 +571,8 @@ function take(input: TaskActionInput, opts: { takeOver: boolean }): Promise<Task
     if (alreadyMine) return { kind: 'noop', message: 'It’s already yours.' }
     const previousOwner = who === 'someoneElse' ? text(task.ownerName) : ''
     const set = {
-      // Recognised as the owner by Slack id under a different name ("Juhan
-      // Sonin" pressing on Juhan's task): keep the board's name, or one person
+      // Recognised as the owner by Slack id under a different name ("Jules
+      // Soren" pressing on Jules's task): keep the board's name, or one person
       // becomes two. Taking over from someone else writes the presser's name.
       ownerName: who === 'presser' ? text(task.ownerName) || person : person,
       ...(slackUserId ? { ownerSlackUserId: slackUserId } : {}),
@@ -631,7 +631,7 @@ export function takeOverTask(input: TaskActionInput): Promise<TaskActionResult> 
  *     conditional write. The next digest never asks them about this task, and
  *     a task two people have answered is offered as "drop it?". Excluding them
  *     by the name in the question missed them whenever Slack's display name
- *     ("Shirley Wu") was not the roster's ("Shirley").
+ *     ("Shay Wu") was not the roster's ("Shay").
  *   - **The write is conditional on the revision it was built from**, so a Take
  *     or Done landing between the read and the write is not silently undone —
  *     the task is read again and the pass rebuilt once, or refused.

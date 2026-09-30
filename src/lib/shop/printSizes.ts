@@ -1,5 +1,5 @@
 /**
- * Print size per piece, in standard US frame sizes (Shirley, 2026-08-12).
+ * Print size per piece, in standard US frame sizes (the studio, 2026-08-12).
  *
  * Derived from the page geometry of each shipped PDF, then snapped to the
  * nearest sheet Amazon actually stocks (11x14, 16x20, 18x24, 20x30, 24x36,

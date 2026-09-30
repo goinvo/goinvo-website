@@ -103,7 +103,7 @@ export async function captureFromMessage(input: {
 /**
  * An idea this person started a moment ago that is still awaiting review.
  *
- * Juhan's merch post was four messages in one burst: the bulleted list, an
+ * Jules's merch post was four messages in one burst: the bulleted list, an
  * aside about t-shirts, "any other ideas?", and "patches and stickers are good,
  * inexpensive experiments". That is one thought. Four board entries for it is
  * exactly the noise that teaches people to ignore a board — and the follow-ons
@@ -206,7 +206,7 @@ export type IdeaAwaitingReview = {
   _id: string
   title: string
   summary?: string
-  /** "Slack — Juhan, not yet reviewed": who said it. */
+  /** "Slack — Jules, not yet reviewed": who said it. */
   source?: string
   /** The Slack permalink back to the message it was caught from. */
   relatedUrl?: string

@@ -68,8 +68,8 @@ export function proposeOwnerAsks(input: {
   const maxAsks = Math.max(0, Math.floor(input.maxAsksPerPerson ?? 2))
   const availability = input.availability || []
 
-  // Owned minutes keyed case-insensitively: the board says "Juhan", a record
-  // may say "juhan", and they are the same person's week.
+  // Owned minutes keyed case-insensitively: the board says "Jules", a record
+  // may say "jules", and they are the same person's week.
   const owned = new Map<string, number>()
   for (const [name, minutes] of Object.entries(input.ownedMinutesByName || {})) {
     const key = lower(name)

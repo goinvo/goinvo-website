@@ -64,7 +64,7 @@ export type WeekPlanResponse = {
   weekEnd: string
   posture: string
   /**
-   * "Rebuild — 4.5 months of certain runway (to 11 Jan 2027)", from the read
+   * "Rebuild — 5 months of certain runway (to 25 Jan 2027)", from the read
    * that chose the posture; null when that read failed (the bare posture is
    * shown instead).
    */
@@ -129,7 +129,7 @@ export function weekOwners(plan: Pick<WeekPlanResponse, 'items' | 'decisions' | 
 /**
  * One person's share of the week: their tasks, decisions, deferred work and
  * follow-ups, and nothing that nobody owns. '' is everyone. Case-insensitive,
- * because "juhan" on a contact and "Juhan" on the board are one person.
+ * because "jules" on a contact and "Jules" on the board are one person.
  */
 export function filterWeekByOwner<T extends Pick<WeekPlanResponse, 'items' | 'decisions' | 'deferred' | 'followUps'>>(
   plan: T,
@@ -149,7 +149,7 @@ export function filterWeekByOwner<T extends Pick<WeekPlanResponse, 'items' | 'de
 const SAYS_NOBODY = new Set(['Nobody has it', 'Marqueta working', 'Needs someone'])
 
 /**
- * "Juhan · In progress · 30m" / "Nobody has it · 30m (est.)" / "Needs
+ * "Jules · In progress · 30m" / "Nobody has it · 30m (est.)" / "Needs
  * someone · 20m": who has it and where it stands, in `taskStatusWords` — the
  * Slack card's words.
  */
@@ -167,7 +167,7 @@ export function workMeta(row: PlanRowStatus & { minutes: number; estimateSource?
  * The planner's decisions, split into the real ones and the owner searches.
  *
  * The planner files every needsHuman task as a decision, including the ones
- * Slack's "Not me" leaves ("Eric passed on this — who should pick it up?").
+ * Slack's "Not me" leaves ("Ezra passed on this — who should pick it up?").
  * Those want a person, not an answer: the card offers them "I’ll take it",
  * the digest lists them under "Needs an owner", and the status words call
  * them "Needs someone". Shown under "Decisions waiting" they read as a
@@ -188,7 +188,7 @@ const DAY_MS = 86_400_000
 
 /**
  * The second line of a "Caught in Slack" row: who said it, when, and a way
- * back to the message — "Slack — Juhan · 2 days ago". The permalink is only
+ * back to the message — "Slack — Jules · 2 days ago". The permalink is only
  * used when it is an https link; anything else is left off rather than linked.
  */
 export function caughtIdeaMeta(idea: CaughtIdea, now: Date): { line: string; url: string } {

@@ -1148,8 +1148,8 @@ function lastTouchOf(contact: PrepContact | undefined): Touch | null {
 
 /**
  * Was the last touch made by the person about to make this one? Compared on
- * the first name, because the board says "Juhan" and a spoken name may be
- * "Juhan Sonin". Unknown either way is NOT a match: "our call" is true
+ * the first name, because the board says "Jules" and a spoken name may be
+ * "Jules Soren". Unknown either way is NOT a match: "our call" is true
  * whoever made it, while "my call" said about a colleague's call is a
  * sentence the prospect can catch out.
  */

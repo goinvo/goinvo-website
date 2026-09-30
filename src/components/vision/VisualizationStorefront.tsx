@@ -117,8 +117,8 @@ const collectionSlugs: Record<Exclude<CollectionId, 'all'>, string[]> = {
 
 
 /**
- * Printed sizes for the pieces the studio keeps in stock (Jon's note,
- * 2026-08-07). Jon gave these from memory, so they are stated as approximate
+ * Printed sizes for the pieces the studio keeps in stock (the studio's note,
+ * 2026-08-07). The studio gave these from memory, so they are stated as approximate
  * until someone measures the actual stock.
  */
 const PRODUCTION_LABEL: Record<string, string> = {
@@ -126,7 +126,7 @@ const PRODUCTION_LABEL: Record<string, string> = {
   'from-stock': 'Ships from our shelf',
 }
 
-/** The launch band: complete posters, no crops (Jon's feedback, 2026-08-05). */
+/** The launch band: complete posters, no crops (the studio's feedback, 2026-08-05). */
 const FEATURED_SLUGS = {
   hero: 'determinants-of-health',
   second: 'own-your-health-data',
@@ -156,7 +156,7 @@ const SERIES: Array<{ id: Exclude<CollectionId, 'all'>; label: string; blurb: st
 const CATALOG_SECTIONS: Array<{ id: Exclude<CollectionId, 'all'>; blurb: string }> = [
   // These must not restate the Collections cards higher up the page, which
   // already describe Design Axioms and Health Cards. Saying nearly the same
-  // sentence twice on one page is the repetition Juhan objected to; say what
+  // sentence twice on one page is the repetition the studio objected to; say what
   // the set is FOR instead.
   { id: 'design-axioms', blurb: 'Put them up where the work happens.' },
   { id: 'health-cards', blurb: 'One reminder per card, for a wall or a waiting room.' },
@@ -300,7 +300,7 @@ export function VisualizationStorefront({
   const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({})
   const [query, setQuery] = useState('')
   // No sort control: 31 curated designs don't need one, and "curated order" as
-  // a sort option read as noise (Juhan's feedback, 2026-08-07).
+  // a sort option read as noise (the studio's feedback, 2026-08-07).
   const [collection, setCollection] = useState<CollectionId>('all')
   const [donationChoice, setDonationChoice] = useState<DonationChoice>('0')
   const [customDonation, setCustomDonation] = useState('')
@@ -613,7 +613,7 @@ export function VisualizationStorefront({
       >
         <div className="max-width content-padding py-14 lg:py-20">
           {/* No tan "download the source files…" byline here — the hero already
-              says it once (Juhan's feedback, 2026-08-07). */}
+              says it once (the studio's feedback, 2026-08-07). */}
           <h2 className="mb-8 font-serif text-[2.15rem] font-light leading-[1.08] lg:text-[3rem]">
             Featured visualizations
           </h2>
@@ -720,7 +720,7 @@ export function VisualizationStorefront({
                     onClick={() => browseCollection(series.id)}
                     /* flex-col matters: a stretched <button> centers its own
                        content, so the shorter card floated with a band of dead
-                       white above its thumbnails (Shirley, 2026-08-10). */
+                       white above its thumbnails (the studio, 2026-08-10). */
                     className="group flex flex-col border border-[#d8cbb5] bg-white text-left shadow-[0_14px_36px_rgba(63,48,29,.10)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-secondary hover:shadow-[0_20px_46px_rgba(63,48,29,.16)]"
                   >
                     <span className="flex gap-2 border-b border-[#eee6d8] bg-[#faf6ee] p-3">
@@ -800,7 +800,7 @@ export function VisualizationStorefront({
               </label>
               {/* Just search + collection chips: the sort select and the "Clear
                   filters" tag-along are gone — "All designs" already resets the
-                  collection (Juhan's feedback, 2026-08-07). */}
+                  collection (the studio's feedback, 2026-08-07). */}
               <div className="flex gap-2 mt-3 overflow-x-auto pb-1" aria-label="Visualization collections">
                 {collections.map((option) => (
                   <button
@@ -832,7 +832,7 @@ export function VisualizationStorefront({
             <>
               {/* When a filter is on, the rest of the collection "disappears" —
                   name the filter and offer the way back so nobody is spooked
-                  (Juhan's feedback, 2026-08-07). */}
+                  (the studio's feedback, 2026-08-07). */}
               <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                 <p className="text-sm text-gray mb-0" aria-live="polite">
                   {hasFilters ? (
@@ -1000,7 +1000,7 @@ export function VisualizationStorefront({
                                 </a>
                               )}
                               {/* Printed size, for the pieces we keep in stock
-                                  (Jon's note, 2026-08-07). */}
+                                  (the studio's note, 2026-08-07). */}
                               {printSize && (
                                 <span data-shop-print-size={item.slug} className="text-gray">
                                   Printed {printSize}
@@ -1008,7 +1008,7 @@ export function VisualizationStorefront({
                               )}
                               {/* Not every piece is made the same way: posters
                                   are printed to order, books come off a shelf
-                                  (Shirley, 2026-08-11). Per piece, from the CMS.*/}
+                                  (the studio, 2026-08-11). Per piece, from the CMS.*/}
                               {item.production && PRODUCTION_LABEL[item.production] && (
                                 <span data-shop-production={item.production} className="text-gray">
                                   {PRODUCTION_LABEL[item.production]}
@@ -1053,7 +1053,7 @@ export function VisualizationStorefront({
                             ) : (
                               // Outline, not a filled orange slab: the posters
                               // are the show, the CTAs shouldn't compete with
-                              // them (Juhan's feedback, 2026-08-07).
+                              // them (the studio's feedback, 2026-08-07).
                               <button
                                 type="button"
                                 aria-pressed={selected}
@@ -1072,7 +1072,7 @@ export function VisualizationStorefront({
                                   the top of the page and again in the cart
                                   summary; repeating it on every button overflowed
                                   the container on the live site and told the
-                                  visitor nothing new (Shirley, 2026-08-12).
+                                  visitor nothing new (the studio, 2026-08-12).
                                 */}
                                 <span className="whitespace-nowrap text-right text-xs font-normal leading-tight">
                                   {wasPrice && (
@@ -1117,7 +1117,7 @@ export function VisualizationStorefront({
                         <section key={section.id} aria-labelledby={`catalog-${section.id}`}>
                           {/* The blurb sits under the heading it describes, not
                               jammed next to the count, where it made a long
-                              ragged line (Shirley, 2026-08-10). */}
+                              ragged line (the studio, 2026-08-10). */}
                           <div className="mb-5 border-b-2 border-[#1d1b1a] pb-3">
                             <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
                               <h3
@@ -1284,7 +1284,7 @@ export function VisualizationStorefront({
                   : 'Support the work'}
               </p>
               {/* Break out shipping in the first popup so the total isn't a
-                  surprise (Jon's feedback, 2026-08-07). */}
+                  surprise (the studio's feedback, 2026-08-07). */}
               <p data-shop-cart-total className="mb-0 text-sm text-[#c5ccda]">
                 {selectedPrints.length > 0
                   ? `${priceLabel(selectedSubtotal, selectedItems[0]?.currency)} + ${formatPrice(

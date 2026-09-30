@@ -108,10 +108,10 @@ afterEach(() => {
 
 // ── Strategy ─────────────────────────────────────────────────────────────────
 
-const STORED_POSTURE = { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-10T00:00:00Z' } }
+const STORED_POSTURE = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-10T00:00:00Z' } }
 const PRIOR_REVIEW = {
   confirmedAt: '2026-09-02T00:00:00Z',
-  confirmedBy: 'Eric',
+  confirmedBy: 'Ezra',
   verdict: 'stillRight',
   monthKey: '2026-09',
   postureAtReview: 'rebuild',
@@ -122,8 +122,8 @@ const wonContact = {
   organization: 'Acme',
   status: 'won',
   interactions: [
-    { at: '2026-09-01T00:00:00Z', statusAfter: 'meeting', channel: 'phone', by: 'Juhan' },
-    { at: '2026-09-20T15:00:00Z', statusAfter: 'won', value: 40000, channel: 'phone', by: 'Juhan' },
+    { at: '2026-09-01T00:00:00Z', statusAfter: 'meeting', channel: 'phone', by: 'Jules' },
+    { at: '2026-09-20T15:00:00Z', statusAfter: 'won', value: 40000, channel: 'phone', by: 'Jules' },
   ],
 }
 const strategyData = (extra: Record<string, unknown> = {}) => ({
@@ -158,7 +158,7 @@ describe('recordStrategyVerdict', () => {
   it('writes nothing for a press on last month’s card, and hands back this month’s answer with its buttons', async () => {
     routeOutreach({ strategy: strategyData() })
     routePosture({ stored: STORED_POSTURE, review: PRIOR_REVIEW })
-    const result = await recordStrategyVerdict({ verdict: 'stillRight', personName: 'Juhan', monthKey: '2026-08', now: NOW })
+    const result = await recordStrategyVerdict({ verdict: 'stillRight', personName: 'Jules', monthKey: '2026-08', now: NOW })
     expect(result).toMatchObject({ ok: false, stale: true })
     // This year's month without its year (rule 7).
     expect(result.message).toBe('That was August’s check — here is this month’s.')
@@ -173,13 +173,13 @@ describe('recordStrategyVerdict', () => {
   it('records "plan still fits" against the posture in force', async () => {
     routeOutreach({ strategy: strategyData() })
     routePosture({ stored: STORED_POSTURE, review: PRIOR_REVIEW })
-    const result = await recordStrategyVerdict({ verdict: 'stillRight', personName: 'Juhan', monthKey: '2026-09', now: NOW })
+    const result = await recordStrategyVerdict({ verdict: 'stillRight', personName: 'Jules', monthKey: '2026-09', now: NOW })
     expect(result.ok).toBe(true)
-    expect(result.message).toBe('Plan confirmed for September by Juhan — I’ll ask again in October, or sooner if the runway crosses a line.')
+    expect(result.message).toBe('Plan confirmed for September by Jules — I’ll ask again in October, or sooner if the runway crosses a line.')
     const [patch] = patchesFor('marketingFinancialPosture')
     expect(setOf(patch).strategyReview).toEqual({
       confirmedAt: NOW.toISOString(),
-      confirmedBy: 'Juhan',
+      confirmedBy: 'Jules',
       verdict: 'stillRight',
       monthKey: '2026-09',
       postureAtReview: 'rebuild',
@@ -190,9 +190,9 @@ describe('recordStrategyVerdict', () => {
   it('files one rethink decision on This week, keyed by the answer it follows, BEFORE recording the verdict', async () => {
     routeOutreach({ strategy: strategyData() })
     routePosture({ stored: STORED_POSTURE, review: PRIOR_REVIEW })
-    const result = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Juhan', monthKey: '2026-09', now: NOW })
+    const result = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Jules', monthKey: '2026-09', now: NOW })
     expect(result).toMatchObject({ ok: true, filed: true })
-    expect(result.message).toBe('Juhan asked for a rethink — it’s a decision on This week, suggested to Juhan.')
+    expect(result.message).toBe('Jules asked for a rethink — it’s a decision on This week, suggested to Jules.')
     const decision = mocks.outreach.createIfNotExists.mock.calls[0][0] as Record<string, any>
     const sourceKey = 'strategy-review/2026-09/after-20260902T000000000Z'
     expect(decision).toMatchObject({
@@ -201,7 +201,7 @@ describe('recordStrategyVerdict', () => {
       sourceKey,
       kind: 'decision',
       status: 'needsHuman',
-      suggestedOwner: 'Juhan',
+      suggestedOwner: 'Jules',
       ownerName: '',
       targetView: 'thisWeek',
     })
@@ -213,7 +213,7 @@ describe('recordStrategyVerdict', () => {
 
     // A second press on the same card reads the same prior answer: same id,
     // so createIfNotExists keeps it to one decision.
-    await recordStrategyVerdict({ verdict: 'rethink', personName: 'Eric', monthKey: '2026-09', now: NOW })
+    await recordStrategyVerdict({ verdict: 'rethink', personName: 'Ezra', monthKey: '2026-09', now: NOW })
     const second = mocks.outreach.createIfNotExists.mock.calls[1][0] as Record<string, any>
     expect(second._id).toBe(decision._id)
   })
@@ -222,22 +222,22 @@ describe('recordStrategyVerdict', () => {
     const open = { _id: 'marketingOperation.rethink', title: 'Rethink the marketing plan (September 2026)', activity: [] }
     routeOutreach({ strategy: strategyData({ openRethink: open }) })
     routePosture({ stored: STORED_POSTURE, review: PRIOR_REVIEW })
-    const result = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Juhan', monthKey: '2026-09', now: NOW })
+    const result = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Jules', monthKey: '2026-09', now: NOW })
     expect(result).toMatchObject({ ok: true, filed: false, decisionTaskId: open._id })
-    expect(result.message).toBe('Juhan asked for a rethink too — it’s already a decision on This week.')
+    expect(result.message).toBe('Jules asked for a rethink too — it’s already a decision on This week.')
     expect(mocks.outreach.createIfNotExists).not.toHaveBeenCalled()
     const [joined] = patchesFor(open._id)
     const [, , entries] = opsOf(joined, 'insert')[0] as [string, string, Record<string, unknown>[]]
-    expect(entries[0]).toMatchObject({ action: 'Asked for a rethink from Slack', outcome: 'By Juhan', actor: 'person' })
+    expect(entries[0]).toMatchObject({ action: 'Asked for a rethink from Slack', outcome: 'By Jules', actor: 'person' })
 
     // The same person again a minute later is the same ask.
     mocks.patches.length = 0
     routeOutreach({
       strategy: strategyData({
-        openRethink: { ...open, activity: [{ _key: 'a', at: minutesAgo(1), actor: 'person', action: 'Asked for a rethink from Slack', outcome: 'By Juhan' }] },
+        openRethink: { ...open, activity: [{ _key: 'a', at: minutesAgo(1), actor: 'person', action: 'Asked for a rethink from Slack', outcome: 'By Jules' }] },
       }),
     })
-    await recordStrategyVerdict({ verdict: 'rethink', personName: 'Juhan', monthKey: '2026-09', now: NOW })
+    await recordStrategyVerdict({ verdict: 'rethink', personName: 'Jules', monthKey: '2026-09', now: NOW })
     expect(patchesFor(open._id)).toHaveLength(0)
     // The verdict itself is still recorded.
     expect(patchesFor('marketingFinancialPosture')).toHaveLength(1)
@@ -257,26 +257,26 @@ describe('recordStrategyVerdict', () => {
       activity,
     })
 
-    // Juhan filed it a minute ago and pressed again: still HIS rethink, not "too".
-    routeOutreach({ strategy: strategyData({ openRethink: open([ask('Juhan', 1)]) }) })
+    // Jules filed it a minute ago and pressed again: still HIS rethink, not "too".
+    routeOutreach({ strategy: strategyData({ openRethink: open([ask('Jules', 1)]) }) })
     routePosture({ stored: STORED_POSTURE, review: PRIOR_REVIEW })
-    const filer = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Juhan', monthKey: '2026-09', now: NOW })
+    const filer = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Jules', monthKey: '2026-09', now: NOW })
     expect(filer).toMatchObject({ ok: true, filed: true, repeat: true, decisionTaskId: 'marketingOperation.rethink' })
-    expect(filer.message).toBe('Juhan asked for a rethink — it’s a decision on This week, suggested to Juhan.')
+    expect(filer.message).toBe('Jules asked for a rethink — it’s a decision on This week, suggested to Jules.')
     expect(patchesFor('marketingOperation.rethink')).toHaveLength(0)
 
-    // Juhan joined Eric's, then pressed again: still one "too".
+    // Jules joined Ezra's, then pressed again: still one "too".
     mocks.patches.length = 0
-    routeOutreach({ strategy: strategyData({ openRethink: open([ask('Eric', 30), ask('Juhan', 1)]) }) })
-    const joiner = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Juhan', monthKey: '2026-09', now: NOW })
+    routeOutreach({ strategy: strategyData({ openRethink: open([ask('Ezra', 30), ask('Jules', 1)]) }) })
+    const joiner = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Jules', monthKey: '2026-09', now: NOW })
     expect(joiner).toMatchObject({ ok: true, filed: false, repeat: true })
-    expect(joiner.message).toBe('Juhan asked for a rethink too — it’s already a decision on This week.')
+    expect(joiner.message).toBe('Jules asked for a rethink too — it’s already a decision on This week.')
     expect(patchesFor('marketingOperation.rethink')).toHaveLength(0)
 
     // A colleague a minute after the filer is a real second voice: joined, recorded, no `repeat`.
     mocks.patches.length = 0
-    routeOutreach({ strategy: strategyData({ openRethink: open([ask('Juhan', 1)]) }) })
-    const second = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Eric', monthKey: '2026-09', now: NOW })
+    routeOutreach({ strategy: strategyData({ openRethink: open([ask('Jules', 1)]) }) })
+    const second = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Ezra', monthKey: '2026-09', now: NOW })
     expect(second).toMatchObject({ ok: true, filed: false })
     expect(second.repeat).toBeUndefined()
     expect(patchesFor('marketingOperation.rethink')).toHaveLength(1)
@@ -285,20 +285,20 @@ describe('recordStrategyVerdict', () => {
   it('names an earlier month without this year’s number', async () => {
     routeOutreach({ strategy: strategyData() })
     routePosture({ stored: STORED_POSTURE, review: PRIOR_REVIEW })
-    const lastYear = await recordStrategyVerdict({ verdict: 'stillRight', personName: 'Juhan', monthKey: '2025-12', now: NOW })
+    const lastYear = await recordStrategyVerdict({ verdict: 'stillRight', personName: 'Jules', monthKey: '2025-12', now: NOW })
     expect(lastYear.message).toBe('That was December 2025’s check — here is this month’s.')
   })
 
   it('says "nothing changed" only when nothing did', async () => {
     routeOutreach({ strategy: new Error('outreach down') })
     routePosture({ stored: STORED_POSTURE, review: PRIOR_REVIEW })
-    const failed = await recordStrategyVerdict({ verdict: 'stillRight', personName: 'Juhan', monthKey: '2026-09', now: NOW })
+    const failed = await recordStrategyVerdict({ verdict: 'stillRight', personName: 'Jules', monthKey: '2026-09', now: NOW })
     expect(failed).toMatchObject({ ok: false, message: 'Couldn’t record that — nothing changed. Answer it on This week in the Studio.' })
 
     // The decision was filed, then the verdict write failed: that is not "nothing changed".
     routeOutreach({ strategy: strategyData() })
     mocks.commit.mockRejectedValue(new Error('posture write refused'))
-    const half = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Juhan', monthKey: '2026-09', now: NOW })
+    const half = await recordStrategyVerdict({ verdict: 'rethink', personName: 'Jules', monthKey: '2026-09', now: NOW })
     expect(half.ok).toBe(false)
     expect(half.message).not.toContain('nothing changed')
     expect(half.message).toContain('press again and it joins the same decision')
@@ -309,11 +309,11 @@ describe('renderMoneyAndDirection — the redraw a money press leaves in place',
   it('reads the records AFTER the press: the receipt carries the number now, and the next question follows', async () => {
     // The runway was just confirmed; the strategy has never been checked.
     routeOutreach({ strategy: strategyData({ contacts: [] }) })
-    routePosture({ stored: { runway: { certainUntil: '2027-01-11', confirmedAt: NOW.toISOString() } }, review: null })
-    const blocks = await renderMoneyAndDirection({ now: NOW, receipt: { kind: 'runwayConfirmed', who: '<@UJUHAN>' } })
+    routePosture({ stored: { runway: { certainUntil: '2027-01-25', confirmedAt: NOW.toISOString() } }, review: null })
+    const blocks = await renderMoneyAndDirection({ now: NOW, receipt: { kind: 'runwayConfirmed', who: '<@UJULES>' } })
     expectValidSlackBlocks(blocks)
     expect(blocks.every((block) => String(block.block_id).startsWith('mq_money'))).toBe(true)
-    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@UJUHAN> · Thu 24 Sep — 3.5 months (to 11 Jan 2027).')
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@UJULES> · Thu 24 Sep — 4 months (to 25 Jan 2027).')
     expect(buttons(blocks).map((button) => button.text.text)).toEqual([LABEL.RUNWAY_CHANGED, LABEL.PLAN_FITS, LABEL.PLAN_RETHINK])
     expect(buttons(blocks).some((button) => button.style)).toBe(false)
   })
@@ -323,10 +323,10 @@ describe('renderMoneyAndDirection — the redraw a money press leaves in place',
     routePosture({ stored: STORED_POSTURE, review: PRIOR_REVIEW })
     const blocks = await renderMoneyAndDirection({
       now: NOW,
-      receipt: { kind: 'rethink', who: '<@UJUHAN>', suggestedTo: 'Juhan', decisionTaskId: 'marketingOperation.rethink' },
+      receipt: { kind: 'rethink', who: '<@UJULES>', suggestedTo: 'Jules', decisionTaskId: 'marketingOperation.rethink' },
     })
     expectValidSlackBlocks(blocks)
-    expect(blocks[0].text.text).toBe('<@UJUHAN> asked for a rethink — it’s a decision on This week, suggested to Juhan.')
+    expect(blocks[0].text.text).toBe('<@UJULES> asked for a rethink — it’s a decision on This week, suggested to Jules.')
     expect(buttons(blocks)[0]).toMatchObject({
       text: { text: 'Open This week' },
       url: 'https://www.goinvo.com/studio/marketing?view=thisWeek&task=marketingOperation.rethink',
@@ -338,9 +338,9 @@ describe('renderMoneyAndDirection — the redraw a money press leaves in place',
   it('never throws: a failed re-read still draws the receipt, without numbers or a question', async () => {
     routeOutreach({ strategy: new Error('outreach down') })
     routePosture({ stored: STORED_POSTURE, review: PRIOR_REVIEW })
-    const blocks = await renderMoneyAndDirection({ now: NOW, receipt: { kind: 'runwayConfirmed', who: '<@UJUHAN>' } })
+    const blocks = await renderMoneyAndDirection({ now: NOW, receipt: { kind: 'runwayConfirmed', who: '<@UJULES>' } })
     expect(blocks).toHaveLength(2)
-    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@UJUHAN> · Thu 24 Sep.')
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@UJULES> · Thu 24 Sep.')
     await expect(renderMoneyAndDirection({ now: NOW })).resolves.toEqual([])
   })
 })

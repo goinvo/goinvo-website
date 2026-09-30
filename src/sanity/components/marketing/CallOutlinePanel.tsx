@@ -79,7 +79,7 @@ type OutlineData = {
 }
 
 /**
- * The name an outline speaks as — "it’s Shirley from GoInvo" — from the
+ * The name an outline speaks as — "it’s Shay from GoInvo" — from the
  * Studio user's name: its first word, or '' when there is none. Slack does the
  * same with the presser's name. An empty name is left for the composer, which
  * writes "[your name]" rather than signing a draft as somebody else.

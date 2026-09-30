@@ -5,14 +5,14 @@
  * post, and each has one wrong answer that is easy to write:
  *
  *   - "What is this presser's name on the board?" The wrong answer is their
- *     Slack display name. The board says "Juhan"; Slack says "Juhan Sonin" or
+ *     Slack display name. The board says "Jules"; Slack says "Jules Soren" or
  *     whatever the display name is this month, and writing that as an owner
  *     splits one person into two — two check-in groups, two loads when asking
  *     who has time, and a `mine` that finds nothing.
  *   - "Which Slack user is this owner?" The wrong answer is the id stored on
  *     the task. Claiming in Slack stamps `ownerSlackUserId` and nothing ever
- *     clears it, so after a reassignment in the Studio the task says "Eric"
- *     next to Juhan's id. The availability records — one per person, written
+ *     clears it, so after a reassignment in the Studio the task says "Ezra"
+ *     next to Jules's id. The availability records — one per person, written
  *     when somebody links their identity — are the roster, and the roster wins.
  *
  * Server-only: the availability records live in the PRIVATE outreach dataset
@@ -99,13 +99,13 @@ export function tidyAvailability(
  *
  * Pass `entries` when the caller already has the roster; otherwise it is read,
  * and a failed read THROWS rather than falling back to the raw display name,
- * which would write "Juhan Sonin" as the owner of work the board files under
- * "Juhan".
+ * which would write "Jules Soren" as the owner of work the board files under
+ * "Jules".
  *
  * A NAMESAKE is nobody: "Someone", the resolver's word for a person it could
  * not name, which every caller already refuses to write. The display-name
  * match used to win even when that board name was linked to a DIFFERENT Slack
- * account — so anybody whose display name read "Juhan" was Juhan: their Take
+ * account — so anybody whose display name read "Jules" was Jules: their Take
  * made them the owner of his work, their "Not me" was filed as his, and "I'm
  * away" booked his week off. A name linked to someone is theirs; only the
  * linked account may use it. (The chat path's `presser` had this guard; the
@@ -137,8 +137,11 @@ export async function resolvePresserName(input: {
 /** Open work somebody owns — what "your 2 open tasks" counts. Weekly-plan records are the planner's, not theirs. */
 export const OWNED_OPEN_TASKS_QUERY = `count(*[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**")) && lower(ownerName) == $name && !(status in ["done", "dismissed"]) && !string::startsWith(coalesce(sourceKey, ""), "weekly-plan/")])`
 
-/** Who does the studio's marketing, when `MARKETING_TEAM_NAMES` does not say. */
-export const DEFAULT_MARKETING_TEAM_NAMES = ['Juhan', 'Shirley', 'Eric', 'Jon']
+/**
+ * Who does the studio's marketing when `MARKETING_TEAM_NAMES` does not say: nobody beyond the board's owners.
+ * The studio's list lives in the deployment's environment, not in this public repository (task_1008).
+ */
+export const DEFAULT_MARKETING_TEAM_NAMES: string[] = []
 
 /**
  * The marketing team by the names the board files work under — everyone the
@@ -168,10 +171,10 @@ export function marketingTeamNames(): string[] {
  *
  * `resolvePresserName` falls back to the raw display name when nothing on the
  * roster matches. That is fine for words said aloud and wrong for an owner: an
- * unlinked Juhan whose Slack says "Juhan Sonin" pressed Take and became the
- * owner "Juhan Sonin". Once he linked as "Juhan" the task was nobody's — Hand
- * back refused him ("It's Juhan Sonin's"), `mine` did not list it, the
- * check-in could not mention him, and the setup kept offering "Juhan Sonin",
+ * unlinked Jules whose Slack says "Jules Soren" pressed Take and became the
+ * owner "Jules Soren". Once he linked as "Jules" the task was nobody's — Hand
+ * back refused him ("It's Jules Soren's"), `mine` did not list it, the
+ * check-in could not mention him, and the setup kept offering "Jules Soren",
  * which he could no longer pick. Follow-ups filed under that name split off
  * the same way.
  *
