@@ -22,6 +22,10 @@ const client = createClient({
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
   apiVersion: '2024-01-01',
   useCdn: false,
+  // The dataset is private (2026-09-30); without a token every query returns [] and the
+  // "should have documents" check below fails loudly, which is the intended signal.
+  token: process.env.SANITY_API_READ_TOKEN || process.env.SANITY_API_WRITE_TOKEN || undefined,
+  perspective: 'published',
 })
 
 interface SanityBlock {
