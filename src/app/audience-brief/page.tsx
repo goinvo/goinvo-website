@@ -58,8 +58,8 @@ const WARN = '#a12820'
 /** Segments the outreach plan names as targets, to check the list against. */
 const TARGETED_SEGMENTS = ['medDevice', 'pharma', 'provider', 'healthtech'] as const
 
-/** Who this brief is written for; their decisions sort first. */
-const READER = 'Jules'
+/** Who this brief is written for; their decisions sort first. Set in the deployment's environment. */
+const READER = process.env.AUDIENCE_BRIEF_READER || ''
 
 let outreachClient: SanityClient | null = null
 let outreachResolved = false

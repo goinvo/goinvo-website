@@ -239,23 +239,23 @@ describe('strategyReviewDue', () => {
   })
 
   it('comes due on the day the runway crosses a line, not a month later', () => {
-    // Confirmed on 5 Oct against Rebuild, runway to 10 Mar 2027. The runway
+    // Confirmed on 19 Oct against Rebuild, runway to 10 Mar 2027. The runway
     // itself is fresh and not urgent all week — only the posture moves.
     //
     // The flip is computed, not assumed: 3 months (the Survival line) before
-    // 10 Mar 2027 at 30.44 days a month lands at 2026-10-11T16:19:12Z. The
-    // spec's dates (not due on the 10th, due on the 13th) straddle it as
+    // 10 Mar 2027 at 30.44 days a month lands at 2026-10-25T16:19:12Z. The
+    // spec's dates, moved 14 days with the runway date (not due on the 24th, due on the 27th), straddle it as
     // written, so no adjustment was needed.
-    const stored: StoredPosture = { runway: { certainUntil: '2027-03-10', confirmedAt: '2026-10-05T12:00:00Z' } }
-    const review = { confirmedAt: '2026-10-05T12:00:00Z', verdict: 'stillRight' as const, postureAtReview: 'rebuild' }
+    const stored: StoredPosture = { runway: { certainUntil: '2027-03-10', confirmedAt: '2026-10-19T12:00:00Z' } }
+    const review = { confirmedAt: '2026-10-19T12:00:00Z', verdict: 'stillRight' as const, postureAtReview: 'rebuild' }
     const postureOn = (at: Date) => postureForRunwayMonths(monthsOfRunway(stored.runway!.certainUntil, at)!)
 
-    const tenth = new Date('2026-10-10T12:00:00Z')
-    const thirteenth = new Date('2026-10-13T12:00:00Z')
+    const tenth = new Date('2026-10-24T12:00:00Z')
+    const thirteenth = new Date('2026-10-27T12:00:00Z')
     expect(postureOn(tenth)).toBe('rebuild')
     expect(postureOn(thirteenth)).toBe('survival')
-    expect(postureOn(new Date('2026-10-11T16:19:00Z'))).toBe('rebuild')
-    expect(postureOn(new Date('2026-10-11T16:20:00Z'))).toBe('survival')
+    expect(postureOn(new Date('2026-10-25T16:19:00Z'))).toBe('rebuild')
+    expect(postureOn(new Date('2026-10-25T16:20:00Z'))).toBe('survival')
 
     expect(strategyReviewDue(review, tenth, postureOn(tenth)).due).toBe(false)
     const due = strategyReviewDue(review, thirteenth, postureOn(thirteenth))
@@ -602,7 +602,7 @@ describe('buildMoneyAndDirectionBlocks', () => {
     expectValidSlackBlocks(blocks)
     expect(blocks.every((block) => String(block.block_id).startsWith('mq_money'))).toBe(true)
     expect(blocks[0].text.text).toBe(
-      '*Money and direction*\nStill 5.5 months of certain runway (to 10 Mar 2027), or has that moved?\n_Last confirmed 54 days ago._',
+      '*Money and direction*\nStill 4 months of certain runway (to 10 Mar 2027), or has that moved?\n_Last confirmed 54 days ago._',
     )
     expect(labels(blocks)).toEqual([LABEL.RUNWAY_OK, LABEL.RUNWAY_SIGNED, LABEL.RUNWAY_CHANGED])
     expect(buttons(blocks).some((button) => button.style)).toBe(false)
@@ -700,7 +700,7 @@ describe('money receipts — what a press leaves where its question was', () => 
     })
     expectValidSlackBlocks(blocks)
     expect(blocks[0]).toMatchObject({ block_id: 'mq_money_receipt' })
-    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@U1> · Thu 24 Sep — 5.5 months (to 10 Mar 2027).')
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@U1> · Thu 24 Sep — 4 months (to 10 Mar 2027).')
     expect(blocks[1].elements.map((element: Block) => [element.text.text, element.action_id])).toEqual([
       [LABEL.RUNWAY_CHANGED, MARKETING_ACTION.runwayUpdate],
     ])
@@ -715,14 +715,14 @@ describe('money receipts — what a press leaves where its question was', () => 
     // Even if the re-read still says due (a stale read, a disagreement), the answer just given stands.
     const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: RUNWAY_DUE, receipt: { kind: 'runwayUpdated', who: 'Jules & *co*' } })
     // A name that is not a mention is escaped and kept out of the formatting around it.
-    expect(blocks[0].text.text).toBe(':white_check_mark: Runway updated by Jules &amp; co · Thu 24 Sep — now 5.5 months (to 10 Mar 2027).')
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway updated by Jules &amp; co · Thu 24 Sep — now 4 months (to 10 Mar 2027).')
     expect(labels(blocks)).toEqual([LABEL.RUNWAY_CHANGED])
   })
 
   it('signed work says what was signed and where the runway now reaches', () => {
     const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: freshRunway(), receipt: { kind: 'runwaySigned', who: '<@U2>', label: 'SoW — Acme' } })
     expect(blocks[0].text.text).toBe(
-      ':white_check_mark: Signed work recorded by <@U2> · Thu 24 Sep (SoW — Acme) — runway now 5.5 months (to 10 Mar 2027).',
+      ':white_check_mark: Signed work recorded by <@U2> · Thu 24 Sep (SoW — Acme) — runway now 4 months (to 10 Mar 2027).',
     )
   })
 
@@ -790,7 +790,7 @@ describe('answers — moneyAnswer, strategyAnswer, pipelineAnswer', () => {
   it('"runway": the number first, the pipeline, and the check-in’s own buttons when one is due', () => {
     const answer = moneyAnswer({ now: SEPT, runway: runwayState(), snapshot: snapshot() })
     expectAnswerAnatomy(answer)
-    expect(answer.text).toBe('*Runway* — 5.5 months of certain runway, to 10 Mar 2027 (Rebuild)')
+    expect(answer.text).toBe('*Runway* — 4 months of certain runway, to 10 Mar 2027 (Rebuild)')
     expect(answer.blocks[0].text.text).toContain('Pipeline: 2 in meeting/opportunity, ~$120,000 estimated · Won this month: none')
     expect(labels(answer.blocks)).toEqual([LABEL.RUNWAY_OK, LABEL.RUNWAY_SIGNED, LABEL.RUNWAY_CHANGED])
     // The question carries the group's id, so a press redraws it in place.
@@ -818,7 +818,7 @@ describe('answers — moneyAnswer, strategyAnswer, pipelineAnswer', () => {
       '*Runway says Rebuild: outreach leads. 2 touches logged this month — is outreach getting the hours it needs?*',
     )
     const text = answer.blocks[0].text.text
-    expect(text).toContain('Runway: 5.5 months of certain runway, to 10 Mar 2027 (Rebuild)')
+    expect(text).toContain('Runway: 4 months of certain runway, to 10 Mar 2027 (Rebuild)')
     expect(text).toContain('Pipeline: 2 in meeting/opportunity')
     // Midnight UTC on the 20th is the evening of the 19th in Boston, where the studio reads it.
     expect(text).toContain('Decision gates: Gate: keep the pre-mortem offer? — overdue since Sat 19 Sep')

@@ -247,8 +247,8 @@ describe('team identity', () => {
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UJULES', displayName: 'Jules Soren' })).resolves.toBe('Jules')
       routeOutreach({ availability: unlinkedJules, openTasks: 0 })
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'jules' })).resolves.toBe('Jules')
-      // Joss owns nothing and has no record, but he is on the marketing team.
-      delete process.env.MARKETING_TEAM_NAMES
+      // Joss owns nothing and has no record, but he is on the marketing team (the deployment's list, task_1008).
+      process.env.MARKETING_TEAM_NAMES = 'Jules,Shay,Ezra,Joss'
       expect(marketingTeamNames()).toEqual(['Jules', 'Shay', 'Ezra', 'Joss'])
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UJOSS', displayName: 'Joss' })).resolves.toBe('Joss')
       // Somebody new with work already filed under exactly their name.

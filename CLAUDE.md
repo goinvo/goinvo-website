@@ -110,7 +110,7 @@ even though PUBLISHED prod data is world-readable). Three ways to show one to a 
   preview** → dialog to mint a **no-login, expiring (7/14/30-day), revocable** link
   `https://www.goinvo.com/preview/<token>`. Copy-once: only the token's SHA-256 hash is stored,
   so the link can't be re-shown (create a fresh one) — but active links are listed with Revoke.
-- **Sanity project members** (Jules, Ezra, Joss, Shay all have accounts): send the Presentation
+- **Sanity project members** (the studio's team all have accounts): send the Presentation
   deep link `.../studio/presentation?preview=/vision/<slug>` — draft rendered next to its editor,
   supports in-Studio comments.
 - **Sanity's built-in shared-preview toggle** (Presentation URL-bar share menu) also works but is
@@ -196,7 +196,7 @@ openers/offers/evidence, email templates, offer one-pagers).
 
 ## Lead magnet: Clinical AI Pilot Pre-Mortem (started 2026-08-03)
 
-Pipeline-first strategy (Jules approved via Slack): lead magnet before homepage
+Pipeline-first strategy (approved by the studio): lead magnet before homepage
 experiments. **The drafts now live in the CMS, not the repo** (moved 2026-08-17; this repo is
 PUBLIC, so unpublished drafts must not be committed here). Three `marketingIdea` documents hold
 the byte-exact markdown — `marketingIdea.lead-magnet-premortem-article`,
@@ -208,7 +208,7 @@ dataset, so they surface on the Operations board and on /action-plan.
 Key facts: ungated article + ungated one-page scorecard, email gate ONLY on the
 facilitator's kit; public info + published case studies only (the fix methodology
 stays paid); the F1–F8 failure taxonomy is INTERNAL-only strategy content today —
-publishing it is an open decision (Shay). Email capture today = third-party
+publishing it is an open decision for the studio. Email capture today = third-party
 EmailOctopus embeds (`eocampaign1.com`, form id in `src/lib/config.ts`) — blockable,
 uninstrumented (zero signup events in GA4 ever); the build plan replaces it with a
 first-party `/api/newsletter/subscribe` route (needs `EMAILOCTOPUS_API_KEY`).
@@ -261,7 +261,7 @@ puts a proposal on the board — always as a PROPOSAL: `needsReview: true`, one 
 - `relatedUrl` comes from **`chat.getPermalink`** (`getSlackPermalink` in `src/lib/chat/slack.ts`),
   not a constructed URL — no `SLACK_WORKSPACE_DOMAIN` to configure or get wrong.
 ### The three reasons she missed the first two real ideas (fixed 2026-08-28)
-Jules posted merch ideas for Riverside Town Day and a finished newsletter draft; Marqueta
+A teammate posted merch ideas for a town-day event and a finished newsletter draft; Marqueta
 caught neither. Three independent causes, all worth remembering:
 1. **She was in the wrong room.** She watched `#marketing-bot` (built FOR her, **0 human
    messages ever**) while marketing is discussed elsewhere. `SLACK_MARKETING_CHANNEL_IDS`
@@ -276,8 +276,8 @@ caught neither. Three independent causes, all worth remembering:
    now returns `idea | draft | none`; a draft becomes a `marketingCalendarItem`
    (`status: drafting`, `autoPublish: false`, `contentDraft` = the blockquote, **no date**).
 
-**She is in `#marketing` (`C0MKTGEN000`) as of 2026-09-01, and TALKS ONLY IN HER OWN ROOM.**
-`SLACK_MARKETING_CHANNEL_IDS=C0MKTBOT000,C0MKTGEN000` (watched); `SLACK_MARKETING_CHANNEL_ID`
+**She is in `#marketing` as of 2026-09-01, and TALKS ONLY IN HER OWN ROOM.**
+`SLACK_MARKETING_CHANNEL_IDS` lists both channel ids (watched; the ids live in the env, not here); `SLACK_MARKETING_CHANNEL_ID`
 (#marketing-bot) is where she posts and where she replies in-thread. In a watched human
 channel she captures **silently** — reviewed in one batch on **This week** and in the digest.
 Why: replaying the filter over **189 real #marketing messages** would have caught 22 things,
@@ -381,7 +381,7 @@ exactly 2 `weekly-plan/*` records, both from a human calling the route by hand.
   presenting the raw board as though it were a planned week.
 - **Needs on Vercel:** `CRON_SECRET` and `MARKETING_API_KEY` (the tick calls the other routes with it).
 ### Domain expiry — free, keyless, no model (built 2026-09-02)
-A domain renewal once came close to lapsing without warning (renewed same day; now 2027-09-03).
+A domain renewal once came close to lapsing without warning (renewed in time; now 2027-09-03).
 A lapsed domain takes the site, client email and every scheduled job down together.
 
 - **RDAP, not WHOIS**: the registries' own JSON API. No key, no account, no vendor, no LLM — an
@@ -464,7 +464,7 @@ What she does (pure module → server module):
   → 3 lines · help (short) · prep · log · signed · time-off question · availability · proposal ·
   contact · topics · unknown → suggest a command, never run a guess. Work answers only in her own rooms
   or a DM. Time off is written only from a first-person statement with readable dates, via the same
-  safe write as the Monday button, with Undo ("is Ezra away next week?" writes nothing).
+  safe write as the Monday button, with Undo ("is a teammate away next week?" writes nothing).
 
 **The message design system is code:** `src/lib/marketing/marquetaStyle.ts` — `LABEL` (every button
 label), `VIEW_TITLE` (Studio tab names), `formatSlackDay` ("Mon 21 Sep", New York time, never ISO),
@@ -496,8 +496,8 @@ Rules that each cost a review round to learn:
   namesake linked to a different Slack id resolves to `'Someone'`, and every write refuses `'Someone'`.
   A write that files something UNDER the name (Take, Add to outreach, Log it) uses
   `resolveOwnerNameForWrite`: an unlinked display name the team list does not know is `'Someone'` too
-  ("Jules Soren" became an owner nobody could hand back once he linked as "Jules").
-- **`MARKETING_TEAM_NAMES`** (default `Jules,Shay,Ezra,Joss`; empty = board owners only) is who the
+  (a full Slack display name became an owner nobody could hand back once the person linked under their first name).
+- **`MARKETING_TEAM_NAMES`** (set on Vercel; unset or empty = board owners only) is who the
   Monday setup offers. It used to offer only names that owned open work, so a teammate with none could
   never link — and only linked people are ever asked. The Studio desk's owner select offers every
   team page by first name for the same reason.
@@ -549,7 +549,7 @@ changing message shapes (it lived in the session scratchpad; see the PR for how 
 
 ## Runway — the number the whole strategy is derived from (built 2026-08-27)
 
-The financial posture used to be a hand-picked bin (`survival`) with a timestamp. A bin does
+The financial posture used to be a hand-picked bin with a timestamp. A bin does
 not decay: once set, it would read the same a year later. So the stored
 fact is now a DATE — the last day the studio is confident it can pay for — and the bin is
 COMPUTED from it. The current figure lives only in the private outreach dataset, never in this repo.
@@ -561,17 +561,17 @@ COMPUTED from it. The current figure lives only in the private outreach dataset,
 - **Recency decides.** A hand-set bin newer than the runway confirmation WINS (someone knows
   something the date does not); a runway confirmed later wins instead. They never silently
   disagree — `resolved.disagreement` says which was used and why, and the digest shows it.
-- **Signed work EXTENDS, never replaces.** 3 months signed in August against a runway already
-  reaching January means April, not November — `applyCommitment`, tested. If the runway has
+- **Signed work EXTENDS, never replaces.** N months signed against a runway already reaching
+  month M means month M+N, not today+N — `applyCommitment`, tested. If the runway has
   already run out it extends from today instead (signed money cannot buy back spent months).
 - **Storage:** `runway` object on the `marketingFinancialPosture` doc in the PRIVATE outreach
   dataset. Server helpers `runway.server.ts`; every write stamps `confirmedAt`, which is the
   entire mechanism behind the check-in.
-- **Inputs:** `npx tsx scripts/set-runway.ts [--months 4.5|--until DATE|--confirm|--signed "X" --months 3]`
+- **Inputs:** `npx tsx scripts/set-runway.ts [--months N|--until DATE|--confirm|--signed "X" --months N]`
   (no args = read); `GET|POST /api/marketing/runway` (`confirm`/`set`/`signed`); and in Slack
   the digest's **Runway** card — *Still right* / *We signed something* / *It has changed*.
 - **Consumers wired:** `plan-week` and `assist` now resolve through the runway instead of
-  reading `.posture` raw, so the plan tightens on its own as the money runs down.
+  reading `.posture` raw, so the plan tightens on its own as the date approaches.
 
 ### GOTCHA that cost a real leak: an unlisted type writes to the PUBLIC dataset
 `getMarketingWriteClientFor(type)` → `clientForType` **passes any type not in
@@ -703,7 +703,7 @@ deleting its own `.ul` padding gets bullets 32px out of place.
 
 ## Marqueta in Slack: weekly digest + task delegation (built 2026-08-26)
 
-Posts the week's marketing work to **#marketing-bot** (`C0MKTBOT000`) with a button per task, so
+Posts the week's marketing work to **#marketing-bot** with a button per task, so
 the plan is delegated rather than announced. Extends the EXISTING Slack app (the one behind the
 website chat widget) — same bot token, same signing secret, same
 `/api/slack/interactions` route, which already verifies signatures and dispatches on `action_id`.
@@ -717,7 +717,7 @@ website chat widget) — same bot token, same signing secret, same
   without asking is how a plan loses the team's trust. "I'm away this week" writes a
   `marketingTeamAvailability` record and the next digest surfaces that person's work with the
   names of whoever is actually free.
-- **Identity:** owners are names ("Jules"); Slack has user IDs. The digest appends a one-time
+- **Identity:** owners are first names; Slack has user IDs. The digest appends a one-time
   consent prompt (a select of unmapped owners) that stores the presser's Slack ID against the
   name they choose. It states what it stores, and removes itself once everyone is mapped.
 - **Core:** `src/lib/marketing/availability.ts` (pure date logic — both bounds INCLUSIVE, because
