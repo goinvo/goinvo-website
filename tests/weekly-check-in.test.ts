@@ -859,7 +859,7 @@ describe('buildWeeklyCheckInBlocks', () => {
       },
     ]
     const unowned = [
-      op({ _id: 'marketingOperation.town-day-merch', title: 'Arlington Town Day merch table', dueAt: '2026-09-26T14:00:00Z', minutes: 120 }),
+      op({ _id: 'marketingOperation.town-day-merch', title: 'Riverside Town Day merch table', dueAt: '2026-09-26T14:00:00Z', minutes: 120 }),
       op({ _id: 'marketingOperation.newsletter-teaser', title: 'Newsletter: pre-mortem teaser', dueAt: '2026-09-29T16:00:00Z', minutes: 60 }),
       op({ _id: 'marketingOperation.pin-kit-linkedin', title: 'Pin the kit on LinkedIn', priority: 'low', minutes: 15 }),
     ]

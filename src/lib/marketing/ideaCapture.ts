@@ -2,7 +2,7 @@
  * Catching what gets floated in the marketing channel before it scrolls away.
  *
  * Projects get proposed in Slack and then lost — "what about custom patches for
- * Arlington Town Day" is a real plan for about forty minutes. Marqueta sits in
+ * Riverside Town Day" is a real plan for about forty minutes. Marqueta sits in
  * the channel, so she can put it somewhere before it goes.
  *
  * The rule is the same one the rest of the suite is built on: a detector
@@ -221,7 +221,7 @@ export type CaptureVerdict = {
 /**
  * What kind of thing is this message?
  *
- * Drafts are checked FIRST. "Next newsletter is for TheBlanding.com, here's a
+ * Drafts are checked FIRST. "Next newsletter is for example.org, here's a
  * draft" also contains no proposal phrasing at all, but the more important
  * point is that even when a message reads as both, the finished writing is the
  * more valuable thing to keep and the calendar is where it belongs.
@@ -274,14 +274,14 @@ export function looksLikeAnIdea(text: string): { capture: boolean; reason: strin
  *
  * A bulleted list gets its lead-in plus what it is about, because the bullets
  * ARE the idea and a title made of the first bullet hides the other two. "What
- * about: custom printed patch of Kindness is Power…" tells a reader nothing;
+ * about: custom printed patch of Open Data Wins…" tells a reader nothing;
  * "What about custom merch — 3 ideas" tells them what they are looking at.
  */
 export function ideaTitleFrom(text: string, maxLength = 90): string {
   const bullets = bulletsIn(text)
   if (bullets.length > 1) {
     const lead = messageProse(unwrapSlackLinks(text).split('\n')[0] || '').replace(/[:\-–—]\s*$/, '')
-    // The trailing "… for Arlington Town Day" line is the context that makes
+    // The trailing "… for Riverside Town Day" line is the context that makes
     // the list mean something, so it goes in the title rather than the body.
     const tail = unwrapSlackLinks(text)
       .split('\n')
@@ -289,8 +289,8 @@ export function ideaTitleFrom(text: string, maxLength = 90): string {
       .filter((line) => line.startsWith('...') || line.startsWith('…'))
       .map((line) => line.replace(/^[.…]+\s*/, ''))[0]
     // Joined with an ellipsis, because the lead is usually a bare opener:
-    // "What about" + "for Arlington Town Day" runs together into nonsense,
-    // while "What about … for Arlington Town Day" reads as what was said.
+    // "What about" + "for Riverside Town Day" runs together into nonsense,
+    // while "What about … for Riverside Town Day" reads as what was said.
     const parts = tail ? `${lead || 'Ideas'} … ${tail}` : lead || 'Ideas'
     return truncate(`${parts} (${bullets.length} ideas)`, maxLength)
   }
@@ -311,7 +311,7 @@ export function ideaTitleFrom(text: string, maxLength = 90): string {
  * A title for a shared draft.
  *
  * The first line almost always names the thing — "Next newsletter is for
- * TheBlanding.com" — so it is used verbatim rather than paraphrased.
+ * example.org" — so it is used verbatim rather than paraphrased.
  */
 export function draftTitleFrom(text: string, maxLength = 90): string {
   const firstLine = messageProse(unwrapSlackLinks(text).split('\n')[0] || '')
@@ -367,13 +367,13 @@ function truncate(value: string, maxLength: number): string {
 /**
  * Being somewhere in person — a table or a booth AT an event — which is how
  * people find us, whatever is on the table. "We should do a merch table at
- * Arlington Town Day, stickers and a tote" was filed under product because it
+ * Riverside Town Day, stickers and a tote" was filed under product because it
  * mentions stickers; the idea is the table, not a new thing to sell. Both
  * halves are required, so "a table in the report" stays whatever it was.
  *
  * The event half names an EVENT, not a word that is often near one. Bare
  * "day", "town" and "market" put "add a table of numbers to the report every
- * day" under growth; a day counts only as a named one ("Arlington Town Day",
+ * day" under growth; a day counts only as a named one ("Riverside Town Day",
  * "open day"), and anything else has to be somewhere you can stand — "a booth
  * at HIMSS" is at a capitalised place.
  */
