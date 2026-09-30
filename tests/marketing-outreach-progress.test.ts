@@ -22,7 +22,7 @@ function readyContact(
     warmth: 'warm',
     email: `${id}@example.com`,
     phone: '+1 617 555 0100',
-    owner: 'Juhan',
+    owner: 'Jules',
     researchReviewedAt: '2026-07-12T12:00:00.000Z',
     personVerified: true,
     identityConfidence: 'high',

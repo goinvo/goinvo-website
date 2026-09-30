@@ -139,12 +139,12 @@ describe('parseGeneration', () => {
         subject: 'Saw the AIwithCare launch',
         greeting: 'Hi Jane,',
         body: ['I saw that you spun out AIwithCare.', 'We do a short pre-mortem — happy to talk.'],
-        signoff: '— Juhan, GoInvo',
+        signoff: '— Jules, GoInvo',
       }),
     )!
     expect(generated.subject).toBe('Saw the AIwithCare launch')
     expect(generated.body).toContain('Hi Jane,')
-    expect(generated.body).toContain('— Juhan, GoInvo')
+    expect(generated.body).toContain('— Jules, GoInvo')
   })
 
   it('returns null on unparseable output rather than an empty draft', () => {
@@ -175,7 +175,7 @@ describe('generatedToCalendarDraft', () => {
       generated,
       channel: 'C123',
       ts: '1712345678.000100',
-      personName: 'Shirley',
+      personName: 'Shay',
       topic: 'open data',
       permalink: 'https://slack/x',
       sources: [source],

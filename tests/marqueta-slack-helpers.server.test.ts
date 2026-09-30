@@ -50,8 +50,8 @@ afterEach(() => {
 
 describe('getSlackUserProfile — fails closed', () => {
   it('passes a full member of our workspace with their display name', async () => {
-    stubSlackUsers({ ok: true, user: { name: 'juhan', team_id: 'TGOINVO', profile: { display_name: 'Juhan' } } })
-    await expect(getSlackUserProfile('UJUHAN')).resolves.toEqual({ ok: true, name: 'Juhan', isGuest: false, isBot: false })
+    stubSlackUsers({ ok: true, user: { name: 'jules', team_id: 'TGOINVO', profile: { display_name: 'Jules' } } })
+    await expect(getSlackUserProfile('UJULES')).resolves.toEqual({ ok: true, name: 'Jules', isGuest: false, isBot: false })
   })
 
   it('marks both kinds of guest as guests', async () => {
@@ -80,21 +80,21 @@ describe('getSlackUserProfile — fails closed', () => {
   })
 
   it('is not ok when it cannot learn which workspace is ours — and does not cache that miss', async () => {
-    const member = { ok: true, user: { name: 'juhan', team_id: 'TGOINVO' } }
+    const member = { ok: true, user: { name: 'jules', team_id: 'TGOINVO' } }
     stubSlackUsers(member, { ok: false, error: 'ratelimited' })
-    await expect(getSlackUserProfile('UJUHAN')).resolves.toEqual({ ok: false })
+    await expect(getSlackUserProfile('UJULES')).resolves.toEqual({ ok: false })
     stubSlackUsers(member, { ok: true, user_id: 'UMARQUETA' })
-    await expect(getSlackUserProfile('UJUHAN')).resolves.toEqual({ ok: false })
+    await expect(getSlackUserProfile('UJULES')).resolves.toEqual({ ok: false })
 
     // A transient failure must not lock the whole team out for the life of the process.
     stubSlackUsers(member)
-    await expect(getSlackUserProfile('UJUHAN')).resolves.toMatchObject({ ok: true, isGuest: false })
+    await expect(getSlackUserProfile('UJULES')).resolves.toMatchObject({ ok: true, isGuest: false })
   })
 
   it('asks auth.test once, and shares the answer with getSlackBotUserId', async () => {
-    const { calls } = stubSlackUsers({ ok: true, user: { name: 'juhan', team_id: 'TGOINVO' } })
-    await getSlackUserProfile('UJUHAN')
-    await getSlackUserProfile('UERIC')
+    const { calls } = stubSlackUsers({ ok: true, user: { name: 'jules', team_id: 'TGOINVO' } })
+    await getSlackUserProfile('UJULES')
+    await getSlackUserProfile('UEZRA')
     await expect(getSlackBotUserId()).resolves.toBe('UMARQUETA')
     await expect(getSlackTeamId()).resolves.toBe('TGOINVO')
     expect(authTestCalls(calls)).toBe(1)

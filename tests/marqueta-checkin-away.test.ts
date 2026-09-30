@@ -4,8 +4,8 @@
  * Reviewer finding: the check-in @-mentioned people recorded as away — "<@U> —
  * here's what's on your list", with Done and Stuck buttons, and the mention in
  * the top-level text their phone reads. And the digest's "I'm away this week"
- * button files the absence under Slack's display name ("Juhan Sonin"), beside
- * the record the roster knows the person by ("Juhan"), so a check by board name
+ * button files the absence under Slack's display name ("Jules Soren"), beside
+ * the record the roster knows the person by ("Jules"), so a check by board name
  * alone would still have missed it. These pin both.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -59,13 +59,13 @@ const NOW = new Date('2026-09-24T14:00:00Z')
 const TODAY = '2026-09-24'
 
 const ROSTER: TeamMemberAvailability[] = [
-  { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available' },
-  { ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' },
+  { ownerName: 'Jules', slackUserId: 'UJULES', status: 'available' },
+  { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'available' },
 ]
 /** What "I'm away this week" writes: Slack's display name, the same Slack id. */
 const JUHAN_AWAY: TeamMemberAvailability = {
-  ownerName: 'Juhan Sonin',
-  slackUserId: 'UJUHAN',
+  ownerName: 'Jules Soren',
+  slackUserId: 'UJULES',
   status: 'away',
   from: '2026-09-21',
   until: '2026-09-27',
@@ -84,17 +84,17 @@ const task = (id: string, ownerName: string, extra: Record<string, unknown> = {}
 
 function checkInData(availability: TeamMemberAvailability[], extraTasks: Record<string, unknown>[] = []) {
   return {
-    tasks: [task('j1', 'Juhan'), task('j2', 'Juhan'), task('e1', 'Eric'), ...extraTasks],
+    tasks: [task('j1', 'Jules'), task('j2', 'Jules'), task('e1', 'Ezra'), ...extraTasks],
     availability,
     contacts: [
       {
         _id: 'marketingContact.f1',
         name: 'Riley Replied',
         organization: 'Acme',
-        owner: 'Juhan',
+        owner: 'Jules',
         status: 'responded',
         followUpAt: '2026-09-23T14:00:00Z',
-        interactions: [{ at: '2026-09-21T14:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'responded' }],
+        interactions: [{ at: '2026-09-21T14:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'responded' }],
       },
     ],
   }
@@ -135,15 +135,15 @@ describe('the check-in and people who are away', () => {
     const blocks: Block[] = post.blocks
     expectValidSlackBlocks(blocks, { maxBlocks: 30 })
     // Not in the notification text, not in the blocks, and no buttons on his tasks.
-    expect(post.text).not.toContain('<@UJUHAN>')
-    expect(JSON.stringify(blocks)).not.toContain('<@UJUHAN>')
+    expect(post.text).not.toContain('<@UJULES>')
+    expect(JSON.stringify(blocks)).not.toContain('<@UJULES>')
     expect(JSON.stringify(blocks)).not.toContain('marketingOperation.j1')
-    // Eric, who is here, is still asked.
-    expect(post.text).toContain('<@UERIC>')
-    expect(JSON.stringify(blocks)).toContain('*<@UERIC>* · 1 task')
+    // Ezra, who is here, is still asked.
+    expect(post.text).toContain('<@UEZRA>')
+    expect(JSON.stringify(blocks)).toContain('*<@UEZRA>* · 1 task')
 
     // Named once, as plain text, with what is waiting — so the room can cover it.
-    expect(JSON.stringify(blocks)).toContain('Away, so not asked this week: Juhan (2 tasks, 1 follow-up).')
+    expect(JSON.stringify(blocks)).toContain('Away, so not asked this week: Jules (2 tasks, 1 follow-up).')
     expect(result.taskCount).toBe(1)
     expect(result.detail).toContain('1 person away, not asked')
 
@@ -153,17 +153,17 @@ describe('the check-in and people who are away', () => {
   })
 
   it('also recognises an absence filed under the board name itself', async () => {
-    route([{ ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'away', from: '2026-09-21', until: '2026-09-27' }, ROSTER[1]])
+    route([{ ownerName: 'Jules', slackUserId: 'UJULES', status: 'away', from: '2026-09-21', until: '2026-09-27' }, ROSTER[1]])
     const result = await runWeeklyCheckIn({ now: NOW, dryRun: true })
-    expect(result.text).not.toContain('<@UJUHAN>')
-    expect(JSON.stringify(result.blocks)).not.toContain('<@UJUHAN>')
+    expect(result.text).not.toContain('<@UJULES>')
+    expect(JSON.stringify(result.blocks)).not.toContain('<@UJULES>')
     expectValidSlackBlocks(result.blocks, { maxBlocks: 30 })
   })
 
   it('asks as usual once the absence is over', async () => {
     route([...ROSTER, { ...JUHAN_AWAY, from: '2026-09-07', until: '2026-09-13' }])
     const result = await runWeeklyCheckIn({ now: NOW, dryRun: true })
-    expect(result.text).toContain('<@UJUHAN>')
+    expect(result.text).toContain('<@UJULES>')
     expect(JSON.stringify(result.blocks)).not.toContain('Away, so not asked')
   })
 
@@ -184,17 +184,17 @@ describe('absencesOn', () => {
   it('files an id-linked absence under every name that shares the id, ahead of "available"', () => {
     const { entries, isAway } = absencesOn([...ROSTER, JUHAN_AWAY], TODAY)
     // The name-keyed helpers now see the absence under the board's name.
-    expect(statusOn(entries, 'Juhan', TODAY)).toBe('away')
-    expect(hoursForWeek({ entries, ownerName: 'Juhan', dateKey: TODAY, defaultHours: 4 })).toBe(0)
-    expect(statusOn(entries, 'Eric', TODAY)).toBe('available')
-    expect(isAway('Juhan', undefined)).toBe(true)
-    expect(isAway('Somebody', 'UJUHAN')).toBe(true)
-    expect(isAway('Eric', 'UERIC')).toBe(false)
+    expect(statusOn(entries, 'Jules', TODAY)).toBe('away')
+    expect(hoursForWeek({ entries, ownerName: 'Jules', dateKey: TODAY, defaultHours: 4 })).toBe(0)
+    expect(statusOn(entries, 'Ezra', TODAY)).toBe('available')
+    expect(isAway('Jules', undefined)).toBe(true)
+    expect(isAway('Somebody', 'UJULES')).toBe(true)
+    expect(isAway('Ezra', 'UEZRA')).toBe(false)
   })
 
   it('is exactly the roster when nobody is away today', () => {
     const { entries, isAway } = absencesOn([...ROSTER, JUHAN_AWAY], '2026-10-01')
     expect(entries).toEqual([...ROSTER, JUHAN_AWAY])
-    expect(isAway('Juhan', 'UJUHAN')).toBe(false)
+    expect(isAway('Jules', 'UJULES')).toBe(false)
   })
 })

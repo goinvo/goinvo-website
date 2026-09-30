@@ -10,7 +10,7 @@
  *   - a task taken in Slack shows its taker on the desk;
  *   - pressing "Still right" in the Studio leaves the runway in charge;
  *   - the desk counts no weekly-plan records;
- *   - "+2 more on This week" (owner=Juhan) shows exactly Juhan's share.
+ *   - "+2 more on This week" (owner=Jules) shows exactly Jules's share.
  */
 import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
@@ -126,8 +126,8 @@ describe('the tool reads a Slack landing once, and cleans the URL', () => {
       focus: null,
     })
 
-    const week = new URL(studioViewUrl(BASE, 'thisWeek', { owner: 'Juhan', focus: 'caught' }))
-    expect(readMarketingLandingParams(week.search)).toEqual({ contact: null, owner: 'Juhan', focus: 'caught' })
+    const week = new URL(studioViewUrl(BASE, 'thisWeek', { owner: 'Jules', focus: 'caught' }))
+    expect(readMarketingLandingParams(week.search)).toEqual({ contact: null, owner: 'Jules', focus: 'caught' })
   })
 
   it('drops what it does not recognise rather than guessing, and opens prep, never a log form, by default', () => {
@@ -139,7 +139,7 @@ describe('the tool reads a Slack landing once, and cleans the URL', () => {
   })
 
   it('strips exactly the landing params, leaving the tab and everything else', () => {
-    const url = `${BASE}/studio/marketing?view=outreach&contact=c-jane&action=log&owner=Juhan&focus=caught&task=marketingOperation.abc&role=principal`
+    const url = `${BASE}/studio/marketing?view=outreach&contact=c-jane&action=log&owner=Jules&focus=caught&task=marketingOperation.abc&role=principal`
     const cleaned = new URL(marketingUrlWithoutLandingParams(url))
     expect([...cleaned.searchParams.keys()].sort()).toEqual(['role', 'task', 'view'])
     expect(cleaned.searchParams.get('view')).toBe('outreach')
@@ -191,37 +191,37 @@ describe('the desk shows the owner Slack uses', () => {
   // The website's team pages, as the tool loads them: full names
   // (tests/marketing-warm-start.test.ts has the real shape).
   const owners = [
-    { _id: 'tm-juhan', title: 'Juhan Sonin' },
-    { _id: 'tm-eric', title: 'Eric Benoit' },
-    { _id: 'tm-shirley', title: 'Shirley Xu' },
+    { _id: 'tm-jules', title: 'Jules Soren' },
+    { _id: 'tm-ezra', title: 'Ezra Bennet' },
+    { _id: 'tm-shay', title: 'Shay Lund' },
   ]
   // The roster: the names Slack resolves a presser to.
-  const roster = ['Juhan', 'Eric', 'Shirley']
+  const roster = ['Jules', 'Ezra', 'Shay']
   const rosterEntries = [
-    { ownerName: 'Juhan', slackUserId: 'U1' },
-    { ownerName: 'Eric', slackUserId: 'U3' },
-    { ownerName: 'Shirley', slackUserId: 'U2' },
+    { ownerName: 'Jules', slackUserId: 'U1' },
+    { ownerName: 'Ezra', slackUserId: 'U3' },
+    { ownerName: 'Shay', slackUserId: 'U2' },
   ]
 
   it('shows a task taken in Slack as its taker’s, though the Studio user id was never set', () => {
     // What "I’ll take it" writes: the board name, no Studio id.
-    const taken = operation({ _id: 'op-1', ownerName: 'Juhan' })
+    const taken = operation({ _id: 'op-1', ownerName: 'Jules' })
     const options = deskOwnerOptions([taken], owners, roster)
-    expect(deskOwnerValue(taken.ownerName, options)).toBe('Juhan')
-    expect(options).toContain('Juhan')
+    expect(deskOwnerValue(taken.ownerName, options)).toBe('Jules')
+    expect(options).toContain('Jules')
   })
 
   it('offers one option per person — the roster’s name, never the team page’s full name beside it', () => {
     const items = [
-      operation({ _id: 'a', ownerName: 'juhan' }),
-      operation({ _id: 'b', suggestedOwner: 'Eric' }),
+      operation({ _id: 'a', ownerName: 'jules' }),
+      operation({ _id: 'b', suggestedOwner: 'Ezra' }),
     ]
     const options = deskOwnerOptions(items, owners, roster)
-    expect(options).toEqual(['Eric', 'Juhan', 'Shirley'])
-    expect(options).not.toContain('Juhan Sonin')
-    expect(options).not.toContain('Eric Benoit')
-    // "juhan" on a task is Juhan in the select, not "Nobody has it".
-    expect(deskOwnerValue('juhan', options)).toBe('Juhan')
+    expect(options).toEqual(['Ezra', 'Jules', 'Shay'])
+    expect(options).not.toContain('Jules Soren')
+    expect(options).not.toContain('Ezra Bennet')
+    // "jules" on a task is Jules in the select, not "Nobody has it".
+    expect(deskOwnerValue('jules', options)).toBe('Jules')
     expect(deskOwnerValue('', options)).toBe('')
   })
 
@@ -233,49 +233,49 @@ describe('the desk shows the owner Slack uses', () => {
       expect(resolveOwnerName({ displayName: patch.ownerName, entries: rosterEntries })).toBe(name)
       expect(rosterEntries.map((entry) => entry.ownerName)).toContain(patch.ownerName)
     }
-    expect(deskOwnerPatch('Juhan', owners, { options })).toEqual({ ownerName: 'Juhan', ownerSanityUserId: 'tm-juhan' })
-    expect(deskOwnerPatch('Shirley', owners, { options })).toEqual({ ownerName: 'Shirley', ownerSanityUserId: 'tm-shirley' })
+    expect(deskOwnerPatch('Jules', owners, { options })).toEqual({ ownerName: 'Jules', ownerSanityUserId: 'tm-jules' })
+    expect(deskOwnerPatch('Shay', owners, { options })).toEqual({ ownerName: 'Shay', ownerSanityUserId: 'tm-shay' })
     expect(deskOwnerPatch('', owners, { options })).toEqual({ ownerName: '', ownerSanityUserId: '' })
   })
 
   it('never guesses which of two people a first name means', () => {
-    const twoErics = [...owners, { _id: 'tm-eric-2', title: 'Eric Chen' }]
+    const twoErics = [...owners, { _id: 'tm-ezra-2', title: 'Ezra Chen' }]
     const options = deskOwnerOptions([], twoErics, roster)
-    expect(options.filter((name) => name.startsWith('Eric'))).toEqual(['Eric'])
-    // Two team pages could be "Eric": no Studio id rather than the wrong one.
-    expect(deskOwnerPatch('Eric', twoErics, { options })).toEqual({ ownerName: 'Eric', ownerSanityUserId: '' })
+    expect(options.filter((name) => name.startsWith('Ezra'))).toEqual(['Ezra'])
+    // Two team pages could be "Ezra": no Studio id rather than the wrong one.
+    expect(deskOwnerPatch('Ezra', twoErics, { options })).toEqual({ ownerName: 'Ezra', ownerSanityUserId: '' })
     // Two board names could be the one team page: no id either.
-    const boardTwoErics = ['Eric', 'Eric B', 'Juhan']
-    expect(deskOwnerPatch('Eric', owners, { options: boardTwoErics }).ownerSanityUserId).toBe('')
+    const boardTwoErics = ['Ezra', 'Ezra B', 'Jules']
+    expect(deskOwnerPatch('Ezra', owners, { options: boardTwoErics }).ownerSanityUserId).toBe('')
   })
 
   it('offers every team member, by first name, and never twice for a name already there', () => {
-    const items = [operation({ _id: 'a', ownerName: 'Juhan' })]
-    // "Juhan Sonin" is plainly the Juhan already on the board.
-    expect(deskOwnerOptions(items, owners, [])).toEqual(['Eric', 'Juhan', 'Shirley'])
+    const items = [operation({ _id: 'a', ownerName: 'Jules' })]
+    // "Jules Soren" is plainly the Jules already on the board.
+    expect(deskOwnerOptions(items, owners, [])).toEqual(['Ezra', 'Jules', 'Shay'])
     // The day the first person links, the rest of the team is still there to pick.
-    expect(deskOwnerOptions(items, owners, ['Juhan'])).toEqual(['Eric', 'Juhan', 'Shirley'])
+    expect(deskOwnerOptions(items, owners, ['Jules'])).toEqual(['Ezra', 'Jules', 'Shay'])
   })
 
-  it('keeps Eric and Jon assignable once Juhan and Shirley have linked — they own nothing yet and never had a roster record', () => {
-    const team = [...owners, { _id: 'tm-jon', title: 'Jon Follett' }]
-    // The seeded quarter: only Juhan and Shirley own anything; only they could link.
-    const items = [operation({ _id: 'a', ownerName: 'Juhan' }), operation({ _id: 'b', ownerName: 'Shirley' })]
-    const options = deskOwnerOptions(items, team, ['Juhan', 'Shirley'])
-    expect(options).toEqual(['Eric', 'Jon', 'Juhan', 'Shirley'])
-    expect(options).not.toContain('Jon Follett')
+  it('keeps Ezra and Joss assignable once Jules and Shay have linked — they own nothing yet and never had a roster record', () => {
+    const team = [...owners, { _id: 'tm-joss', title: 'Joss Follett' }]
+    // The seeded quarter: only Jules and Shay own anything; only they could link.
+    const items = [operation({ _id: 'a', ownerName: 'Jules' }), operation({ _id: 'b', ownerName: 'Shay' })]
+    const options = deskOwnerOptions(items, team, ['Jules', 'Shay'])
+    expect(options).toEqual(['Ezra', 'Joss', 'Jules', 'Shay'])
+    expect(options).not.toContain('Joss Follett')
     // Picked here, the name is the one Slack and the setup use, with the right Studio id.
-    expect(deskOwnerPatch('Jon', team, { options })).toEqual({ ownerName: 'Jon', ownerSanityUserId: 'tm-jon' })
-    expect(deskOwnerPatch('Eric', team, { options })).toEqual({ ownerName: 'Eric', ownerSanityUserId: 'tm-eric' })
+    expect(deskOwnerPatch('Joss', team, { options })).toEqual({ ownerName: 'Joss', ownerSanityUserId: 'tm-joss' })
+    expect(deskOwnerPatch('Ezra', team, { options })).toEqual({ ownerName: 'Ezra', ownerSanityUserId: 'tm-ezra' })
     // Two team pages sharing a first name are offered in full rather than guessed between.
-    const twoErics = [...team, { _id: 'tm-eric-2', title: 'Eric Chen' }]
-    expect(deskOwnerOptions(items, twoErics, ['Juhan', 'Shirley'])).toEqual(['Eric Benoit', 'Eric Chen', 'Jon', 'Juhan', 'Shirley'])
+    const twoErics = [...team, { _id: 'tm-ezra-2', title: 'Ezra Chen' }]
+    expect(deskOwnerOptions(items, twoErics, ['Jules', 'Shay'])).toEqual(['Ezra Bennet', 'Ezra Chen', 'Joss', 'Jules', 'Shay'])
   })
 
   it('finishes the owner search when somebody is picked for a task passed on in Slack — Slack’s own take', () => {
-    const passed = operation({ _id: 'op-p', status: 'needsHuman', humanQuestion: 'Eric passed on this — who should pick it up?' })
-    const patch = deskOwnerPatch('Juhan', owners, { options: roster, item: passed })
-    expect(patch).toEqual({ ownerName: 'Juhan', ownerSanityUserId: 'tm-juhan', status: 'queued', humanQuestion: '' })
+    const passed = operation({ _id: 'op-p', status: 'needsHuman', humanQuestion: 'Ezra passed on this — who should pick it up?' })
+    const patch = deskOwnerPatch('Jules', owners, { options: roster, item: passed })
+    expect(patch).toEqual({ ownerName: 'Jules', ownerSanityUserId: 'tm-jules', status: 'queued', humanQuestion: '' })
     // An allowed move, and the route keeps every field (an empty question is unset).
     expect(canTransitionMarketingOperation('needsHuman', 'queued')).toBe(true)
     expect(normalizeMarketingOperationPatch(patch)).toEqual(patch)
@@ -284,7 +284,7 @@ describe('the desk shows the owner Slack uses', () => {
 
     // A real decision keeps its question and its state: naming someone is not answering it.
     const decision = operation({ _id: 'op-d', status: 'needsHuman', kind: 'decision', humanQuestion: 'Publish F1–F8?' })
-    expect(deskOwnerPatch('Juhan', owners, { options: roster, item: decision })).toEqual({ ownerName: 'Juhan', ownerSanityUserId: 'tm-juhan' })
+    expect(deskOwnerPatch('Jules', owners, { options: roster, item: decision })).toEqual({ ownerName: 'Jules', ownerSanityUserId: 'tm-jules' })
     // Clearing the owner of a passed task leaves the search open.
     expect(deskOwnerPatch('', owners, { options: roster, item: passed })).toEqual({ ownerName: '', ownerSanityUserId: '' })
   })
@@ -302,7 +302,7 @@ describe('the desk shows the owner Slack uses', () => {
 
   it('leaves the planner’s weekly records off the desk, before ranking and before any count', () => {
     const items = [
-      operation({ _id: 'op-1', status: 'working', ownerName: 'Juhan' }),
+      operation({ _id: 'op-1', status: 'working', ownerName: 'Jules' }),
       operation({ _id: 'plan-38', status: 'working', sourceKey: 'weekly-plan/2026-W38', dueAt: '2026-09-20T12:00:00Z' }),
       operation({ _id: 'plan-39', status: 'working', sourceKey: 'weekly-plan/2026-W39' }),
     ]
@@ -335,7 +335,7 @@ describe('the desk shows the owner Slack uses', () => {
 
 describe('money and direction in the Studio', () => {
   it('answers about the runway with the runway API’s bodies — never a posture, never setAt', () => {
-    expect(runwayAnswerBody('confirm', {}, 'Shirley')).toEqual({ action: 'confirm', personName: 'Shirley' })
+    expect(runwayAnswerBody('confirm', {}, 'Shay')).toEqual({ action: 'confirm', personName: 'Shay' })
     expect(runwayAnswerBody('signed', { label: 'SoW — Acme', months: '3' })).toEqual({ action: 'signed', label: 'SoW — Acme', monthsAdded: 3 })
     expect(runwayAnswerBody('changed', { months: '4,5 months', basis: 'Signed work in hand' })).toEqual({
       action: 'set',
@@ -384,12 +384,12 @@ describe('money and direction in the Studio', () => {
       _id: 'marketingFinancialPosture',
       posture: 'survival',
       setAt: '2026-09-01T00:00:00.000Z',
-      runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-01T00:00:00.000Z' },
+      runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T00:00:00.000Z' },
     }
     const before = resolveRunwayPosture(store.doc as StoredPosture, NOW)
     expect(before.source).toBe('manual')
 
-    const after = await confirmRunway({ personName: 'Shirley', now: NOW })
+    const after = await confirmRunway({ personName: 'Shay', now: NOW })
     expect(after.resolved.source).toBe('runway')
     expect(after.resolved.id).toBe('rebuild')
     expect(after.stored.setAt).toBe('2026-09-01T00:00:00.000Z')
@@ -405,7 +405,7 @@ describe('money and direction in the Studio', () => {
     expect(none.resolved.months).toBeNull()
     expect(none.checkIn.due).toBe(true)
     expect(runwayAnswersOffered(none)).toEqual(['changed'])
-    const recorded = runwayStateFrom({ runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-01T00:00:00.000Z' } }, NOW)
+    const recorded = runwayStateFrom({ runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T00:00:00.000Z' } }, NOW)
     expect(runwayAnswersOffered(recorded)).toEqual(['confirm', 'signed', 'changed'])
     expect(runwayAnswersOffered(null)).toEqual([])
     expect(MONEY).toContain("offered.includes('confirm') && (")
@@ -413,7 +413,7 @@ describe('money and direction in the Studio', () => {
 
   it('shows a reader who cannot write the runway, read the old way, and does not nag them on the Dashboard', () => {
     // The fallback describes the record with the API's own pure functions.
-    const stored: StoredPosture = { posture: 'survival', setAt: '2026-09-01T00:00:00.000Z', runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-01T00:00:00.000Z' } }
+    const stored: StoredPosture = { posture: 'survival', setAt: '2026-09-01T00:00:00.000Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T00:00:00.000Z' } }
     const state = runwayStateFrom(stored, NOW)
     expect(state.resolved).toEqual(resolveRunwayPosture(stored, NOW))
     expect(state.summary).toMatch(/months? of certain runway/)
@@ -441,7 +441,7 @@ describe('money and direction in the Studio', () => {
       _id: 'marketingFinancialPosture',
       posture: 'survival',
       setAt: '2026-07-11T15:19:37.000Z',
-      runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-27T12:00:00.000Z' },
+      runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T12:00:00.000Z' },
     }
     const monday = new Date('2026-09-28T13:00:00Z')
     store.doc = JSON.parse(JSON.stringify(record))
@@ -449,7 +449,7 @@ describe('money and direction in the Studio', () => {
     expect(before.checkIn.due).toBe(true)
     expect(moneyNudgeDue(before)).toBe(true)
 
-    const after = await confirmRunway({ personName: 'Shirley', now: monday })
+    const after = await confirmRunway({ personName: 'Shay', now: monday })
     // Still a disagreement (3.4 months is Rebuild; the stale bin says Survival) — said, not nagged about.
     expect(after.resolved).toMatchObject({ source: 'runway', id: 'rebuild' })
     expect(after.resolved.disagreement).toBeTruthy()
@@ -461,7 +461,7 @@ describe('money and direction in the Studio', () => {
   it('shows an override in the select only while it is the one in charge, and can always pick any posture', () => {
     // The runway is in charge: the stored "Survival" is not what the plan uses.
     const runwayInCharge = runwayStateFrom(
-      { posture: 'survival', setAt: '2026-07-11T15:19:37.000Z', runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-27T12:00:00.000Z' } },
+      { posture: 'survival', setAt: '2026-07-11T15:19:37.000Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T12:00:00.000Z' } },
       NOW,
     )
     expect(runwayInCharge.resolved.source).toBe('runway')
@@ -473,7 +473,7 @@ describe('money and direction in the Studio', () => {
 
     // The override in charge: shown as chosen.
     const overriding = runwayStateFrom(
-      { posture: 'survival', setAt: '2026-09-20T00:00:00.000Z', runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-27T12:00:00.000Z' } },
+      { posture: 'survival', setAt: '2026-09-20T00:00:00.000Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T12:00:00.000Z' } },
       NOW,
     )
     expect(overriding.resolved.source).toBe('manual')
@@ -499,12 +499,12 @@ describe('the task banner acts, in the Slack card’s words', () => {
   }
   const task = (overrides: Partial<BannerTask>): BannerTask => ({ _id: 'marketingOperation.abc', title: 'Pin the kit', ...overrides })
   const decision = task({ status: 'needsHuman', kind: 'decision', humanQuestion: 'Publish F1–F8?' })
-  const passedOn = task({ status: 'needsHuman', humanQuestion: 'Eric passed on this — who should pick it up?' })
+  const passedOn = task({ status: 'needsHuman', humanQuestion: 'Ezra passed on this — who should pick it up?' })
 
   it('offers each state what the card offers it', () => {
     const cases: Array<[BannerTask, TaskBannerAction[]]> = [
       [task({ status: 'queued' }), ['done', 'stuck']],
-      [task({ status: 'working', ownerName: 'Juhan' }), ['done', 'stuck']],
+      [task({ status: 'working', ownerName: 'Jules' }), ['done', 'stuck']],
       [task({ status: 'waiting' }), ['done', 'stuck']],
       [task({ status: 'scheduled' }), ['done', 'stuck']],
       // Done leftmost, as on the card (§2.5): Done★ · Unstuck.
@@ -567,15 +567,15 @@ describe('the task banner acts, in the Slack card’s words', () => {
   })
 
   it('describes the task in the card’s words', () => {
-    expect(taskBannerMeta(task({ status: 'blocked', ownerName: 'Juhan', priority: 'high', dueAt: '2026-09-22T14:00:00Z' }), NOW)).toBe(
-      'Urgent · Stuck · Juhan · overdue since Tue 22 Sep',
+    expect(taskBannerMeta(task({ status: 'blocked', ownerName: 'Jules', priority: 'high', dueAt: '2026-09-22T14:00:00Z' }), NOW)).toBe(
+      'Urgent · Stuck · Jules · overdue since Tue 22 Sep',
     )
     expect(taskBannerMeta(task({ status: 'queued', dueAt: '2026-09-25T14:00:00Z' }), NOW)).toBe('Nobody has it · due tomorrow')
     expect(taskBannerMeta(task({ status: 'waiting', dueAt: '2026-09-24T20:00:00Z' }), NOW)).toBe('Waiting on someone · Nobody has it · due today')
     expect(taskBannerMeta({ ...decision, dueAt: '2026-09-28T14:00:00Z' }, NOW)).toBe('Needs a decision · due Mon 28 Sep')
-    expect(taskBannerMeta(task({ status: 'done', ownerName: 'Juhan', dueAt: '2026-09-01T14:00:00Z' }), NOW)).toBe('Done · Juhan')
+    expect(taskBannerMeta(task({ status: 'done', ownerName: 'Jules', dueAt: '2026-09-01T14:00:00Z' }), NOW)).toBe('Done · Jules')
     // One function for the words, shared with the card and the desk.
-    const working = task({ status: 'working', ownerName: 'Shirley' })
+    const working = task({ status: 'working', ownerName: 'Shay' })
     expect(taskBannerMeta(working, NOW)).toContain(taskStatusWords(working))
   })
 
@@ -603,34 +603,34 @@ describe('This week shows one person’s share when a link asks for it', () => {
     theme: null,
     rationale: null,
     items: [
-      { id: 'i-juhan', title: 'Call MGB', kind: 'outreach', owner: 'Juhan', status: 'working', minutes: 30, estimateSource: 'explicit', overdue: false },
-      { id: 'i-shirley', title: 'Draft the article', kind: 'content', owner: 'Shirley', status: 'queued', minutes: 60, estimateSource: 'estimated', overdue: false },
+      { id: 'i-jules', title: 'Call MGB', kind: 'outreach', owner: 'Jules', status: 'working', minutes: 30, estimateSource: 'explicit', overdue: false },
+      { id: 'i-shay', title: 'Draft the article', kind: 'content', owner: 'Shay', status: 'queued', minutes: 60, estimateSource: 'estimated', overdue: false },
       { id: 'i-nobody', title: 'Newsletter teaser', kind: 'content', owner: null, status: 'queued', minutes: 30, estimateSource: 'explicit', overdue: false },
     ],
     decisions: [
-      { id: 'd-juhan', title: 'Publish F1–F8?', kind: 'decision', question: 'Should we?', owner: 'juhan', status: 'needsHuman', minutes: 20, rev: 'rev-d1' },
+      { id: 'd-jules', title: 'Publish F1–F8?', kind: 'decision', question: 'Should we?', owner: 'jules', status: 'needsHuman', minutes: 20, rev: 'rev-d1' },
       { id: 'd-nobody', title: 'Pick a price band', kind: 'decision', question: 'Which?', owner: null, status: 'needsHuman', minutes: 20, rev: 'rev-d2' },
       // What Slack's "Not me" leaves: the planner files it as a decision.
-      { id: 'd-passed', title: 'Newsletter: pre-mortem teaser', kind: 'content', question: 'Eric passed on this — who should pick it up?', owner: null, status: 'needsHuman', minutes: 20, rev: 'rev-p' },
+      { id: 'd-passed', title: 'Newsletter: pre-mortem teaser', kind: 'content', question: 'Ezra passed on this — who should pick it up?', owner: null, status: 'needsHuman', minutes: 20, rev: 'rev-p' },
     ],
     deferred: [
-      { id: 'x-juhan', title: 'Pin the kit', owner: 'Juhan', status: 'blocked', blocker: 'No PDF', minutes: 20, reason: 'blocked' },
-      { id: 'x-eric', title: 'Town Day table', owner: 'Eric', status: 'queued', minutes: 60, reason: 'over budget' },
-      { id: 'x-done', title: 'Old post', owner: 'Juhan', status: 'done', minutes: 20, reason: 'already done', completedAt: '2026-09-22T15:00:00Z' },
+      { id: 'x-jules', title: 'Pin the kit', owner: 'Jules', status: 'blocked', blocker: 'No PDF', minutes: 20, reason: 'blocked' },
+      { id: 'x-ezra', title: 'Town Day table', owner: 'Ezra', status: 'queued', minutes: 60, reason: 'over budget' },
+      { id: 'x-done', title: 'Old post', owner: 'Jules', status: 'done', minutes: 20, reason: 'already done', completedAt: '2026-09-22T15:00:00Z' },
     ],
     followUps: [
-      { contactId: 'c-jane', who: 'Jane Doe (MGB)', due: 'overdue since Tue 22 Sep', last: '', temperature: 'they know us', overdue: true, ownerName: 'Juhan' },
+      { contactId: 'c-jane', who: 'Jane Doe (MGB)', due: 'overdue since Tue 22 Sep', last: '', temperature: 'they know us', overdue: true, ownerName: 'Jules' },
       { contactId: 'c-ada', who: 'Ada Park (X Health)', due: 'due Fri 25 Sep', last: '', temperature: 'cold', overdue: false, ownerName: '' },
     ],
   }
 
-  it('"+2 more on This week" (owner=Juhan) shows exactly Juhan’s tasks, decisions, deferred work and follow-ups', () => {
-    const link = new URL(studioViewUrl(BASE, 'thisWeek', { owner: 'Juhan' }))
+  it('"+2 more on This week" (owner=Jules) shows exactly Jules’s tasks, decisions, deferred work and follow-ups', () => {
+    const link = new URL(studioViewUrl(BASE, 'thisWeek', { owner: 'Jules' }))
     const { owner } = readMarketingLandingParams(link.search)
     const shown = filterWeekByOwner(plan, owner)
-    expect(shown.items.map((row) => row.id)).toEqual(['i-juhan'])
-    expect(shown.decisions.map((row) => row.id)).toEqual(['d-juhan'])
-    expect(shown.deferred.map((row) => row.id)).toEqual(['x-juhan', 'x-done'])
+    expect(shown.items.map((row) => row.id)).toEqual(['i-jules'])
+    expect(shown.decisions.map((row) => row.id)).toEqual(['d-jules'])
+    expect(shown.deferred.map((row) => row.id)).toEqual(['x-jules', 'x-done'])
     expect(shown.followUps.map((row) => row.contactId)).toEqual(['c-jane'])
 
     const everyone = filterWeekByOwner(plan, '')
@@ -639,21 +639,21 @@ describe('This week shows one person’s share when a link asks for it', () => {
   })
 
   it('offers a chip for everyone with a share, and for whoever a link asked for', () => {
-    expect(weekOwners(plan)).toEqual(['Eric', 'Juhan', 'Shirley'])
-    expect(weekOwners(plan, 'Priya')).toEqual(['Eric', 'Juhan', 'Priya', 'Shirley'])
-    expect(weekOwners(plan, 'juhan')).toEqual(['Eric', 'Juhan', 'Shirley'])
+    expect(weekOwners(plan)).toEqual(['Ezra', 'Jules', 'Shay'])
+    expect(weekOwners(plan, 'Priya')).toEqual(['Ezra', 'Jules', 'Priya', 'Shay'])
+    expect(weekOwners(plan, 'jules')).toEqual(['Ezra', 'Jules', 'Shay'])
   })
 
   it('describes each row in the card’s status words', () => {
-    expect(workMeta(plan.items[0])).toBe('Juhan · In progress · 30m')
-    expect(workMeta(plan.items[1])).toBe('Shirley · 1h (est.)')
+    expect(workMeta(plan.items[0])).toBe('Jules · In progress · 30m')
+    expect(workMeta(plan.items[1])).toBe('Shay · 1h (est.)')
     expect(workMeta(plan.items[2])).toBe('Nobody has it · 30m')
     expect(workMeta({ owner: null, status: 'working', minutes: 15 })).toBe('Marqueta working · 15m')
   })
 
   it('puts stuck work on its own with what is in the way, and counts what is done', () => {
     const grouped = groupDeferred(plan.deferred, plan.weekStart)
-    expect(grouped.stuck.map((row) => row.id)).toEqual(['x-juhan'])
+    expect(grouped.stuck.map((row) => row.id)).toEqual(['x-jules'])
     expect(grouped.doneCount).toBe(1)
     expect(grouped.byReason).toEqual([['over budget', [plan.deferred[1]]]])
     expect(WEEK).toContain('`In the way: ${entry.blocker}`')
@@ -663,13 +663,13 @@ describe('This week shows one person’s share when a link asks for it', () => {
   it('calls only blocked work Stuck, and counts only work done this week as done', () => {
     // Everything the planner defers as 'blocked' or 'already done', by status.
     const rows: PlanDeferral[] = [
-      { id: 'stuck', title: 'Pin the kit', owner: 'Juhan', status: 'blocked', blocker: 'No PDF', minutes: 20, reason: 'blocked' },
-      { id: 'waiting', title: 'Hear back from MGB', owner: 'Shirley', status: 'waiting', minutes: 30, reason: 'blocked' },
+      { id: 'stuck', title: 'Pin the kit', owner: 'Jules', status: 'blocked', blocker: 'No PDF', minutes: 20, reason: 'blocked' },
+      { id: 'waiting', title: 'Hear back from MGB', owner: 'Shay', status: 'waiting', minutes: 30, reason: 'blocked' },
       { id: 'leftover', title: 'Case study refresh', owner: null, status: 'queued', blocker: 'No strong internal source matched this update.', minutes: 45, reason: 'blocked' },
       { id: 'decision-leftover', title: 'Pick a price band', kind: 'decision', owner: null, status: 'needsHuman', blocker: 'Need last year’s numbers', minutes: 20, reason: 'blocked' },
-      { id: 'done-now', title: 'Post the teaser', owner: 'Eric', status: 'done', minutes: 20, reason: 'already done', completedAt: '2026-09-21T14:00:00Z' },
-      { id: 'done-before', title: 'Old post', owner: 'Eric', status: 'done', minutes: 20, reason: 'already done', completedAt: '2026-08-02T14:00:00Z' },
-      { id: 'done-undated', title: 'Older post', owner: 'Eric', status: 'done', minutes: 20, reason: 'already done' },
+      { id: 'done-now', title: 'Post the teaser', owner: 'Ezra', status: 'done', minutes: 20, reason: 'already done', completedAt: '2026-09-21T14:00:00Z' },
+      { id: 'done-before', title: 'Old post', owner: 'Ezra', status: 'done', minutes: 20, reason: 'already done', completedAt: '2026-08-02T14:00:00Z' },
+      { id: 'done-undated', title: 'Older post', owner: 'Ezra', status: 'done', minutes: 20, reason: 'already done' },
       { id: 'dropped', title: 'Dropped idea', owner: null, status: 'dismissed', minutes: 20, reason: 'already done' },
     ]
     const grouped = groupDeferred(rows, '2026-09-21')
@@ -688,7 +688,7 @@ describe('This week shows one person’s share when a link asks for it', () => {
 
   it('shows a task somebody passed on as work that needs someone, not as a decision', () => {
     const { decisions, needsSomeone } = splitWeekDecisions(plan.decisions)
-    expect(decisions.map((row) => row.id)).toEqual(['d-juhan', 'd-nobody'])
+    expect(decisions.map((row) => row.id)).toEqual(['d-jules', 'd-nobody'])
     expect(needsSomeone.map((row) => row.id)).toEqual(['d-passed'])
     // The Studio's words for it, without saying nobody has it twice.
     expect(workMeta(needsSomeone[0])).toBe('Needs someone · 20m')
@@ -729,12 +729,12 @@ describe('This week shows one person’s share when a link asks for it', () => {
     const idea = {
       _id: 'marketingIdea.slack-C1-1',
       title: 'Merch table at Town Day',
-      source: 'Slack — Juhan, not yet reviewed',
+      source: 'Slack — Jules, not yet reviewed',
       relatedUrl: 'https://goinvo.slack.com/archives/C1/p1',
       _createdAt: '2026-09-22T15:00:00Z',
     }
-    expect(caughtIdeaMeta(idea, NOW)).toEqual({ line: 'Slack — Juhan · 2 days ago', url: 'https://goinvo.slack.com/archives/C1/p1' })
-    expect(caughtIdeaMeta({ ...idea, _createdAt: '2026-09-24T13:00:00Z' }, NOW).line).toBe('Slack — Juhan · today')
+    expect(caughtIdeaMeta(idea, NOW)).toEqual({ line: 'Slack — Jules · 2 days ago', url: 'https://goinvo.slack.com/archives/C1/p1' })
+    expect(caughtIdeaMeta({ ...idea, _createdAt: '2026-09-24T13:00:00Z' }, NOW).line).toBe('Slack — Jules · today')
     expect(caughtIdeaMeta({ ...idea, relatedUrl: 'javascript:alert(1)' }, NOW).url).toBe('')
     expect(WEEK).toContain('view the message in Slack ↗')
     expect(WEEK).toContain('Kept — it’s in the idea backlog on the SEO tab.')

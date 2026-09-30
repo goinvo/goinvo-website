@@ -56,9 +56,9 @@ const HARNESS_WARM_START = {
       text: [
         'Peter Jones',
         'Jen Patel',
-        'Eric Benoit',
+        'Ezra Bennet',
         'Sharon Lee',
-        'Juhan Sonin',
+        'Jules Soren',
         'Huahua Zhu',
       ].join('\n'),
       featureTitle: 'Test. Treat. Trace.',
@@ -66,9 +66,9 @@ const HARNESS_WARM_START = {
   ],
   teamMembers: [
     { name: 'Jen Patel' },
-    { name: 'Eric Benoit' },
+    { name: 'Ezra Bennet' },
     { name: 'Sharon Lee' },
-    { name: 'Juhan Sonin' },
+    { name: 'Jules Soren' },
     { name: 'Huahua Zhu' },
   ],
 }

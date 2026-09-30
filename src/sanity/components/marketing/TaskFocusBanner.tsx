@@ -159,7 +159,7 @@ function dueWords(dueAt: string | undefined, now: Date): string {
 const SAYS_WHO = new Set(['Nobody has it', 'Marqueta working', 'Needs someone', 'Needs a decision', 'Done', 'Dropped'])
 
 /**
- * One line, in the Slack card's wording: "Urgent · Stuck · Juhan · overdue
+ * One line, in the Slack card's wording: "Urgent · Stuck · Jules · overdue
  * since Tue 22 Sep". The status words are `taskStatusWords`, the function the
  * card and the desk's pill use, so the three never describe one task two ways.
  */

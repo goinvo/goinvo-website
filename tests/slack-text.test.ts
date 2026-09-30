@@ -26,7 +26,7 @@ describe('decodeSlackText', () => {
 
   it('names mentioned colleagues when it can, and drops broadcast mentions', () => {
     expect(decodeSlackText('<@U123> prep Jane', {})).toBe('prep Jane')
-    expect(decodeSlackText('ask <@U999> about it', { U999: 'Eric' })).toBe('ask @Eric about it')
+    expect(decodeSlackText('ask <@U999> about it', { U999: 'Ezra' })).toBe('ask @Ezra about it')
     expect(decodeSlackText('<!here> hi')).toBe('hi')
     expect(decodeSlackText('in <#C1|marketing>')).toBe('in #marketing')
   })
@@ -56,12 +56,12 @@ describe('escapeSlackText / clipSlackText / slackLink', () => {
   })
 
   it('mentions only real user ids', () => {
-    expect(slackMention('U0B4DQ2B5D1', 'Juhan')).toBe('<@U0B4DQ2B5D1>')
-    expect(slackMention('not-an-id', 'Juhan <x>')).toBe('Juhan &lt;x&gt;')
+    expect(slackMention('U0000000001', 'Jules')).toBe('<@U0000000001>')
+    expect(slackMention('not-an-id', 'Jules <x>')).toBe('Jules &lt;x&gt;')
   })
 
   it('names Marqueta as a mention that actually works', () => {
-    expect(marquetaHandle('U0B4DQ2B5D1')).toBe('<@U0B4DQ2B5D1>')
+    expect(marquetaHandle('U0000000001')).toBe('<@U0000000001>')
     expect(marquetaHandle(undefined)).not.toContain('@Marqueta')
   })
 
@@ -74,15 +74,15 @@ describe('escapeSlackText / clipSlackText / slackLink', () => {
 
 describe('resolveOwnerName', () => {
   const entries = [
-    { ownerName: 'Juhan', slackUserId: 'U1' },
-    { ownerName: 'Shirley' },
+    { ownerName: 'Jules', slackUserId: 'U1' },
+    { ownerName: 'Shay' },
   ]
   it('prefers the linked identity over the Slack display name', () => {
-    expect(resolveOwnerName({ slackUserId: 'U1', displayName: 'Juhan Sonin', entries })).toBe('Juhan')
+    expect(resolveOwnerName({ slackUserId: 'U1', displayName: 'Jules Soren', entries })).toBe('Jules')
   })
   it('matches an exact name, and never guesses from a first name', () => {
-    expect(resolveOwnerName({ slackUserId: 'U2', displayName: 'shirley', entries })).toBe('Shirley')
-    expect(resolveOwnerName({ slackUserId: 'U3', displayName: 'Shirley Xu', entries })).toBe('Shirley Xu')
+    expect(resolveOwnerName({ slackUserId: 'U2', displayName: 'shay', entries })).toBe('Shay')
+    expect(resolveOwnerName({ slackUserId: 'U3', displayName: 'Shay Lund', entries })).toBe('Shay Lund')
   })
   it('never returns an empty owner', () => {
     expect(resolveOwnerName({ entries })).toBe('Someone')
@@ -114,7 +114,7 @@ describe('buildOperationStatusPatch', () => {
     const patch = buildOperationStatusPatch({ status: 'queued', activity }, 'working', {
       now,
       action: 'Unstuck in Slack',
-      outcome: 'by Juhan',
+      outcome: 'by Jules',
       unset: ['blocker'],
     })!
     const written = patch.set.activity as Array<{ action: string }>

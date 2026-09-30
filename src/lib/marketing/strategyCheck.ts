@@ -123,7 +123,7 @@ const MONTH_NAMES = [
 export type StrategyReviewRecord = {
   /** When a person last answered. */
   confirmedAt?: string
-  /** Their board name, for "checked by Juhan on 5 Oct". */
+  /** Their board name, for "checked by Jules on 5 Oct". */
   confirmedBy?: string
   verdict?: 'stillRight' | 'rethink'
   /** The month the answer was about ("2026-10"). */
@@ -683,9 +683,9 @@ function strategyQuestionBlocks(input: { snapshot: StrategySnapshot; reason: str
  * The line a money press leaves where its question was, with the press that
  * reverses it where there is one:
  *
- *   ✅ Runway confirmed by <@U> · Thu 24 Sep — 4.5 months (to 11 Jan 2027).   [It changed…]
+ *   ✅ Runway confirmed by <@U> · Thu 24 Sep — 5 months (to 25 Jan 2027).   [It changed…]
  *   ✅ Plan confirmed for September by <@U> — I’ll ask again in October.
- *   <@U> asked for a rethink — it’s a decision on This week, suggested to Juhan.   [Open This week]
+ *   <@U> asked for a rethink — it’s a decision on This week, suggested to Jules.   [Open This week]
  *
  * The numbers are the record as it reads AFTER the press, so the receipt says
  * what is now true rather than what the button assumed. No pronouns.
@@ -821,7 +821,7 @@ export type MoneyState = {
 
 const hint = (text: string): Block => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] })
 
-/** "3.5 months of certain runway, to 11 Jan 2027 (Rebuild)": the number first, the bin after it. */
+/** "3.5 months of certain runway, to 25 Jan 2027 (Rebuild)": the number first, the bin after it. */
 function runwayHeadline(runway: MoneyRunway, now: Date): string {
   const title = getFinancialPosture(runway.resolved.id)?.title || String(runway.resolved.id || '')
   const parts = runwayParts(runway.resolved, now)

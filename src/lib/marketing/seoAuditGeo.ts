@@ -356,7 +356,7 @@ function isAuthoritativeHost(host: string): boolean {
   return AUTHORITATIVE_HOSTS.some((d) => h === d || h.endsWith(`.${d}`))
 }
 
-// A byline phrase in the visible text ("By Juhan Sonin", "Written by …").
+// A byline phrase in the visible text ("By Jules Soren", "Written by …").
 const BYLINE_RE = /\b(by|written by|authored by|author)\b[:\s]+[A-Z][a-z]+(?:\s+[A-Z][a-z.]+){0,3}/
 
 export function auditEeat(url: string, html: string): SeoFinding[] {

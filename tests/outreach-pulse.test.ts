@@ -33,9 +33,9 @@ describe('summarizeOutreach', () => {
       [
         contact({
           interactions: [
-            { at: '2026-09-20T23:59:59Z', by: 'Juhan', channel: 'phone' }, // the Sunday before
-            { at: '2026-09-22T10:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'contacted' },
-            { at: '2026-09-28T00:00:00Z', by: 'Juhan', channel: 'phone' }, // end is exclusive
+            { at: '2026-09-20T23:59:59Z', by: 'Jules', channel: 'phone' }, // the Sunday before
+            { at: '2026-09-22T10:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'contacted' },
+            { at: '2026-09-28T00:00:00Z', by: 'Jules', channel: 'phone' }, // end is exclusive
           ],
         }),
       ],
@@ -52,21 +52,21 @@ describe('summarizeOutreach', () => {
         contact({
           _id: 'a',
           interactions: [
-            { at: '2026-09-22T10:00:00Z', by: 'Juhan', channel: 'email', statusAfter: 'responded' },
-            { at: '2026-09-23T10:00:00Z', by: 'Juhan', channel: 'video', statusAfter: 'meeting' },
+            { at: '2026-09-22T10:00:00Z', by: 'Jules', channel: 'email', statusAfter: 'responded' },
+            { at: '2026-09-23T10:00:00Z', by: 'Jules', channel: 'video', statusAfter: 'meeting' },
           ],
         }),
         contact({
           _id: 'b',
-          interactions: [{ at: '2026-09-23T12:00:00Z', by: 'Eric', channel: 'phone', statusAfter: 'won', value: 40000 }],
+          interactions: [{ at: '2026-09-23T12:00:00Z', by: 'Ezra', channel: 'phone', statusAfter: 'won', value: 40000 }],
         }),
       ],
       WEEK,
     )
     expect(pulse).toMatchObject({ touches: 3, people: 2, emails: 1, calls: 1, replies: 1, meetings: 1, won: 1, wonValue: 40000 })
     expect(pulse.byPerson).toEqual([
-      { name: 'Juhan', touches: 2 },
-      { name: 'Eric', touches: 1 },
+      { name: 'Jules', touches: 2 },
+      { name: 'Ezra', touches: 1 },
     ])
   })
 
@@ -76,15 +76,15 @@ describe('summarizeOutreach', () => {
         contact({
           interactions: [
             // Booked last week, so this week's voicemail is not a new meeting.
-            { at: '2026-09-15T10:00:00Z', by: 'Juhan', channel: 'video', statusAfter: 'meeting' },
-            { at: '2026-09-22T10:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'meeting' },
+            { at: '2026-09-15T10:00:00Z', by: 'Jules', channel: 'video', statusAfter: 'meeting' },
+            { at: '2026-09-22T10:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'meeting' },
           ],
         }),
         contact({
           _id: 'client',
           interactions: [
-            { at: '2026-09-23T10:00:00Z', by: 'Eric', channel: 'phone', statusAfter: 'won', value: 1 },
-            { at: '2026-09-24T10:00:00Z', by: 'Eric', channel: 'phone', statusAfter: 'won', value: 1 },
+            { at: '2026-09-23T10:00:00Z', by: 'Ezra', channel: 'phone', statusAfter: 'won', value: 1 },
+            { at: '2026-09-24T10:00:00Z', by: 'Ezra', channel: 'phone', statusAfter: 'won', value: 1 },
           ],
         }),
       ],
@@ -98,8 +98,8 @@ describe('summarizeOutreach', () => {
       [
         contact({
           interactions: [
-            { at: '2026-09-23T10:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'responded' },
-            { at: '2026-09-22T10:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'contacted' },
+            { at: '2026-09-23T10:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'responded' },
+            { at: '2026-09-22T10:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'contacted' },
           ],
         }),
       ],
@@ -153,7 +153,7 @@ describe('describePulse', () => {
     const lastWeek = { from: '2026-09-21T00:00:00Z', to: '2026-09-28T00:00:00Z', now: new Date('2026-09-28T13:00:00Z') }
     const pulse = summarizeOutreach(
       [
-        contact({ _id: 'fri', followUpAt: '2026-09-25T12:00:00Z', interactions: [{ at: '2026-09-22T10:00:00Z', by: 'Juhan', channel: 'phone' }] }),
+        contact({ _id: 'fri', followUpAt: '2026-09-25T12:00:00Z', interactions: [{ at: '2026-09-22T10:00:00Z', by: 'Jules', channel: 'phone' }] }),
         contact({ _id: 'mon1', followUpAt: '2026-09-28T12:00:00Z' }),
         contact({ _id: 'mon2', followUpAt: '2026-09-28T12:00:00Z' }),
       ],
@@ -169,8 +169,8 @@ describe('describePulse', () => {
       [
         contact({
           interactions: [
-            { at: '2026-09-22T10:00:00Z', by: 'Juhan', channel: 'phone' },
-            { at: '2026-09-23T10:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'meeting' },
+            { at: '2026-09-22T10:00:00Z', by: 'Jules', channel: 'phone' },
+            { at: '2026-09-23T10:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'meeting' },
           ],
         }),
       ],

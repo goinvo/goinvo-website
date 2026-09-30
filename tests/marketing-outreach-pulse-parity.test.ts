@@ -78,7 +78,7 @@ const contact = (id: string, extra: Partial<Contact> = {}): Contact => ({
   _id: id,
   name: `Person ${id}`,
   organization: 'Acme Health',
-  owner: 'Juhan',
+  owner: 'Jules',
   status: 'contacted',
   warmth: 'warm',
   followUpAt: null,
@@ -88,7 +88,7 @@ const contact = (id: string, extra: Partial<Contact> = {}): Contact => ({
 
 /** This week's sentence: the plan-week route's `pulse`, over `published` (its GROQ never returns drafts). */
 async function thisWeekSays(published: Contact[]): Promise<string> {
-  mocks.outreach.fetch.mockResolvedValue({ contacts: published, team: [{ ownerName: 'Juhan', slackUserId: 'UJUHAN' }] })
+  mocks.outreach.fetch.mockResolvedValue({ contacts: published, team: [{ ownerName: 'Jules', slackUserId: 'UJULES' }] })
   const response = await PLAN_WEEK_GET(
     new NextRequest('https://www.goinvo.com/api/marketing/plan-week', { headers: { authorization: 'Bearer key' } }),
   )
@@ -128,14 +128,14 @@ describe('the outreach pulse on Outreach and on This week', () => {
       contact('called', {
         followUpAt: '2026-09-22T14:00:00.000Z',
         interactions: [
-          { at: '2026-09-17T14:00:00.000Z', by: 'Juhan', channel: 'phone', statusAfter: 'contacted' },
-          { at: '2026-09-22T14:00:00.000Z', by: 'Shirley', channel: 'phone', statusAfter: 'responded' },
+          { at: '2026-09-17T14:00:00.000Z', by: 'Jules', channel: 'phone', statusAfter: 'contacted' },
+          { at: '2026-09-22T14:00:00.000Z', by: 'Shay', channel: 'phone', statusAfter: 'responded' },
         ],
         status: 'responded',
       }),
       contact('emailed', {
         followUpAt: '2026-09-30T14:00:00.000Z',
-        interactions: [{ at: '2026-09-23T14:00:00.000Z', by: 'Juhan', channel: 'email', statusAfter: 'contacted' }],
+        interactions: [{ at: '2026-09-23T14:00:00.000Z', by: 'Jules', channel: 'email', statusAfter: 'contacted' }],
       }),
       contact('later', { followUpAt: '2026-10-09T14:00:00.000Z' }),
       contact('closed', { status: 'won', followUpAt: '2026-09-23T14:00:00.000Z' }),
@@ -150,7 +150,7 @@ describe('the outreach pulse on Outreach and on This week', () => {
     vi.setSystemTime(now)
     const published = contact('jane', {
       followUpAt: '2026-09-23T14:00:00.000Z',
-      interactions: [{ at: '2026-09-21T12:00:00.000Z', by: 'Juhan', channel: 'phone', statusAfter: 'contacted' }],
+      interactions: [{ at: '2026-09-21T12:00:00.000Z', by: 'Jules', channel: 'phone', statusAfter: 'contacted' }],
     })
     const draft = { ...published, _id: 'drafts.jane' }
     expect(outreachPulseSentence([published, draft], now)).toBe(await thisWeekSays([published]))

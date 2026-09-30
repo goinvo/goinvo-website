@@ -110,10 +110,10 @@ describe('Marketing Operations private API', () => {
   it('gives the desk the roster’s names — who Slack knows — from the private dataset, and survives a failed read', async () => {
     mocks.privateFetch
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(['Juhan', ' Eric ', 'Juhan', null, ''])
+      .mockResolvedValueOnce(['Jules', ' Ezra ', 'Jules', null, ''])
     const response = await GET(new NextRequest('https://www.goinvo.com/api/marketing/operations'))
     const body = await response.json()
-    expect(body.team).toEqual(['Juhan', 'Eric'])
+    expect(body.team).toEqual(['Jules', 'Ezra'])
     const [rosterQuery] = mocks.privateFetch.mock.calls[1] as [string]
     expect(rosterQuery).toContain('_type == "marketingTeamAvailability"')
     expect(rosterQuery).toContain('!(_id in path("drafts.**"))')
@@ -252,8 +252,8 @@ describe('Marketing Operations private API', () => {
   })
 
   it('clears the stale Slack id whenever the Studio names a new owner', async () => {
-    // Claimed in Slack by Eric (his id stamped), then reassigned to Juhan here.
-    // Left in place, that id would have Slack @-mention Eric about Juhan's work.
+    // Claimed in Slack by Ezra (his id stamped), then reassigned to Jules here.
+    // Left in place, that id would have Slack @-mention Ezra about Jules's work.
     mocks.privateFetch.mockResolvedValueOnce({
       _id: 'marketingOperation.abc1234',
       _type: 'marketingOperation',
@@ -265,13 +265,13 @@ describe('Marketing Operations private API', () => {
       action: 'update',
       id: 'marketingOperation.abc1234',
       expectedRevision: 'rev-1',
-      patch: { ownerName: 'Juhan', ownerSanityUserId: 'user-juhan' },
-      note: 'Assigned to Juhan.',
+      patch: { ownerName: 'Jules', ownerSanityUserId: 'user-jules' },
+      note: 'Assigned to Jules.',
     }))
 
     expect(response.status).toBe(200)
     expect(mocks.ifRevisionId).toHaveBeenCalledWith('rev-1')
-    expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ ownerName: 'Juhan', ownerSanityUserId: 'user-juhan' }))
+    expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ ownerName: 'Jules', ownerSanityUserId: 'user-jules' }))
     expect(mocks.unset).toHaveBeenCalledWith(['ownerSlackUserId'])
   })
 
@@ -288,11 +288,11 @@ describe('Marketing Operations private API', () => {
       action: 'update',
       id: 'marketingOperation.abc1234',
       expectedRevision: 'rev-1',
-      patch: { ownerName: 'Juhan', ownerSanityUserId: 'tm-juhan', status: 'queued', humanQuestion: '' },
-      note: 'Assigned to Juhan.',
+      patch: { ownerName: 'Jules', ownerSanityUserId: 'tm-jules', status: 'queued', humanQuestion: '' },
+      note: 'Assigned to Jules.',
     }))
     expect(response.status).toBe(200)
-    expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ ownerName: 'Juhan', status: 'queued' }))
+    expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ ownerName: 'Jules', status: 'queued' }))
     // The "who should pick it up?" question goes, and so does the old Slack id.
     expect(mocks.unset).toHaveBeenCalledWith(expect.arrayContaining(['humanQuestion', 'ownerSlackUserId']))
   })

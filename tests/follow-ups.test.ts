@@ -152,11 +152,11 @@ describe('listFollowUps — temperature', () => {
 
 describe('listFollowUps — owner', () => {
   it('uses the contact owner, resolved to the board name', () => {
-    const [entry] = listFollowUps([contact({ _id: 'a', owner: 'Juhan Sonin' })], {
+    const [entry] = listFollowUps([contact({ _id: 'a', owner: 'Jules Soren' })], {
       now: NOW,
-      resolveOwner: (raw) => (raw === 'Juhan Sonin' ? 'Juhan' : raw),
+      resolveOwner: (raw) => (raw === 'Jules Soren' ? 'Jules' : raw),
     })
-    expect(entry.ownerName).toBe('Juhan')
+    expect(entry.ownerName).toBe('Jules')
   })
 
   it('falls back to whoever logged the most recent touch, by date rather than array order', () => {
@@ -166,15 +166,15 @@ describe('listFollowUps — owner', () => {
           _id: 'a',
           owner: '',
           interactions: [
-            { at: '2026-09-20T15:00:00Z', by: 'Eric', statusAfter: 'contacted' },
+            { at: '2026-09-20T15:00:00Z', by: 'Ezra', statusAfter: 'contacted' },
             // Logged later but dated earlier: not the most recent touch.
-            { at: '2026-09-10T15:00:00Z', by: 'Shirley', statusAfter: 'contacted' },
+            { at: '2026-09-10T15:00:00Z', by: 'Shay', statusAfter: 'contacted' },
           ],
         }),
       ],
       { now: NOW },
     )
-    expect(entry.ownerName).toBe('Eric')
+    expect(entry.ownerName).toBe('Ezra')
   })
 
   it('leaves the owner empty when nobody is on record, without asking the resolver about nobody', () => {
@@ -337,7 +337,7 @@ describe('listFollowUps — last touch is a status, never a note', () => {
       nextStep: secret,
       outcomeNotes: secret,
       interactions: [
-        { at: '2026-09-14T15:00:00Z', statusAfter: secret, outcome: secret, intel: secret, nextStep: secret, by: 'Eric' },
+        { at: '2026-09-14T15:00:00Z', statusAfter: secret, outcome: secret, intel: secret, nextStep: secret, by: 'Ezra' },
       ],
     } as unknown as FollowUpContact
     const [entry] = listFollowUps([noisy], { now: NOW })
@@ -369,16 +369,16 @@ describe('groupFollowUpsByOwner', () => {
   it('groups case-insensitively, keeps the order, and files nobody under ""', () => {
     const entries = listFollowUps(
       [
-        contact({ _id: 'a', owner: 'Juhan', followUpAt: at(-1) }),
-        contact({ _id: 'b', owner: 'juhan', followUpAt: at(2) }),
-        contact({ _id: 'c', owner: 'Eric', followUpAt: at(1) }),
+        contact({ _id: 'a', owner: 'Jules', followUpAt: at(-1) }),
+        contact({ _id: 'b', owner: 'jules', followUpAt: at(2) }),
+        contact({ _id: 'c', owner: 'Ezra', followUpAt: at(1) }),
         contact({ _id: 'd', owner: null, followUpAt: at(3) }),
       ],
       { now: NOW },
     )
     const groups = groupFollowUpsByOwner(entries)
-    expect(Object.keys(groups).sort()).toEqual(['', 'eric', 'juhan'])
-    expect(ids(groups.juhan)).toEqual(['a', 'b'])
+    expect(Object.keys(groups).sort()).toEqual(['', 'ezra', 'jules'])
+    expect(ids(groups.jules)).toEqual(['a', 'b'])
     expect(ids(groups[''])).toEqual(['d'])
     expect(groupFollowUpsByOwner([])).toEqual({})
   })
@@ -390,7 +390,7 @@ describe('followUpLine', () => {
     warmth: 'warm',
     // 9am Monday in Arlington.
     followUpAt: '2026-09-21T13:00:00Z',
-    interactions: [{ at: '2026-09-14T15:00:00Z', by: 'Eric', statusAfter: 'contacted' }],
+    interactions: [{ at: '2026-09-14T15:00:00Z', by: 'Ezra', statusAfter: 'contacted' }],
   })
 
   it('reads the way the spec shows it', () => {
@@ -455,9 +455,9 @@ describe('followUpParts — the same facts, laid out by the caller', () => {
     contact({
       _id: 'jane',
       warmth: 'warm',
-      owner: 'juhan',
+      owner: 'jules',
       followUpAt: '2026-09-21T13:00:00Z',
-      interactions: [{ at: '2026-09-14T15:00:00Z', by: 'Eric', statusAfter: 'contacted' }],
+      interactions: [{ at: '2026-09-14T15:00:00Z', by: 'Ezra', statusAfter: 'contacted' }],
     }),
     contact({ _id: 'today', followUpAt: '2026-09-24T20:00:00Z', status: 'responded' }),
     contact({ _id: 'no-name', name: 'jd@mgb.org', organization: 'MGB', warmth: 'cold' }),
@@ -467,7 +467,7 @@ describe('followUpParts — the same facts, laid out by the caller', () => {
   ]
 
   it('reads the way the Studio row shows it', () => {
-    const [entry] = listFollowUps([mixed[0]], { now: NOW, resolveOwner: (raw) => (raw === 'juhan' ? 'Juhan' : raw) })
+    const [entry] = listFollowUps([mixed[0]], { now: NOW, resolveOwner: (raw) => (raw === 'jules' ? 'Jules' : raw) })
     expect(followUpParts(entry, NOW)).toEqual({
       contactId: 'jane',
       who: 'Jane Doe (MGB)',
@@ -475,7 +475,7 @@ describe('followUpParts — the same facts, laid out by the caller', () => {
       last: 'last: Contacted on 14 Sep',
       temperature: 'they know us',
       overdue: true,
-      ownerName: 'Juhan',
+      ownerName: 'Jules',
     })
   })
 
@@ -506,7 +506,7 @@ describe('unownedFollowUpsText — follow-ups nobody owns', () => {
     contact({ owner: null, interactions: [], ...overrides })
 
   it('is empty when every follow-up has an owner, so no empty block is posted', () => {
-    const entries = listFollowUps([contact({ _id: 'a', owner: 'Juhan' })], { now: NOW })
+    const entries = listFollowUps([contact({ _id: 'a', owner: 'Jules' })], { now: NOW })
     expect(unownedFollowUpsText(entries, NOW)).toBe('')
     expect(unownedFollowUpsText([], NOW)).toBe('')
   })
@@ -514,7 +514,7 @@ describe('unownedFollowUpsText — follow-ups nobody owns', () => {
   it('names only the ones with nobody on record, with when they are due', () => {
     const entries = listFollowUps(
       [
-        contact({ _id: 'owned', name: 'Ann Lee', owner: 'Juhan' }),
+        contact({ _id: 'owned', name: 'Ann Lee', owner: 'Jules' }),
         ownerless({ _id: 'jane', name: 'Jane Doe', followUpAt: '2026-09-21T13:00:00Z' }),
         ownerless({ _id: 'acme', name: 'jd@acme.com', organization: 'Acme', followUpAt: '2026-09-25T13:00:00Z' }),
       ],
@@ -574,7 +574,7 @@ describe('every due follow-up reaches the check-in', () => {
   it('shows owned follow-ups in their owner\'s list and ownerless ones on their own line', () => {
     const entries = listFollowUps(
       [
-        contact({ _id: 'owned', name: 'Ann Lee', owner: 'Juhan', followUpAt: at(1) }),
+        contact({ _id: 'owned', name: 'Ann Lee', owner: 'Jules', followUpAt: at(1) }),
         contact({ _id: 'nobody', name: 'Jane Doe', owner: null, interactions: [], status: 'responded', followUpAt: at(-2) }),
       ],
       { now: NOW },

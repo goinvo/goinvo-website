@@ -11,7 +11,7 @@ const ROOT = process.cwd()
 const NEXT_BIN = path.join(ROOT, 'node_modules', 'next', 'dist', 'bin', 'next')
 const RESULTS_DIR = path.join(ROOT, 'test-results', 'marketing-principal')
 const HARNESS_PATH = '/marketing-e2e-harness/principal'
-const EMPLOYEE_NAMES = ['Jen Patel', 'Eric Benoit', 'Sharon Lee', 'Juhan Sonin', 'Huahua Zhu']
+const EMPLOYEE_NAMES = ['Jen Patel', 'Ezra Bennet', 'Sharon Lee', 'Jules Soren', 'Huahua Zhu']
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 function xmlEscape(value: string) {

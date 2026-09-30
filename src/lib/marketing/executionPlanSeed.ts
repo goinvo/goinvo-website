@@ -42,7 +42,7 @@ export interface SeedOperationDef {
   /** Gates/asks seed as needsHuman (with humanQuestion) so the board surfaces them. */
   status: 'queued' | 'needsHuman'
   humanQuestion?: string
-  ownerName: 'Juhan' | 'Shirley'
+  ownerName: 'Jules' | 'Shay'
   /** YYYY-MM-DD → dueAt via dateInputToIso (noon-anchored). */
   dueOn: string
   /** Linked marketingOffer keys → linkedRecords in the outreach dataset. */
@@ -82,7 +82,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     autonomy: 'humanReview',
     status: 'needsHuman',
     humanQuestion: 'Who on this list would take your call this week? Mark them hot so they top every wave.',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-09-02',
   },
   {
@@ -99,7 +99,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     status: 'needsHuman',
     humanQuestion:
       'What range goes on each of the five offers — and which of those are you comfortable saying out loud on a call?',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-09-04',
     linkedOfferKeys: ALL_OFFER_KEYS,
   },
@@ -115,7 +115,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     priority: 'high',
     autonomy: 'externalAction',
     status: 'queued',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-09-08',
   },
   {
@@ -131,7 +131,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     status: 'needsHuman',
     humanQuestion:
       'Approve the article + scorecard drafts; decide whether the F1–F8 taxonomy publishes or stays internal; settle the byline and the CC-BY license on the scorecard.',
-    ownerName: 'Shirley',
+    ownerName: 'Shay',
     dueOn: '2026-09-11',
     linkedOfferKeys: ['ai-pilot-premortem'],
   },
@@ -147,7 +147,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     priority: 'urgent',
     autonomy: 'externalAction',
     status: 'queued',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-09-18',
   },
   {
@@ -161,7 +161,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     priority: 'normal',
     autonomy: 'safeInternal',
     status: 'queued',
-    ownerName: 'Shirley',
+    ownerName: 'Shay',
     dueOn: '2026-09-23',
   },
   {
@@ -176,7 +176,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     status: 'needsHuman',
     humanQuestion:
       'Calls made vs planned, meetings booked, offers sent — keep the cadence, tighten the list, or change the offer?',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-09-30',
   },
   {
@@ -190,7 +190,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     priority: 'high',
     autonomy: 'externalAction',
     status: 'queued',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-10-02',
   },
   {
@@ -205,7 +205,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     priority: 'high',
     autonomy: 'externalAction',
     status: 'queued',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-10-09',
     linkedOfferKeys: ['ai-pilot-premortem'],
   },
@@ -220,7 +220,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     priority: 'high',
     autonomy: 'externalAction',
     status: 'queued',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-10-16',
   },
   {
@@ -236,7 +236,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     autonomy: 'humanReview',
     status: 'needsHuman',
     humanQuestion: 'Which security/compliance partner do we name, and what exactly do they cover vs us?',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-10-23',
   },
   {
@@ -252,7 +252,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     status: 'needsHuman',
     humanQuestion:
       'Bring the four numbers only the studio can supply: % of last-3-years revenue that was federal/NIH/state/SDOH; runway at current burn; which relationships froze vs merely paused; current utilization.',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-10-30',
   },
   {
@@ -267,7 +267,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     autonomy: 'humanReview',
     status: 'needsHuman',
     humanQuestion: 'Which of the five offer price bands are we comfortable publishing on goinvo.com?',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-11-06',
     linkedOfferKeys: ALL_OFFER_KEYS,
   },
@@ -282,7 +282,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     priority: 'high',
     autonomy: 'externalAction',
     status: 'queued',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-11-13',
     linkedOfferKeys: ['design-eng-capacity'],
   },
@@ -297,7 +297,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     priority: 'normal',
     autonomy: 'externalAction',
     status: 'queued',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-11-20',
   },
   {
@@ -313,7 +313,7 @@ export const EXEC_PLAN_SEED_OPERATIONS: SeedOperationDef[] = [
     status: 'needsHuman',
     humanQuestion:
       'Did the plan produce enough qualified pipeline — and what is Q1: double down, change segments, or change the plan?',
-    ownerName: 'Juhan',
+    ownerName: 'Jules',
     dueOn: '2026-11-30',
   },
 ]

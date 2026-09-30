@@ -13,9 +13,9 @@ import { buildTaskCard } from '@/lib/marketing/weeklyCheckIn'
 import { expectValidSlackBlocks } from './support/slackBlocks'
 
 const TEAM: AskTeamMember[] = [
-  { name: 'Juhan', slackUserId: 'U1' },
-  { name: 'Shirley', slackUserId: 'U2' },
-  { name: 'Eric', slackUserId: 'U3' },
+  { name: 'Jules', slackUserId: 'U1' },
+  { name: 'Shay', slackUserId: 'U2' },
+  { name: 'Ezra', slackUserId: 'U3' },
 ]
 
 const task = (overrides: Partial<AskTask> = {}): AskTask => ({
@@ -44,31 +44,31 @@ const CAPACITY_CLAIM = /free time|free this|capacity|availab|busy|hours left|spa
 
 describe('proposeOwnerAsks', () => {
   it("asks the plan's suggested owner when they have room", () => {
-    const { asks } = propose([task({ suggestedOwner: 'shirley' })])
-    expect(asks).toEqual([{ taskId: 't1', name: 'Shirley', slackUserId: 'U2', reason: 'suggested' }])
+    const { asks } = propose([task({ suggestedOwner: 'shay' })])
+    expect(asks).toEqual([{ taskId: 't1', name: 'Shay', slackUserId: 'U2', reason: 'suggested' }])
   })
 
   it('asks whoever has the most room when the suggested owner is full, ties broken by name', () => {
-    const { asks } = propose([task({ suggestedOwner: 'Shirley' })], { ownedMinutesByName: { Shirley: 230 } })
-    expect(asks).toEqual([{ taskId: 't1', name: 'Eric', slackUserId: 'U3', reason: 'open' }])
+    const { asks } = propose([task({ suggestedOwner: 'Shay' })], { ownedMinutesByName: { Shay: 230 } })
+    expect(asks).toEqual([{ taskId: 't1', name: 'Ezra', slackUserId: 'U3', reason: 'open' }])
   })
 
   it('reads owned minutes case-insensitively', () => {
-    const { asks } = propose([task()], { ownedMinutesByName: { eric: 200, JUHAN: 100 } })
-    expect(asks[0].name).toBe('Shirley')
+    const { asks } = propose([task()], { ownedMinutesByName: { ezra: 200, JULES: 100 } })
+    expect(asks[0].name).toBe('Shay')
   })
 
   it('never asks somebody who is away that day', () => {
     const availability: TeamMemberAvailability[] = [
-      { ownerName: 'Eric', slackUserId: 'U3', status: 'away', from: '2026-09-21', until: '2026-09-30' },
-      { ownerName: 'Juhan', slackUserId: 'U1', status: 'away', from: '2026-09-24', until: '2026-09-24' },
+      { ownerName: 'Ezra', slackUserId: 'U3', status: 'away', from: '2026-09-21', until: '2026-09-30' },
+      { ownerName: 'Jules', slackUserId: 'U1', status: 'away', from: '2026-09-24', until: '2026-09-24' },
     ]
-    const { asks } = propose([task({ suggestedOwner: 'Eric' })], { availability })
-    expect(asks).toEqual([{ taskId: 't1', name: 'Shirley', slackUserId: 'U2', reason: 'open' }])
+    const { asks } = propose([task({ suggestedOwner: 'Ezra' })], { availability })
+    expect(asks).toEqual([{ taskId: 't1', name: 'Shay', slackUserId: 'U2', reason: 'open' }])
   })
 
   it('uses a reduced week, and never asks past anybody’s hours', () => {
-    const availability: TeamMemberAvailability[] = [{ ownerName: 'Juhan', status: 'available', weeklyHours: 1 }]
+    const availability: TeamMemberAvailability[] = [{ ownerName: 'Jules', status: 'available', weeklyHours: 1 }]
     const { asks } = propose([task({ _id: 'a', minutes: 40 }), task({ _id: 'b', minutes: 40 })], {
       team: [TEAM[0]],
       availability,
@@ -82,9 +82,9 @@ describe('proposeOwnerAsks', () => {
       { team: [TEAM[0], TEAM[1]] },
     )
     expect(asks.map((ask) => [ask.taskId, ask.name])).toEqual([
-      ['a', 'Juhan'],
-      ['b', 'Shirley'],
-      ['c', 'Juhan'],
+      ['a', 'Jules'],
+      ['b', 'Shay'],
+      ['c', 'Jules'],
     ])
   })
 
@@ -95,7 +95,7 @@ describe('proposeOwnerAsks', () => {
   })
 
   it('never asks the same person about the same task twice', () => {
-    const { asks } = propose([task({ suggestedOwner: 'Eric', askedSlackUserIds: ['U3'] })])
+    const { asks } = propose([task({ suggestedOwner: 'Ezra', askedSlackUserIds: ['U3'] })])
     expect(asks[0].slackUserId).not.toBe('U3')
     expect(asks[0].reason).toBe('open')
   })
@@ -115,7 +115,7 @@ describe('proposeOwnerAsks', () => {
 
   it('leaves owned work and decisions alone', () => {
     const result = propose([
-      task({ _id: 'owned', ownerName: 'Juhan' }),
+      task({ _id: 'owned', ownerName: 'Jules' }),
       task({ _id: 'decision', kind: 'decision' }),
       task({ _id: 'decision2', kind: 'decision', askedSlackUserIds: ['U1', 'U2'] }),
     ])
@@ -123,15 +123,15 @@ describe('proposeOwnerAsks', () => {
   })
 
   it('never asks somebody with no hours this week, even about an unestimated task', () => {
-    const availability: TeamMemberAvailability[] = [{ ownerName: 'Juhan', status: 'available', weeklyHours: 0 }]
+    const availability: TeamMemberAvailability[] = [{ ownerName: 'Jules', status: 'available', weeklyHours: 0 }]
     const { asks } = propose([task({ minutes: 0 })], { team: [TEAM[0]], availability })
     expect(asks).toEqual([])
   })
 
   it('is deterministic whatever order the team arrives in, and ignores duplicate people', () => {
-    const tasks = [task({ _id: 'a' }), task({ _id: 'b', suggestedOwner: 'Juhan' }), task({ _id: 'c' }), task({ _id: 'a' })]
+    const tasks = [task({ _id: 'a' }), task({ _id: 'b', suggestedOwner: 'Jules' }), task({ _id: 'c' }), task({ _id: 'a' })]
     const first = propose(tasks)
-    const shuffled = propose(tasks, { team: [TEAM[2], { name: 'Juhan again', slackUserId: 'U1' }, ...TEAM].reverse() })
+    const shuffled = propose(tasks, { team: [TEAM[2], { name: 'Jules again', slackUserId: 'U1' }, ...TEAM].reverse() })
     expect(propose(tasks)).toEqual(first)
     expect(shuffled.asks.map((ask) => [ask.taskId, ask.slackUserId])).toEqual(first.asks.map((ask) => [ask.taskId, ask.slackUserId]))
     expect(first.asks.map((ask) => ask.taskId)).toEqual(['a', 'b', 'c'])
@@ -143,7 +143,7 @@ describe('proposeOwnerAsks', () => {
 })
 
 describe('askMeta', () => {
-  const ask = (reason: OwnerAsk['reason']): OwnerAsk => ({ taskId: 't1', name: 'Shirley', slackUserId: 'U2', reason })
+  const ask = (reason: OwnerAsk['reason']): OwnerAsk => ({ taskId: 't1', name: 'Shay', slackUserId: 'U2', reason })
 
   it('says who, and — only when true — that the plan had them in mind', () => {
     expect(askMeta(ask('suggested'))).toBe('<@U2>, could you take this one? · the plan had you in mind')
@@ -169,7 +169,7 @@ describe('askMeta', () => {
     for (const reason of ['suggested', 'open'] as const) {
       const card = buildTaskCard(
         { _id: 't1', title: 'Write the pre-mortem post', status: 'queued' },
-        { now: new Date('2026-09-21T13:00:00Z'), mode: 'plan', ask: { slackUserId: 'U2', name: 'Shirley', reason } },
+        { now: new Date('2026-09-21T13:00:00Z'), mode: 'plan', ask: { slackUserId: 'U2', name: 'Shay', reason } },
       )
       expectValidSlackBlocks(card)
       expect(card[0].text.text.split('\n')[1]).toBe(askMeta(ask(reason)))

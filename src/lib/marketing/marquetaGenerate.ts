@@ -218,7 +218,7 @@ export function outputContractForFormat(format: GenerationFormat): Record<string
     subject: 'Email subject line',
     greeting: 'Hi <first name>,',
     body: ['One paragraph per array item — lead with their news, then a small concrete offer'],
-    signoff: '— Juhan, GoInvo',
+    signoff: '— Jules, GoInvo',
   }
 }
 

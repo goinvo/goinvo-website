@@ -55,11 +55,11 @@ const ACCENT = '#d94d2f'
 const TEAL = '#007385'
 const WARN = '#a12820'
 
-/** Segments the turnaround plan names as targets, to check the list against. */
+/** Segments the outreach plan names as targets, to check the list against. */
 const TARGETED_SEGMENTS = ['medDevice', 'pharma', 'provider', 'healthtech'] as const
 
-/** Who this brief is written for; their decisions sort first. */
-const READER = 'Juhan'
+/** Who this brief is written for; their decisions sort first. Set in the deployment's environment. */
+const READER = process.env.AUDIENCE_BRIEF_READER || ''
 
 let outreachClient: SanityClient | null = null
 let outreachResolved = false
@@ -291,7 +291,7 @@ export default async function AudienceBriefPage({
               <p className="ab-verdict-label">Do not lead with</p>
               <p className="ab-verdict-value">{gap.label}</p>
               <p className="ab-verdict-why">
-                The turnaround plan targets this segment and the list holds {gap.count}{' '}
+                The outreach plan targets this segment and the list holds {gap.count}{' '}
                 {gap.count === 1 ? 'contact' : 'contacts'}. It can still be a deliberate
                 cold-outreach bet — but it should be chosen with that cost visible, not assumed.
               </p>

@@ -17,7 +17,7 @@
  *   idea   somebody proposing work        → marketingIdea, the board
  *   draft  somebody sharing written work  → marketingCalendarItem, the calendar
  *
- * That distinction was learned the hard way. Juhan posted a finished newsletter
+ * That distinction was learned the hard way. Jules posted a finished newsletter
  * draft and the filter looked for proposal phrasing, found none, and dropped
  * it — when the right answer was not "this is an idea" but "this is content,
  * put it on the calendar with the copy attached".
@@ -439,7 +439,7 @@ export function slackPermalink(input: { workspace?: string; channel: string; ts:
 /**
  * How long after a message a follow-up counts as the same thought.
  *
- * Juhan's merch post was four messages in one burst: the list, an aside about
+ * Jules's merch post was four messages in one burst: the list, an aside about
  * t-shirts, "any other ideas?", and "patches and stickers are good, inexpensive
  * experiments". That is ONE idea. Four board entries for one thought is exactly
  * the noise that makes a board worth ignoring.

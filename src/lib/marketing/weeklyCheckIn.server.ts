@@ -322,8 +322,8 @@ const recordHeartbeat = (
  *
  * By name alone it misses the commonest case. The digest's "I'm away this
  * week" button files the absence under whatever Slack's display name is
- * ("Shirley Wu"), next to the linked record the roster knows her by
- * ("Shirley") — so a name-only check found Shirley available, and the check-in
+ * ("Shay Wu"), next to the linked record the roster knows her by
+ * ("Shay") — so a name-only check found Shay available, and the check-in
  * @-mentioned her, on holiday, with Done and Stuck buttons, and put the mention
  * in the notification text her phone reads.
  *
@@ -368,7 +368,7 @@ export function absencesOn(
 }
 
 /**
- * "🌴 Away, so not asked this week: Shirley (2 tasks, 1 follow-up). That list
+ * "🌴 Away, so not asked this week: Shay (2 tasks, 1 follow-up). That list
  * is on This week if anything needs cover." Names as plain, escaped text,
  * never mentions, and no pronoun guessed from a name. Their lists are left for
  * them (or for cover from the plan) rather than put in front of them on
@@ -464,7 +464,7 @@ export async function runWeeklyCheckIn(input: {
     const tasks = (data?.tasks || []).filter((task) => task && task._id).map(toCheckInTask)
 
     // Follow-ups stay on the contact; owners are mapped onto board names so
-    // "juhan" on a contact and "Juhan" on a task are one person's list.
+    // "jules" on a contact and "Jules" on a task are one person's list.
     const followUps = listFollowUps(contacts, {
       now,
       resolveOwner: (raw) => resolveOwnerName({ displayName: raw, entries: availability }),

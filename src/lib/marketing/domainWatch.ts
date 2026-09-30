@@ -1,8 +1,8 @@
 /**
  * Noticing that a domain is about to expire, before it does.
  *
- * On 2026-09-02 goinvo.com was nine hours from expiry and nobody in the studio
- * knew. It renewed fine — it had renewed every year since 2008 — but the way a
+ * A long-held domain renews every year without anyone looking, which is exactly
+ * why nobody looks. The way a
  * long-held domain actually dies is not forgetfulness, it is an auto-renew that
  * keeps reporting success against a card that expired, silently, for a year.
  * And when it goes it takes the site, the client email and every other

@@ -95,7 +95,7 @@ function outlineFor(
     research: [],
     offers,
     evidence,
-    senderName: 'Juhan',
+    senderName: 'Jules',
     includeContactDetails: false,
     now: NOW,
     ...extra,
@@ -489,7 +489,7 @@ describe('composeCallOutline', () => {
     const outline = outlineFor({ kind: 'contact', contact: reviewed })
     expect(outline.brief).toBe('REVIEWED-BRIEF')
     expect(outline.cheatSheet.say).toBe(
-      'Hi Jane, it’s Juhan from GoInvo — I saw your talk on sepsis alerts at HIMSS. Have you got two minutes, or is this a bad time?',
+      'Hi Jane, it’s Jules from GoInvo — I saw your talk on sepsis alerts at HIMSS. Have you got two minutes, or is this a bad time?',
     )
     expect(outline.background).toEqual([])
   })
@@ -535,7 +535,7 @@ describe('composeCallOutline', () => {
       const outline = outlineFor({ kind: 'contact', contact: contact({ _id: 'c1', howWeKnow: 'Worked together at Partners' }) })
       expect(outline.mode).toBe('cold')
       expect(outline.cheatSheet.say).toBe(
-        'Hi Jane, it’s Juhan from GoInvo — [how you know them: Worked together at Partners]. Have you got two minutes, or is this a bad time?',
+        'Hi Jane, it’s Jules from GoInvo — [how you know them: Worked together at Partners]. Have you got two minutes, or is this a bad time?',
       )
       expect(outline.plan).toBeNull()
       expect(outline.agenda).toBeNull()
@@ -557,7 +557,7 @@ describe('composeCallOutline', () => {
       const outline = outlineFor({ kind: 'contact', contact: c })
       expect(outline.mode).toBe('followUp')
       expect(outline.cheatSheet.say).toBe(
-        'Hi Jane, it’s Juhan from GoInvo — following up on when we spoke on 12 Sep. Is now an OK time for two minutes?',
+        'Hi Jane, it’s Jules from GoInvo — following up on when we spoke on 12 Sep. Is now an OK time for two minutes?',
       )
       expect(outline.who).toContain('last touch 12 Sep (Responded)')
       expect(JSON.stringify(outline)).not.toMatch(/SECRET|OLD-NOTES/)
@@ -568,29 +568,29 @@ describe('composeCallOutline', () => {
       const c = contact({
         _id: 'c1',
         status: 'contacted',
-        interactions: [{ at: '2026-09-12T15:00:00Z', by: 'Juhan', statusAfter: 'contacted', channel: 'phone', outcome: 'No answer' }],
+        interactions: [{ at: '2026-09-12T15:00:00Z', by: 'Jules', statusAfter: 'contacted', channel: 'phone', outcome: 'No answer' }],
       })
       const outline = outlineFor({ kind: 'contact', contact: c })
       expect(outline.cheatSheet.say).toContain('following up on my call on 12 Sep')
       expect(outline.cheatSheet.say).not.toContain('spoke')
       const byEmail = outlineFor({
         kind: 'contact',
-        contact: contact({ _id: 'c2', status: 'contacted', lastContactedAt: '2026-09-10T15:00:00Z', interactions: [{ at: '2026-09-10T15:00:00Z', by: 'Juhan Sonin', statusAfter: 'contacted', channel: 'email' }] }),
+        contact: contact({ _id: 'c2', status: 'contacted', lastContactedAt: '2026-09-10T15:00:00Z', interactions: [{ at: '2026-09-10T15:00:00Z', by: 'Jules Soren', statusAfter: 'contacted', channel: 'email' }] }),
       })
       expect(byEmail.cheatSheet.say).toContain('following up on my note from 10 Sep')
     })
 
     it('followUp: says "our call" when a colleague made it — or when nobody knows who did', () => {
-      // "My call on 11 Sep" said about Shirley's call is a sentence the prospect can catch out.
+      // "My call on 11 Sep" said about Shay's call is a sentence the prospect can catch out.
       const touched = (by?: string) =>
         outlineFor({
           kind: 'contact',
           contact: contact({ _id: 'c1', status: 'contacted', interactions: [{ at: '2026-09-11T15:00:00Z', statusAfter: 'contacted', channel: 'phone', ...(by ? { by } : {}) }] }),
         })
-      expect(touched('Shirley').cheatSheet.say).toContain('following up on our call on 11 Sep')
+      expect(touched('Shay').cheatSheet.say).toContain('following up on our call on 11 Sep')
       expect(touched().cheatSheet.say).toContain('following up on our call on 11 Sep')
-      expect(touched('Shirley').voicemail).toContain('our call on 11 Sep')
-      expect(touched('juhan').cheatSheet.say).toContain('following up on my call on 11 Sep')
+      expect(touched('Shay').voicemail).toContain('our call on 11 Sep')
+      expect(touched('jules').cheatSheet.say).toContain('following up on my call on 11 Sep')
     })
 
     it('meeting: an agenda instead of a cold opener', () => {
@@ -746,7 +746,7 @@ describe('composeCallOutline', () => {
       expect(outline.email).toBe('')
       expect(reachesFor(outline)).not.toMatch(/e-?mail|a (?:short|two-line) note/i)
       expect(outline.voicemail).toBe(
-        'Hi Jane, it’s Juhan from GoInvo, following up on our call on 10 Sep. I’ll try you again later in the week — no need to call back. Thanks, and have a good day.',
+        'Hi Jane, it’s Jules from GoInvo, following up on our call on 10 Sep. I’ll try you again later in the week — no need to call back. Thanks, and have a good day.',
       )
     })
 
@@ -895,7 +895,7 @@ describe('composeCallOutline', () => {
     }
     const whoIsThis = outline.ifTheySay.find((line) => /Who is this/.test(line.theySay))!.youSay
     expect(whoIsThis).toBe(
-      'I’m Juhan at GoInvo, a design studio in Arlington — I read that Mass General Brigham spun out AIwithCare in December, and wanted to talk to whoever looks after it.',
+      'I’m Jules at GoInvo, a design studio in Arlington — I read that Mass General Brigham spun out AIwithCare in December, and wanted to talk to whoever looks after it.',
     )
     expect(outline.ifTheySay.find((line) => /right person/.test(line.theySay))!.youSay).toBe(
       'Who would you point me to? Mind if I say you sent me?',
@@ -930,7 +930,7 @@ describe('composeCallOutline', () => {
     )
     expect(outline.email).toMatch(/^Subject: A quick thought from GoInvo\n\nHi Jane,\n\nI saw that Mass General Brigham spun out AIwithCare in December\./)
     expect(outline.email).toContain('clinical AI pilot')
-    expect(outline.email).toContain('— Juhan, GoInvo')
+    expect(outline.email).toContain('— Jules, GoInvo')
   })
 
   it('builds a generic outline from the request alone, labelled as such', () => {
@@ -966,7 +966,7 @@ describe('composeCallOutline', () => {
     expect(outline.title).toBe('Call prep: someone at Ochsner Health')
     expect(buildCallOutlineMessages(outline).text).toBe('Call prep: someone at Ochsner Health')
     expect(outline.cheatSheet.say).toBe(
-      'Hi, it’s Juhan from GoInvo — I’m hoping to reach whoever looks after clinical AI pilots at Ochsner Health. Is that you, or could you point me the right way?',
+      'Hi, it’s Jules from GoInvo — I’m hoping to reach whoever looks after clinical AI pilots at Ochsner Health. Is that you, or could you point me the right way?',
     )
   })
 
@@ -1416,7 +1416,7 @@ describe('buildPrepListBlocks', () => {
 })
 
 describe('newContactDocument', () => {
-  const base = { name: 'Sam Rivera', organization: 'Acme', role: 'CMIO', note: 'met her at HIMSS', ownerName: 'Juhan', now: NOW }
+  const base = { name: 'Sam Rivera', organization: 'Acme', role: 'CMIO', note: 'met her at HIMSS', ownerName: 'Jules', now: NOW }
 
   it('stores only what was typed, as a new contact of unknown warmth', () => {
     const doc = newContactDocument(base)!
@@ -1428,9 +1428,9 @@ describe('newContactDocument', () => {
       role: 'CMIO',
       status: 'new',
       warmth: 'unknown',
-      owner: 'Juhan',
+      owner: 'Jules',
       howWeKnow: 'met her at HIMSS',
-      sourceNotes: 'Added from Slack by Juhan on 2026-09-24',
+      sourceNotes: 'Added from Slack by Jules on 2026-09-24',
     })
     expect(String(doc._id)).toMatch(/^marketingContact\.slack-[0-9a-z]+$/)
     for (const field of ['email', 'phone', 'segment']) expect(doc).not.toHaveProperty(field)
@@ -1456,7 +1456,7 @@ describe('newContactDocument', () => {
   })
 
   it('gives two people added by email alone two records, each filed under their domain', () => {
-    const emailOnly = { organization: '', role: '', note: '', ownerName: 'Juhan', now: NOW }
+    const emailOnly = { organization: '', role: '', note: '', ownerName: 'Jules', now: NOW }
     const jane = newContactDocument({ ...emailOnly, name: 'jane@mgb.org' })!
     const bob = newContactDocument({ ...emailOnly, name: 'bob@acme.com' })!
     expect(jane._id).not.toBe(bob._id)
@@ -1466,8 +1466,8 @@ describe('newContactDocument', () => {
       organization: 'mgb.org',
       status: 'new',
       warmth: 'unknown',
-      owner: 'Juhan',
-      sourceNotes: 'Added from Slack by Juhan on 2026-09-24',
+      owner: 'Jules',
+      sourceNotes: 'Added from Slack by Jules on 2026-09-24',
     })
     expect(bob.organization).toBe('acme.com')
     for (const doc of [jane, bob]) expect(JSON.stringify(doc)).not.toMatch(/jane@|bob@/)
@@ -1483,7 +1483,7 @@ describe('newContactDocument', () => {
   })
 
   it('writes nothing when there is neither a name nor an organisation to file it under', () => {
-    const empty = { name: '', organization: '', role: '', note: '', ownerName: 'Juhan', now: NOW }
+    const empty = { name: '', organization: '', role: '', note: '', ownerName: 'Jules', now: NOW }
     expect(newContactDocument(empty)).toBeNull()
     // "prep the CIO" — a title alone is nobody.
     expect(newContactDocument({ ...empty, role: 'CIO', note: 'met at HIMSS' })).toBeNull()
@@ -1509,7 +1509,7 @@ describe('somebody not on file whom the requester already knows', () => {
       research: [],
       offers: [],
       evidence: [],
-      senderName: 'Juhan',
+      senderName: 'Jules',
       includeContactDetails: false,
       now,
       request,

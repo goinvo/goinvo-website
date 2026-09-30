@@ -136,7 +136,7 @@ export function decodeActionValue(
  * have answered is offered as "still worth doing?" instead of to a third.
  *
  * Every entry is keyed by Slack id, never by name. A name is whatever Slack's
- * display name is this month ("Shirley Wu"), and the roster says "Shirley";
+ * display name is this month ("Shay Wu"), and the roster says "Shay";
  * excluding the passer by a name parsed out of a sentence missed exactly the
  * person it was for, and asked her about the task she had just declined.
  *
@@ -702,7 +702,7 @@ export function digestNotificationText(input: {
 /**
  * Ask people to say which name is theirs, once.
  *
- * Operations are owned by a name ("Juhan"); Slack knows a user id. Nothing can
+ * Operations are owned by a name ("Jules"); Slack knows a user id. Nothing can
  * @-mention the right person until those are linked, and guessing from display
  * names is how a bot pings the wrong colleague.
  *
@@ -735,13 +735,13 @@ export function buildIdentityPromptBlocks(unmappedOwners: string[]): Block[] {
 
 // ── Money: the runway question ──────────────────────────────────────────────
 
-/** "11 Jan 2027": the studio's calendar, the year only when it is not this one. No weekday on a far-off date. */
+/** "25 Jan 2027": the studio's calendar, the year only when it is not this one. No weekday on a far-off date. */
 export function runwayDay(date: string | null | undefined, now: Date): string {
   return formatSlackDay(String(date || ''), now).replace(/^[A-Z][a-z]{2} /, '')
 }
 
 /**
- * The runway as its two facts — "4.5 months" and "11 Jan 2027" — or null when
+ * The runway as its two facts — "5 months" and "25 Jan 2027" — or null when
  * there is no future date to state. Months are rough on purpose (runway.ts).
  */
 export function runwayParts(input: { months?: number | null; certainUntil?: string | null }, now: Date): { months: string; day: string } | null {
@@ -751,7 +751,7 @@ export function runwayParts(input: { months?: number | null; certainUntil?: stri
   return { months: formatMonths(months), day }
 }
 
-/** "4.5 months (to 11 Jan 2027)", for receipts and answers. '' with no future date. */
+/** "5 months (to 25 Jan 2027)", for receipts and answers. '' with no future date. */
 export function runwayFacts(input: { months?: number | null; certainUntil?: string | null }, now: Date): string {
   const parts = runwayParts(input, now)
   return parts ? `${parts.months} (to ${parts.day})` : ''
@@ -763,7 +763,7 @@ export function runwayFacts(input: { months?: number | null; certainUntil?: stri
  * Money is the input the whole strategy hangs off, so Marqueta asks, in the
  * channel, at the moment the number is about to stop being true — and states
  * the number rather than the bin: "Rebuild" invites the reader to assume
- * somebody decided it; "4.5 months, to 11 Jan 2027" can be argued with, and
+ * somebody decided it; "5 months, to 25 Jan 2027" can be argued with, and
  * being argued with is the point.
  *
  * The check-in's reason says WHY it is asking (stale, close to the line, a
@@ -1347,7 +1347,7 @@ export function buildTaskAttachment(
       ? [button(MARKETING_ACTION.claim, LABEL.TAKE, value, true), details]
       : [button(MARKETING_ACTION.claim, LABEL.TAKE, value, true), details, button(MARKETING_ACTION.decline, LABEL.NOT_ME, value)]
 
-  // A suggestion must read as a suggestion. Showing "Owner: Juhan" for someone
+  // A suggestion must read as a suggestion. Showing "Owner: Jules" for someone
   // who never accepted the work makes the board report commitment that does
   // not exist, and hides the fact that nobody has picked it up.
   const suggested = clean(task.suggestedOwner)

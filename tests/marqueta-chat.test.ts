@@ -19,7 +19,7 @@ import { decodeSlackText } from '@/lib/marketing/slackText'
 
 import { expectValidSlackBlocks } from './support/slackBlocks'
 
-const BOT = 'U0B4DQ2B5D1'
+const BOT = 'U0000000001'
 
 describe('addressesMarqueta', () => {
   it('knows when she is spoken to rather than merely present', () => {
@@ -30,7 +30,7 @@ describe('addressesMarqueta', () => {
   it('is not fooled by someone else being mentioned', () => {
     // Answering when a colleague is tagged is the fastest way to become the
     // thing everyone mutes.
-    expect(addressesMarqueta('<@U05SDK0J8QP> can you look at this?', BOT)).toBe(false)
+    expect(addressesMarqueta('<@U0000000002> can you look at this?', BOT)).toBe(false)
   })
 
   it('stays silent rather than guessing when it does not know its own id', () => {
@@ -286,7 +286,7 @@ describe('stripAddress', () => {
   })
 
   it('leaves a colleague alone when it knows her id', () => {
-    expect(stripAddress(`<@${BOT}> ask <@U05SDK0J8QP> about it`, BOT)).toBe('ask <@U05SDK0J8QP> about it')
+    expect(stripAddress(`<@${BOT}> ask <@U0000000002> about it`, BOT)).toBe('ask <@U0000000002> about it')
   })
 
   it('does not eat the name mid-sentence or a possessive', () => {
@@ -691,7 +691,7 @@ describe('parseMarquetaIntent — availability traps', () => {
       expect(kindOf(text), text).toBe('availability')
     }
     // Ordinary uses of the same words never reach the path that writes.
-    for (const text of ['I’m off to call Jane tomorrow', 'I’m out of ideas', 'I’m out with 2 kids', 'Eric is off Friday', 'we should be out at Town Day with a table']) {
+    for (const text of ['I’m off to call Jane tomorrow', 'I’m out of ideas', 'I’m out with 2 kids', 'Ezra is off Friday', 'we should be out at Town Day with a table']) {
       expect(kindOf(text), text).not.toBe('availability')
     }
   })
@@ -987,9 +987,9 @@ describe('the new intents', () => {
 
   it('answers a question about one of her topics before reading a time-off word in it', () => {
     // These used to be read as the asker saying they were away.
-    expect(parseMarquetaIntent('what does the pipeline look like with Eric away?').kind).toBe('pipeline')
+    expect(parseMarquetaIntent('what does the pipeline look like with Ezra away?').kind).toBe('pipeline')
     expect(parseMarquetaIntent('who’s away this week?').kind).toBe('week')
-    expect(parseMarquetaIntent('how’s the runway with Juhan on holiday?').kind).toBe('runway')
+    expect(parseMarquetaIntent('how’s the runway with Jules on holiday?').kind).toBe('runway')
     // A statement is still a statement, and a question with no topic still goes to availability (which asks back).
     expect(parseMarquetaIntent('I’m away next week').kind).toBe('availability')
     expect(parseMarquetaIntent('away next week').kind).toBe('availability')
@@ -1008,7 +1008,7 @@ describe.skipIf(!process.env.SLACK_BOT_TOKEN)('replay check — #marketing histo
   const OLD_NAME_ADDRESS = /^\s*(?:(?:hey|hi|hello|hiya|ok|okay|yo)[\s,!]+)?(?:@marqueta\b(?![’'])|marqueta\s*(?:[,:!?]|$))/i
 
   it('prints every message the new rule addresses that the old one did not', async () => {
-    const channel = process.env.SLACK_REPLAY_CHANNEL_ID || 'CE4AA4BHP'
+    const channel = process.env.SLACK_REPLAY_CHANNEL_ID || 'C0MKTGEN000'
     let body: { ok?: boolean; error?: string; messages?: { text?: string }[] }
     try {
       const response = await fetch(`https://slack.com/api/conversations.history?channel=${channel}&limit=1000`, {

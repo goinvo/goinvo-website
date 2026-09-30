@@ -67,7 +67,7 @@ function touches(n: number, opts: { at?: string; statusAfter?: string; by?: stri
     interactions: [
       {
         at: opts.at || '2026-09-10T15:00:00Z',
-        by: opts.by || 'Juhan',
+        by: opts.by || 'Jules',
         channel: 'phone',
         statusAfter: opts.statusAfter || 'contacted',
         ...(opts.value !== undefined ? { value: opts.value } : {}),
@@ -83,7 +83,7 @@ function pulse(contacts: PulseContact[], now = SEPT, offset = 0): OutreachPulse 
 function snapshot(overrides: Partial<Parameters<typeof buildStrategySnapshot>[0]> = {}): StrategySnapshot {
   return buildStrategySnapshot({
     now: SEPT,
-    runwaySummary: '3.5 months of certain runway (to 11 Jan 2027) — Rebuild.',
+    runwaySummary: '3.5 months of certain runway (to 25 Jan 2027) — Rebuild.',
     postureId: 'rebuild',
     thisMonth: pulse(touches(2)),
     lastMonth: pulse(touches(6, { at: '2026-08-12T15:00:00Z' }), SEPT, -1),
@@ -100,10 +100,10 @@ function snapshot(overrides: Partial<Parameters<typeof buildStrategySnapshot>[0]
 const allText = (blocks: Block[]) => JSON.stringify(blocks)
 
 /** The runway as `readRunway` returns it, from a stored record. Confirmed 1 Aug by default: stale on 24 Sep. */
-function runwayState(stored: StoredPosture = { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-01T00:00:00Z' } }, now = SEPT): MoneyRunway {
+function runwayState(stored: StoredPosture = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-01T00:00:00Z' } }, now = SEPT): MoneyRunway {
   return { summary: describeRunway(stored, now), checkIn: runwayCheckIn(stored, now), resolved: resolveRunwayPosture(stored, now) }
 }
-const freshRunway = () => runwayState({ runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-20T00:00:00Z' } })
+const freshRunway = () => runwayState({ runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-20T00:00:00Z' } })
 const buttons = (blocks: Block[]) =>
   blocks.flatMap((block) => [...(block.elements || []), ...(block.accessory ? [block.accessory] : [])]).filter((element) => element.type === 'button')
 const labels = (blocks: Block[]) => buttons(blocks).map((button) => button.text.text)
@@ -186,12 +186,12 @@ describe('strategyReviewDue', () => {
 
   it('stays quiet after a recent answer, and says when it will ask again', () => {
     const check = strategyReviewDue(
-      { confirmedAt: '2026-09-10T12:00:00Z', confirmedBy: 'Juhan', verdict: 'stillRight', postureAtReview: 'rebuild' },
+      { confirmedAt: '2026-09-10T12:00:00Z', confirmedBy: 'Jules', verdict: 'stillRight', postureAtReview: 'rebuild' },
       SEPT,
       'rebuild',
     )
     expect(check.due).toBe(false)
-    expect(check.reason).toBe('Checked on Thu 10 Sep by Juhan; the next check is due Sat 10 Oct, sooner if the runway crosses a line.')
+    expect(check.reason).toBe('Checked on Thu 10 Sep by Jules; the next check is due Sat 10 Oct, sooner if the runway crosses a line.')
   })
 
   it('asks again once the answer is as old as the runway stale line', () => {
@@ -239,23 +239,23 @@ describe('strategyReviewDue', () => {
   })
 
   it('comes due on the day the runway crosses a line, not a month later', () => {
-    // Confirmed on 5 Oct against Rebuild, runway to 11 Jan 2027. The runway
+    // Confirmed on 19 Oct against Rebuild, runway to 25 Jan 2027. The runway
     // itself is fresh and not urgent all week — only the posture moves.
     //
     // The flip is computed, not assumed: 3 months (the Survival line) before
-    // 11 Jan 2027 at 30.44 days a month lands at 2026-10-11T16:19:12Z. The
-    // spec's dates (not due on the 10th, due on the 13th) straddle it as
+    // 25 Jan 2027 at 30.44 days a month lands at 2026-10-25T16:19:12Z. The
+    // spec's dates, moved 14 days with the runway date (not due on the 24th, due on the 27th), straddle it as
     // written, so no adjustment was needed.
-    const stored: StoredPosture = { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-10-05T12:00:00Z' } }
-    const review = { confirmedAt: '2026-10-05T12:00:00Z', verdict: 'stillRight' as const, postureAtReview: 'rebuild' }
+    const stored: StoredPosture = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-10-19T12:00:00Z' } }
+    const review = { confirmedAt: '2026-10-19T12:00:00Z', verdict: 'stillRight' as const, postureAtReview: 'rebuild' }
     const postureOn = (at: Date) => postureForRunwayMonths(monthsOfRunway(stored.runway!.certainUntil, at)!)
 
-    const tenth = new Date('2026-10-10T12:00:00Z')
-    const thirteenth = new Date('2026-10-13T12:00:00Z')
+    const tenth = new Date('2026-10-24T12:00:00Z')
+    const thirteenth = new Date('2026-10-27T12:00:00Z')
     expect(postureOn(tenth)).toBe('rebuild')
     expect(postureOn(thirteenth)).toBe('survival')
-    expect(postureOn(new Date('2026-10-11T16:19:00Z'))).toBe('rebuild')
-    expect(postureOn(new Date('2026-10-11T16:20:00Z'))).toBe('survival')
+    expect(postureOn(new Date('2026-10-25T16:19:00Z'))).toBe('rebuild')
+    expect(postureOn(new Date('2026-10-25T16:20:00Z'))).toBe('survival')
 
     expect(strategyReviewDue(review, tenth, postureOn(tenth)).due).toBe(false)
     const due = strategyReviewDue(review, thirteenth, postureOn(thirteenth))
@@ -338,14 +338,14 @@ describe('wins are moments a contact BECAME won, not touches with a client alrea
     const interested = buildQuickCallLog({
       contact: wonInAugust,
       outcomeKey: 'interested',
-      by: 'Juhan',
+      by: 'Jules',
       now: new Date('2026-09-05T15:00:00Z'),
       key: 'sep-5',
     })
     const meeting = buildQuickCallLog({
       contact: wonInAugust,
       outcomeKey: 'meeting',
-      by: 'Juhan',
+      by: 'Jules',
       now: new Date('2026-09-15T15:00:00Z'),
       key: 'sep-15',
     })
@@ -512,7 +512,7 @@ describe('buildStrategySnapshot', () => {
     expect(snap.monthKey).toBe('2026-09')
     expect(snap.postureTitle).toBe('Rebuild')
     expect(snap.postureStrategy).toMatch(/outreach still leads/i)
-    expect(snap.money).toContain('11 Jan 2027')
+    expect(snap.money).toContain('25 Jan 2027')
     expect(snap.pipeline.inMeeting).toBe(1)
     expect(snap.pipeline.estimatedValue).toBe(120000)
   })
@@ -602,7 +602,7 @@ describe('buildMoneyAndDirectionBlocks', () => {
     expectValidSlackBlocks(blocks)
     expect(blocks.every((block) => String(block.block_id).startsWith('mq_money'))).toBe(true)
     expect(blocks[0].text.text).toBe(
-      '*Money and direction*\nStill 3.5 months of certain runway (to 11 Jan 2027), or has that moved?\n_Last confirmed 54 days ago._',
+      '*Money and direction*\nStill 4 months of certain runway (to 25 Jan 2027), or has that moved?\n_Last confirmed 54 days ago._',
     )
     expect(labels(blocks)).toEqual([LABEL.RUNWAY_OK, LABEL.RUNWAY_SIGNED, LABEL.RUNWAY_CHANGED])
     expect(buttons(blocks).some((button) => button.style)).toBe(false)
@@ -641,13 +641,13 @@ describe('buildMoneyAndDirectionBlocks', () => {
 
   it('asks about a disagreement only while the hand-set posture is winning', () => {
     // Set by hand after the runway was confirmed: the plan is following the setting, not the date.
-    const manual = runwayState({ posture: 'survival', setAt: '2026-09-22T00:00:00Z', runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-20T00:00:00Z' } })
+    const manual = runwayState({ posture: 'survival', setAt: '2026-09-22T00:00:00Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-20T00:00:00Z' } })
     expect(manual.resolved.source).toBe('manual')
     const asked = buildMoneyAndDirectionBlocks({ now: SEPT, runway: manual, snapshot: snapshot(), strategyDue: notDue })
     expect(allText(asked)).toContain('but the posture is set to Survival')
     expect(questions(asked)).toBe(1)
     // Confirmed after the setting: the date already wins, so nothing to ask on Monday.
-    const settled = runwayState({ posture: 'survival', setAt: '2026-09-18T00:00:00Z', runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-20T00:00:00Z' } })
+    const settled = runwayState({ posture: 'survival', setAt: '2026-09-18T00:00:00Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-20T00:00:00Z' } })
     expect(settled.resolved.source).toBe('runway')
     expect(buildMoneyAndDirectionBlocks({ now: SEPT, runway: settled, snapshot: snapshot(), strategyDue: notDue })).toEqual([])
   })
@@ -700,7 +700,7 @@ describe('money receipts — what a press leaves where its question was', () => 
     })
     expectValidSlackBlocks(blocks)
     expect(blocks[0]).toMatchObject({ block_id: 'mq_money_receipt' })
-    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@U1> · Thu 24 Sep — 3.5 months (to 11 Jan 2027).')
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@U1> · Thu 24 Sep — 4 months (to 25 Jan 2027).')
     expect(blocks[1].elements.map((element: Block) => [element.text.text, element.action_id])).toEqual([
       [LABEL.RUNWAY_CHANGED, MARKETING_ACTION.runwayUpdate],
     ])
@@ -713,16 +713,16 @@ describe('money receipts — what a press leaves where its question was', () => 
 
   it('never asks the runway again straight after it was answered', () => {
     // Even if the re-read still says due (a stale read, a disagreement), the answer just given stands.
-    const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: RUNWAY_DUE, receipt: { kind: 'runwayUpdated', who: 'Juhan & *co*' } })
+    const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: RUNWAY_DUE, receipt: { kind: 'runwayUpdated', who: 'Jules & *co*' } })
     // A name that is not a mention is escaped and kept out of the formatting around it.
-    expect(blocks[0].text.text).toBe(':white_check_mark: Runway updated by Juhan &amp; co · Thu 24 Sep — now 3.5 months (to 11 Jan 2027).')
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway updated by Jules &amp; co · Thu 24 Sep — now 4 months (to 25 Jan 2027).')
     expect(labels(blocks)).toEqual([LABEL.RUNWAY_CHANGED])
   })
 
   it('signed work says what was signed and where the runway now reaches', () => {
     const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: freshRunway(), receipt: { kind: 'runwaySigned', who: '<@U2>', label: 'SoW — Acme' } })
     expect(blocks[0].text.text).toBe(
-      ':white_check_mark: Signed work recorded by <@U2> · Thu 24 Sep (SoW — Acme) — runway now 3.5 months (to 11 Jan 2027).',
+      ':white_check_mark: Signed work recorded by <@U2> · Thu 24 Sep (SoW — Acme) — runway now 4 months (to 25 Jan 2027).',
     )
   })
 
@@ -743,11 +743,11 @@ describe('money receipts — what a press leaves where its question was', () => 
     const blocks = buildMoneyAndDirectionBlocks({
       now: SEPT,
       runway: freshRunway(),
-      receipt: { kind: 'rethink', who: '<@U1>', suggestedTo: 'Juhan', decisionTaskId: 'marketingOperation.rethink' },
+      receipt: { kind: 'rethink', who: '<@U1>', suggestedTo: 'Jules', decisionTaskId: 'marketingOperation.rethink' },
       studioBaseUrl: 'https://www.goinvo.com',
     })
     expectValidSlackBlocks(blocks)
-    expect(blocks[0].text.text).toBe('<@U1> asked for a rethink — it’s a decision on This week, suggested to Juhan.')
+    expect(blocks[0].text.text).toBe('<@U1> asked for a rethink — it’s a decision on This week, suggested to Jules.')
     expect(blocks[1].elements[0]).toMatchObject({
       text: { text: 'Open This week' },
       url: 'https://www.goinvo.com/studio/marketing?view=thisWeek&task=marketingOperation.rethink',
@@ -781,7 +781,7 @@ describe('money receipts — what a press leaves where its question was', () => 
 })
 
 describe('answers — moneyAnswer, strategyAnswer, pipelineAnswer', () => {
-  const week = summarizeOutreach(touches(3, { by: 'Eric Benoit', at: '2026-09-22T12:00:00Z' }), {
+  const week = summarizeOutreach(touches(3, { by: 'Ezra Bennet', at: '2026-09-22T12:00:00Z' }), {
     from: '2026-09-21T00:00:00Z',
     to: '2026-09-28T00:00:00Z',
     now: SEPT,
@@ -790,7 +790,7 @@ describe('answers — moneyAnswer, strategyAnswer, pipelineAnswer', () => {
   it('"runway": the number first, the pipeline, and the check-in’s own buttons when one is due', () => {
     const answer = moneyAnswer({ now: SEPT, runway: runwayState(), snapshot: snapshot() })
     expectAnswerAnatomy(answer)
-    expect(answer.text).toBe('*Runway* — 3.5 months of certain runway, to 11 Jan 2027 (Rebuild)')
+    expect(answer.text).toBe('*Runway* — 4 months of certain runway, to 25 Jan 2027 (Rebuild)')
     expect(answer.blocks[0].text.text).toContain('Pipeline: 2 in meeting/opportunity, ~$120,000 estimated · Won this month: none')
     expect(labels(answer.blocks)).toEqual([LABEL.RUNWAY_OK, LABEL.RUNWAY_SIGNED, LABEL.RUNWAY_CHANGED])
     // The question carries the group's id, so a press redraws it in place.
@@ -818,7 +818,7 @@ describe('answers — moneyAnswer, strategyAnswer, pipelineAnswer', () => {
       '*Runway says Rebuild: outreach leads. 2 touches logged this month — is outreach getting the hours it needs?*',
     )
     const text = answer.blocks[0].text.text
-    expect(text).toContain('Runway: 3.5 months of certain runway, to 11 Jan 2027 (Rebuild)')
+    expect(text).toContain('Runway: 4 months of certain runway, to 25 Jan 2027 (Rebuild)')
     expect(text).toContain('Pipeline: 2 in meeting/opportunity')
     // Midnight UTC on the 20th is the evening of the 19th in Boston, where the studio reads it.
     expect(text).toContain('Decision gates: Gate: keep the pre-mortem offer? — overdue since Sat 19 Sep')
@@ -828,14 +828,14 @@ describe('answers — moneyAnswer, strategyAnswer, pipelineAnswer', () => {
   })
 
   it('"strategy" when it is not due says when it will be, and ends on a hint', () => {
-    const answer = strategyAnswer({ now: SEPT, snapshot: snapshot(), due: { due: false, reason: 'Checked on Thu 10 Sep by Juhan.' } })
+    const answer = strategyAnswer({ now: SEPT, snapshot: snapshot(), due: { due: false, reason: 'Checked on Thu 10 Sep by Jules.' } })
     expectAnswerAnatomy(answer)
     expect(buttons(answer.blocks)).toHaveLength(0)
-    expect(answer.blocks[0].text.text).toContain('_Checked on Thu 10 Sep by Juhan._')
+    expect(answer.blocks[0].text.text).toContain('_Checked on Thu 10 Sep by Jules._')
   })
 
   it('"pipeline": what is live first, counts only — never who logged what — and where to go next', () => {
-    const month = pulse(touches(4, { by: 'Eric Benoit', at: '2026-09-22T12:00:00Z' }))
+    const month = pulse(touches(4, { by: 'Ezra Bennet', at: '2026-09-22T12:00:00Z' }))
     const answer = pipelineAnswer({
       week,
       snapshot: { thisMonth: month, pipeline: summarizePipeline([{ status: 'opportunity', estimatedValue: 5000, interactions: null }], month) },
@@ -846,7 +846,7 @@ describe('answers — moneyAnswer, strategyAnswer, pipelineAnswer', () => {
     expect(text).toContain('Outreach this week: 3 touches')
     expect(text).toContain('This month: 4 touches')
     expect(text).toContain('Won this month: none')
-    expect(text).not.toContain('Eric')
+    expect(text).not.toContain('Ezra')
     expect(answer.blocks.at(-1)!.elements[0].text).toBe('`Marqueta, my calls` shows who to ring')
   })
 
@@ -887,7 +887,7 @@ describe('legacy answer texts (kept until the conversation code moves to the ans
 
   it('answers "runway" with the runway, any disagreement, the check-in and the pipeline', () => {
     const text = moneyAnswerText({
-      runwaySummary: '3.5 months of certain runway (to 11 Jan 2027) — Rebuild.',
+      runwaySummary: '3.5 months of certain runway (to 25 Jan 2027) — Rebuild.',
       disagreement: 'The runway date works out to 3.5 months (Rebuild), but the posture is set to Survival.',
       checkInLine: 'AT&T was marked won on 20 Sep 2026 — did it extend the runway?',
       pipeline: { inMeeting: 1, inOpportunity: 2, estimatedValue: 1234567.4, wonThisMonth: 1, wonValueThisMonth: 40000 },
@@ -914,12 +914,12 @@ describe('legacy answer texts (kept until the conversation code moves to the ans
   })
 
   it('answers "pipeline" with counts and never a leaderboard', () => {
-    const week = summarizeOutreach(touches(3, { by: 'Eric Benoit', at: '2026-09-22T12:00:00Z' }), {
+    const week = summarizeOutreach(touches(3, { by: 'Ezra Bennet', at: '2026-09-22T12:00:00Z' }), {
       from: '2026-09-21T00:00:00Z',
       to: '2026-09-28T00:00:00Z',
       now: SEPT,
     })
-    const month = pulse(touches(4, { by: 'Eric Benoit', at: '2026-09-22T12:00:00Z' }))
+    const month = pulse(touches(4, { by: 'Ezra Bennet', at: '2026-09-22T12:00:00Z' }))
     const text = pipelineAnswerText(
       week,
       month,
@@ -929,7 +929,7 @@ describe('legacy answer texts (kept until the conversation code moves to the ans
     expect(text).toContain('Outreach this week: 3 touches')
     expect(text).toContain('This month: 4 touches')
     expect(text).toContain('~$5,000 estimated')
-    expect(text).not.toContain('Eric')
+    expect(text).not.toContain('Ezra')
   })
 
   it('keeps every answer inside one Slack section and escapes everything it is handed', () => {
@@ -959,7 +959,7 @@ describe('buildStrategyDecisionOperation', () => {
   it('files one board decision per month, suggested to the person who asked', () => {
     const raw = buildStrategyDecisionOperation({
       monthKey: '2026-10',
-      personName: 'Juhan',
+      personName: 'Jules',
       now,
       priorReview: null,
       question: 'Runway says Survival: outreach leads. 2 touches logged this month — is outreach getting the hours it needs?',
@@ -986,29 +986,29 @@ describe('buildStrategyDecisionOperation', () => {
   })
 
   it('suggests, never assigns — pressing "rethink" is not volunteering to rewrite the plan', () => {
-    const raw = buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Juhan', now, priorReview: null })
-    expect(raw.suggestedOwner).toBe('Juhan')
+    const raw = buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Jules', now, priorReview: null })
+    expect(raw.suggestedOwner).toBe('Jules')
     expect(raw).not.toHaveProperty('ownerName')
     const op = normalizeMarketingOperationInput(raw)
-    expect(op.suggestedOwner).toBe('Juhan')
+    expect(op.suggestedOwner).toBe('Jules')
     expect(op.ownerName).toBe('')
   })
 
   it('is the same document however many times the button is pressed', () => {
     const first = normalizeMarketingOperationInput(
-      buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Juhan', now, priorReview: null }),
+      buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Jules', now, priorReview: null }),
     )
     const retry = normalizeMarketingOperationInput(
       buildStrategyDecisionOperation({
         monthKey: '2026-10',
-        personName: 'Eric',
+        personName: 'Ezra',
         now: new Date(now.getTime() + 60_000),
         priorReview: null,
       }),
     )
     expect(retry._id).toBe(first._id)
     const nextMonth = normalizeMarketingOperationInput(
-      buildStrategyDecisionOperation({ monthKey: '2026-11', personName: 'Juhan', now, priorReview: null }),
+      buildStrategyDecisionOperation({ monthKey: '2026-11', personName: 'Jules', now, priorReview: null }),
     )
     expect(nextMonth._id).not.toBe(first._id)
   })
@@ -1021,18 +1021,18 @@ describe('buildStrategyDecisionOperation', () => {
     // showed no rethink at all.
     const september: StrategyReviewRecord = {
       confirmedAt: '2026-09-07T13:00:00Z',
-      confirmedBy: 'Eric',
+      confirmedBy: 'Ezra',
       verdict: 'stillRight',
       monthKey: '2026-09',
       postureAtReview: 'rebuild',
     }
     const first = normalizeMarketingOperationInput(
-      buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Juhan', now, priorReview: september }),
+      buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Jules', now, priorReview: september }),
     )
     // What the 5 Oct press recorded, and what the 13 Oct press reads first.
     const fifth: StrategyReviewRecord = {
       confirmedAt: now.toISOString(),
-      confirmedBy: 'Juhan',
+      confirmedBy: 'Jules',
       verdict: 'rethink',
       monthKey: '2026-10',
       postureAtReview: 'rebuild',
@@ -1042,7 +1042,7 @@ describe('buildStrategyDecisionOperation', () => {
     expect(strategyReviewDue(fifth, thirteenth, 'survival')).toMatchObject({ due: true })
 
     const second = normalizeMarketingOperationInput(
-      buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Eric', now: thirteenth, priorReview: fifth }),
+      buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Ezra', now: thirteenth, priorReview: fifth }),
     )
     expect(second._id).not.toBe(first._id)
     expect(second.sourceKey).toMatch(/^strategy-review\/2026-10\//)
@@ -1050,7 +1050,7 @@ describe('buildStrategyDecisionOperation', () => {
     for (const op of [first, second]) expect(op.sourceKey.startsWith('strategy-review/')).toBe(true)
     // And it says why it is not a duplicate of the one that was settled.
     // In the day Slack prints everywhere else — never an always-on year.
-    expect(second.summary).toContain('The last answer was “needs a rethink”, on Mon 5 Oct by Juhan.')
+    expect(second.summary).toContain('The last answer was “needs a rethink”, on Mon 5 Oct by Jules.')
     expect(second.summary).not.toMatch(/on \w+ \d+ \w+ 2026/)
   })
 
@@ -1059,12 +1059,12 @@ describe('buildStrategyDecisionOperation', () => {
     // the same check — and the same _id.
     const prior: StrategyReviewRecord = { confirmedAt: '2026-09-07T13:00:00Z', verdict: 'stillRight' }
     const a = normalizeMarketingOperationInput(
-      buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Juhan', now, priorReview: prior }),
+      buildStrategyDecisionOperation({ monthKey: '2026-10', personName: 'Jules', now, priorReview: prior }),
     )
     const b = normalizeMarketingOperationInput(
       buildStrategyDecisionOperation({
         monthKey: '2026-10',
-        personName: 'Eric',
+        personName: 'Ezra',
         now: new Date(now.getTime() + 5_000),
         // The same instant, written differently, is the same answer.
         priorReview: { confirmedAt: '2026-09-07T13:00:00.000Z', verdict: 'stillRight' },
@@ -1083,7 +1083,7 @@ describe('buildStrategyDecisionOperation', () => {
     // A verdict the record should not hold is left unsaid.
     const odd = buildStrategyDecisionOperation({
       monthKey: '2026-10',
-      personName: 'Juhan',
+      personName: 'Jules',
       now,
       priorReview: { confirmedAt: '2026-10-01T00:00:00Z', verdict: 'maybe' as never },
     })

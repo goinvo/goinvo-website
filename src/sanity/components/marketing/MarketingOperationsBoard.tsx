@@ -54,7 +54,7 @@ const firstNameKey = (value: unknown) => nameKey(value).split(' ')[0] || ''
 
 /**
  * The one name in `names` that a website team member's title is, by first
- * name — "Juhan Sonin" is "Juhan" — or '' when none is, or when more than one
+ * name — "Jules Soren" is "Jules" — or '' when none is, or when more than one
  * is (two Erics on the board: guessing would credit the wrong colleague).
  */
 function nameForTitle(title: unknown, names: string[]): string {
@@ -78,18 +78,18 @@ function nameForTitle(title: unknown, names: string[]): string {
  *
  * And the ROSTER's names (`roster`, from `marketingTeamAvailability`), not the
  * website's team pages. Those are titled with full names, so offering them
- * put "Juhan" and "Juhan Sonin" side by side, and picking the second split one
+ * put "Jules" and "Jules Soren" side by side, and picking the second split one
  * person into two for every Slack surface: Slack resolves a presser only to a
  * roster name, exactly. A team page's title is used only to find a name here
  * it unambiguously belongs to (see `deskOwnerPatch`).
  *
  * A team member nobody on the board has a name for yet is still offered, by
  * first name — the way the roster, the one-time setup and every Slack surface
- * name people ("Eric", "Jon"). The roster only ever holds people who already
+ * name people ("Ezra", "Joss"). The roster only ever holds people who already
  * linked, and linking was offered only to people who already owned work, so
  * offering team pages only while the roster was empty dropped half the team
- * from this select the day the first person linked: nobody could hand Eric or
- * Jon anything from the Studio. A first name two team pages share is offered
+ * from this select the day the first person linked: nobody could hand Ezra or
+ * Joss anything from the Studio. A first name two team pages share is offered
  * as the full title instead — a guess would credit the wrong colleague.
  */
 export function deskOwnerOptions(items: MarketingOperation[], owners: OwnerOption[], roster: string[] = []): string[] {
@@ -119,7 +119,7 @@ export function deskOwnerOptions(items: MarketingOperation[], owners: OwnerOptio
 
 /**
  * The option the select shows for an owner: the offered spelling of their
- * name ("Juhan" for a task that says "juhan"), so a task is never displayed as
+ * name ("Jules" for a task that says "jules"), so a task is never displayed as
  * "Nobody has it" just because of how its owner's name was typed.
  */
 export function deskOwnerValue(ownerName: string | undefined, options: string[]): string {
@@ -129,7 +129,7 @@ export function deskOwnerValue(ownerName: string | undefined, options: string[])
 }
 
 /**
- * "Eric passed on this — who should pick it up?": the question the Slack
+ * "Ezra passed on this — who should pick it up?": the question the Slack
  * "Not me" leaves, and the one its "I’ll take it" clears (`take` in
  * taskActions.server.ts matches the same phrase).
  */

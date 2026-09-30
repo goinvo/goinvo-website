@@ -1,7 +1,7 @@
 /**
  * Outreach core — warm-network activation as part of the marketing suite.
  *
- * The flow ("Juhan pastes names, out comes a call plan"):
+ * The flow ("Jules pastes names, out comes a call plan"):
  *   1. INTAKE  — buildIntakePrompts() asks Claude to parse a messy pasted list
  *      ("Name — company — how we know them", any format) into structured
  *      contacts; normalizeParsedContacts() validates + dedupes against existing

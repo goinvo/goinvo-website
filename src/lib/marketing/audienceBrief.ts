@@ -197,8 +197,8 @@ export function groupDecisionsByOwner(
   const others: BriefDecision[] = []
   for (const decision of decisions) {
     const owner = String(decision.ownerName || '').trim().toLowerCase()
-    // Match on the first name too: owners are stored as "Juhan", but a record
-    // written as "Juhan Sonin" is the same person and must not fall through.
+    // Match on the first name too: owners are stored as "Jules", but a record
+    // written as "Jules Soren" is the same person and must not fall through.
     const isMine = target !== '' && (owner === target || owner.split(/\s+/)[0] === target)
     ;(isMine ? mine : others).push(decision)
   }
@@ -262,7 +262,7 @@ export type CoverageGap = {
 /**
  * Segments the plan targets but the audience does not contain.
  *
- * Med-device human factors is the live example: it is named in the turnaround
+ * Med-device human factors is the live example: it is named in the outreach
  * plan and has a handful of contacts, so choosing it means cold outreach with
  * no warm entry. Better to see that before committing a quarter to it.
  */

@@ -269,7 +269,7 @@ describe('an accepted Stripe submission is never re-armed', () => {
         _rev: 'rev-1',
         disputeId: 'du_1',
         canRespond: true,
-        notes: [{ authorName: 'Shirley', text: 'Delivered 2026-08-01.' }],
+        notes: [{ authorName: 'Shay', text: 'Delivered 2026-08-01.' }],
       }),
     }))
     vi.doMock('@/lib/shop/reconcile', () => ({
@@ -302,7 +302,7 @@ describe('an accepted Stripe submission is never re-armed', () => {
     }))
 
     const { submitDisputeEvidence } = await import('@/lib/shop/disputeEvidence')
-    const result = await submitDisputeEvidence({ disputeDocId: 'marketingDispute.stripe-du_1', submittedBy: 'shirley' })
+    const result = await submitDisputeEvidence({ disputeDocId: 'marketingDispute.stripe-du_1', submittedBy: 'shay' })
     return { result, unset }
   }
 
@@ -326,12 +326,12 @@ describe('an accepted Stripe submission is never re-armed', () => {
 describe('evidence is assembled from the channel, never sent implicitly', () => {
   it('joins the drafted notes in order with their authors', () => {
     const text = buildEvidenceText([
-      { authorName: 'Shirley', text: 'Poster shipped 2026-08-01.' },
-      { authorName: 'Juhan', text: 'Tracking shows delivered.' },
+      { authorName: 'Shay', text: 'Poster shipped 2026-08-01.' },
+      { authorName: 'Jules', text: 'Tracking shows delivered.' },
     ])
 
-    expect(text).toContain('Shirley: Poster shipped')
-    expect(text.indexOf('Shirley')).toBeLessThan(text.indexOf('Juhan'))
+    expect(text).toContain('Shay: Poster shipped')
+    expect(text.indexOf('Shay')).toBeLessThan(text.indexOf('Jules'))
   })
 
   it('returns nothing when there is nothing drafted', () => {

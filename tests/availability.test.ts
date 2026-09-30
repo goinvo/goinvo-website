@@ -12,9 +12,9 @@ import {
 } from '@/lib/marketing/availability'
 
 const entries: TeamMemberAvailability[] = [
-  { ownerName: 'Juhan', status: 'away', from: '2026-09-01', until: '2026-09-05' },
-  { ownerName: 'Shirley', status: 'reduced', from: '2026-09-01', weeklyHours: 1 },
-  { ownerName: 'Jon', status: 'available' },
+  { ownerName: 'Jules', status: 'away', from: '2026-09-01', until: '2026-09-05' },
+  { ownerName: 'Shay', status: 'reduced', from: '2026-09-01', weeklyHours: 1 },
+  { ownerName: 'Joss', status: 'available' },
 ]
 
 describe('isInForceOn', () => {
@@ -40,54 +40,54 @@ describe('isInForceOn', () => {
 
 describe('statusOn', () => {
   it('reports the status in force on the day', () => {
-    expect(statusOn(entries, 'Juhan', '2026-09-03')).toBe('away')
-    expect(statusOn(entries, 'Juhan', '2026-09-30')).toBe('available')
-    expect(statusOn(entries, 'Shirley', '2026-09-03')).toBe('reduced')
+    expect(statusOn(entries, 'Jules', '2026-09-03')).toBe('away')
+    expect(statusOn(entries, 'Jules', '2026-09-30')).toBe('available')
+    expect(statusOn(entries, 'Shay', '2026-09-03')).toBe('reduced')
   })
 
   it('defaults to available for anyone with no record', () => {
-    expect(statusOn(entries, 'Eric', '2026-09-03')).toBe('available')
+    expect(statusOn(entries, 'Ezra', '2026-09-03')).toBe('available')
     expect(statusOn([], '', '2026-09-03')).toBe('available')
   })
 
   it('matches the owner name case-insensitively', () => {
-    expect(statusOn(entries, 'juhan', '2026-09-03')).toBe('away')
+    expect(statusOn(entries, 'jules', '2026-09-03')).toBe('away')
   })
 })
 
 describe('whoIsAwayOn', () => {
   it('lists only people actually away that day', () => {
-    expect(whoIsAwayOn(entries, '2026-09-03')).toEqual(['Juhan'])
+    expect(whoIsAwayOn(entries, '2026-09-03')).toEqual(['Jules'])
     expect(whoIsAwayOn(entries, '2026-09-30')).toEqual([])
   })
 })
 
 describe('findReassignments', () => {
   const tasks = [
-    { _id: 'a', title: 'Call the top ten', ownerName: 'Juhan' },
-    { _id: 'b', title: 'Publish the article', ownerName: 'Shirley' },
+    { _id: 'a', title: 'Call the top ten', ownerName: 'Jules' },
+    { _id: 'b', title: 'Publish the article', ownerName: 'Shay' },
     { _id: 'c', title: 'Unowned chore' },
   ]
-  const team = ['Juhan', 'Shirley', 'Jon']
+  const team = ['Jules', 'Shay', 'Joss']
 
   it('finds work owned by someone who is away', () => {
     const found = findReassignments({ tasks, entries, team, dateKey: '2026-09-03' })
     expect(found).toHaveLength(1)
     expect(found[0].task._id).toBe('a')
-    expect(found[0].awayOwner).toBe('Juhan')
+    expect(found[0].awayOwner).toBe('Jules')
   })
 
   it('offers only people who are fully available, never the away owner', () => {
     const found = findReassignments({ tasks, entries, team, dateKey: '2026-09-03' })
-    // Shirley is reduced that week, so she is not offered more work.
-    expect(found[0].candidates).toEqual(['Jon'])
+    // Shay is reduced that week, so she is not offered more work.
+    expect(found[0].candidates).toEqual(['Joss'])
   })
 
   it('returns an empty candidate list rather than inventing one', () => {
     const found = findReassignments({
       tasks,
-      entries: [{ ownerName: 'Juhan', status: 'away' }, { ownerName: 'Jon', status: 'away' }],
-      team: ['Juhan', 'Jon'],
+      entries: [{ ownerName: 'Jules', status: 'away' }, { ownerName: 'Joss', status: 'away' }],
+      team: ['Jules', 'Joss'],
       dateKey: '2026-09-03',
     })
     expect(found[0].candidates).toEqual([])
@@ -100,26 +100,26 @@ describe('findReassignments', () => {
 
 describe('hoursForWeek', () => {
   it('gives an away person zero hours', () => {
-    expect(hoursForWeek({ entries, ownerName: 'Juhan', dateKey: '2026-09-03', defaultHours: 4 })).toBe(0)
+    expect(hoursForWeek({ entries, ownerName: 'Jules', dateKey: '2026-09-03', defaultHours: 4 })).toBe(0)
   })
 
   it('uses the stated hours for a reduced week', () => {
-    expect(hoursForWeek({ entries, ownerName: 'Shirley', dateKey: '2026-09-03', defaultHours: 4 })).toBe(1)
+    expect(hoursForWeek({ entries, ownerName: 'Shay', dateKey: '2026-09-03', defaultHours: 4 })).toBe(1)
   })
 
   it('uses a stated allocation even when the person is fully available', () => {
-    // "Juhan does 4h of calls, Shirley does 4h of content" is two AVAILABLE
+    // "Jules does 4h of calls, Shay does 4h of content" is two AVAILABLE
     // people with different budgets, not two reduced ones.
     const allocations = [
-      { ownerName: 'Juhan', status: 'available' as const, weeklyHours: 4 },
-      { ownerName: 'Shirley', status: 'available' as const, weeklyHours: 4 },
+      { ownerName: 'Jules', status: 'available' as const, weeklyHours: 4 },
+      { ownerName: 'Shay', status: 'available' as const, weeklyHours: 4 },
     ]
-    expect(hoursForWeek({ entries: allocations, ownerName: 'Juhan', dateKey: '2026-09-03', defaultHours: 8 })).toBe(4)
-    expect(hoursForWeek({ entries: allocations, ownerName: 'Shirley', dateKey: '2026-09-03', defaultHours: 8 })).toBe(4)
+    expect(hoursForWeek({ entries: allocations, ownerName: 'Jules', dateKey: '2026-09-03', defaultHours: 8 })).toBe(4)
+    expect(hoursForWeek({ entries: allocations, ownerName: 'Shay', dateKey: '2026-09-03', defaultHours: 8 })).toBe(4)
   })
 
   it('falls back to the studio default', () => {
-    expect(hoursForWeek({ entries, ownerName: 'Jon', dateKey: '2026-09-03', defaultHours: 4 })).toBe(4)
+    expect(hoursForWeek({ entries, ownerName: 'Joss', dateKey: '2026-09-03', defaultHours: 4 })).toBe(4)
     // Reduced but with no number given: better the default than a guess of zero.
     expect(
       hoursForWeek({
@@ -272,7 +272,7 @@ describe('parseAvailabilityCommand — the days people actually say', () => {
 
 describe('availabilityDocId', () => {
   it('is deterministic and safe as an id', () => {
-    expect(availabilityDocId('Juhan')).toBe('marketingTeamAvailability.juhan')
+    expect(availabilityDocId('Jules')).toBe('marketingTeamAvailability.jules')
     expect(availabilityDocId('Mary-Ann O’Brien')).toBe('marketingTeamAvailability.mary-ann-o-brien')
     expect(availabilityDocId('')).toBe('marketingTeamAvailability.unknown')
   })

@@ -140,10 +140,10 @@ describe('draftOutreachNote', () => {
       research: [verified('Acme')],
       contacts: [{ organization: 'Acme' }],
     })
-    const note = draftOutreachNote(anonymous[0], 'Shirley')
+    const note = draftOutreachNote(anonymous[0], 'Shay')
     expect(note.startsWith('Hi,')).toBe(true)
     expect(note).toContain('no pitch attached')
-    expect(note.trimEnd().endsWith('— Shirley, GoInvo')).toBe(true)
+    expect(note.trimEnd().endsWith('— Shay, GoInvo')).toBe(true)
   })
 })
 
@@ -190,12 +190,12 @@ describe('the call sheet on This week', () => {
   })
 
   it('signs the draft as whoever is copying it, never a fixed colleague', () => {
-    // It used to sign every draft "— Juhan", whoever sent it.
-    expect(source).not.toContain("'Juhan'")
+    // It used to sign every draft "— Jules", whoever sent it.
+    expect(source).not.toContain("'Jules'")
     expect(source).toContain('const senderName = callSheetSender(explicitSender, currentUser?.name)')
-    expect(callSheetSender(undefined, 'Shirley Xu')).toBe('Shirley')
-    expect(callSheetSender('Eric', 'Shirley Xu')).toBe('Eric')
-    expect(draftOutreachNote(sheet[0], callSheetSender(undefined, 'Shirley Xu')).trimEnd().endsWith('— Shirley, GoInvo')).toBe(true)
+    expect(callSheetSender(undefined, 'Shay Lund')).toBe('Shay')
+    expect(callSheetSender('Ezra', 'Shay Lund')).toBe('Ezra')
+    expect(draftOutreachNote(sheet[0], callSheetSender(undefined, 'Shay Lund')).trimEnd().endsWith('— Shay, GoInvo')).toBe(true)
   })
 
   it('leaves a placeholder, not somebody else’s name, when it has no name to use', () => {

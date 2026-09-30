@@ -157,7 +157,7 @@ const jane: PrepDataContact = {
   segment: 'provider',
   warmth: 'warm',
   status: 'researched',
-  owner: 'Juhan',
+  owner: 'Jules',
   howWeKnow: 'Met at HIMSS 2025',
   email: 'jane.doe@mgb.org',
   phone: '617-555-0100',
@@ -193,7 +193,7 @@ const buttons = (blocks: Block[]) =>
 describe('prepCallFor', () => {
   it('prepares a known contact, with contact details kept OUT of every block', async () => {
     routeOutreach({ prep: prepData() })
-    const reply = await prepCallFor({ text: 'prep Jane Doe', senderName: 'Juhan', now: NOW })
+    const reply = await prepCallFor({ text: 'prep Jane Doe', senderName: 'Jules', now: NOW })
     expect(reply.kind).toBe('outline')
     if (reply.kind !== 'outline') return
     expectValidSlackBlocks(reply.first, { maxBlocks: 15 })
@@ -219,13 +219,13 @@ describe('prepCallFor', () => {
 
   it('passes the typed request through, so "my meeting with Jane tomorrow" is meeting prep', async () => {
     routeOutreach({ prep: prepData() })
-    const typed = await prepCallFor({ text: 'prep me for my meeting with Jane Doe tomorrow', senderName: 'Juhan', now: NOW })
+    const typed = await prepCallFor({ text: 'prep me for my meeting with Jane Doe tomorrow', senderName: 'Jules', now: NOW })
     expect(typed.kind === 'outline' && typed.text).toBe('Meeting prep: Jane Doe (Mass General Brigham)')
 
     // From a button there is no request: Jane's own record decides.
     const pressed = await prepCallFor({
       ref: decodeContactRef(encodeContactRef({ contactId: 'marketingContact.jane' })),
-      senderName: 'Juhan',
+      senderName: 'Jules',
       now: NOW,
     })
     expect(pressed.kind === 'outline' && pressed.text).toBe('Call prep: Jane Doe (Mass General Brigham)')
@@ -233,7 +233,7 @@ describe('prepCallFor', () => {
 
   it('prepares an organisation around its best contact, with a Log button for that contact', async () => {
     routeOutreach({ prep: prepData() })
-    const reply = await prepCallFor({ text: 'prep Acme Health', senderName: 'Juhan', now: NOW })
+    const reply = await prepCallFor({ text: 'prep Acme Health', senderName: 'Jules', now: NOW })
     expect(reply.kind).toBe('outline')
     if (reply.kind !== 'outline') return
     // Pat is warm, Sam is cold: the outline is built around Pat.
@@ -245,7 +245,7 @@ describe('prepCallFor', () => {
 
   it('asks which one when a first name matches two people', async () => {
     routeOutreach({ prep: prepData() })
-    const reply = await prepCallFor({ text: 'prep Alex', senderName: 'Juhan', now: NOW })
+    const reply = await prepCallFor({ text: 'prep Alex', senderName: 'Jules', now: NOW })
     expect(reply.kind).toBe('candidates')
     if (reply.kind !== 'candidates') return
     expectValidSlackBlocks(reply.blocks)
@@ -258,7 +258,7 @@ describe('prepCallFor', () => {
     routeOutreach({ prep: prepData() })
     const reply = await prepCallFor({
       text: 'prep Chris Nobody at Unknown Co — met at a conference',
-      senderName: 'Juhan',
+      senderName: 'Jules',
       now: NOW,
     })
     expect(reply.kind).toBe('outline')
@@ -280,7 +280,7 @@ describe('prepCallFor', () => {
 
   it('offers no Add button when adding would write nothing (a free-mail address)', async () => {
     routeOutreach({ prep: prepData() })
-    const reply = await prepCallFor({ text: 'prep someone@gmail.com', senderName: 'Juhan', now: NOW })
+    const reply = await prepCallFor({ text: 'prep someone@gmail.com', senderName: 'Jules', now: NOW })
     const all = reply.kind === 'outline' ? buttons(reply.first) : []
     expect(all.some((button) => button.action_id === MARQUETA_ACTION.addContact)).toBe(false)
   })
@@ -294,7 +294,7 @@ describe('prepCallFor', () => {
         { _id: 'marketingContact.scott', name: 'Scott Shreeve', organization: 'Crossover Health', warmth: 'cold', status: 'new' },
       ]),
     })
-    const reply = await prepCallFor({ text: 'prep Crossover Health', senderName: 'Juhan', now: NOW })
+    const reply = await prepCallFor({ text: 'prep Crossover Health', senderName: 'Jules', now: NOW })
     expect(reply.kind).toBe('candidates')
     if (reply.kind !== 'candidates') return
     expect(reply.text).toBe('Who at Crossover Health?')
@@ -307,7 +307,7 @@ describe('prepCallFor', () => {
 
   it('an email-first outline’s Log it… opens with "Sent an email" chosen', async () => {
     routeOutreach({ prep: prepData() })
-    const reply = await prepCallFor({ text: 'prep Sam Rivera at Acme Health', senderName: 'Juhan', now: NOW })
+    const reply = await prepCallFor({ text: 'prep Sam Rivera at Acme Health', senderName: 'Jules', now: NOW })
     expect(reply.kind).toBe('outline')
     if (reply.kind !== 'outline') return
     expect(reply.text).toBe('Email first: Sam Rivera (Acme Health)')
@@ -317,10 +317,10 @@ describe('prepCallFor', () => {
 
   it('answers in words when there is nobody to prep, or the records cannot be read', async () => {
     routeOutreach({ prep: prepData() })
-    await expect(prepCallFor({ text: 'prep', senderName: 'Juhan', now: NOW })).resolves.toMatchObject({ kind: 'text' })
+    await expect(prepCallFor({ text: 'prep', senderName: 'Jules', now: NOW })).resolves.toMatchObject({ kind: 'text' })
 
     mocks.outreach.fetch.mockRejectedValue(new Error('Sanity is down'))
-    const reply = await prepCallFor({ text: 'prep Jane Doe', senderName: 'Juhan', now: NOW })
+    const reply = await prepCallFor({ text: 'prep Jane Doe', senderName: 'Jules', now: NOW })
     expect(reply).toMatchObject({ kind: 'text' })
   })
 })
@@ -332,30 +332,30 @@ describe('prepCallList', () => {
     organization: 'Acme',
     warmth: 'cold',
     status: 'contacted',
-    interactions: [{ at: '2026-09-14T14:00:00Z', by: 'Juhan', statusAfter: 'contacted', channel: 'phone' }],
+    interactions: [{ at: '2026-09-14T14:00:00Z', by: 'Jules', statusAfter: 'contacted', channel: 'phone' }],
     ...extra,
   })
 
   it('puts the people who replied first, and keeps a colleague’s follow-ups off my list', async () => {
     routeOutreach({
       prep: prepData([
-        followUp('marketingContact.cold', 'Casey Cold', { owner: 'juhan', followUpAt: daysFromNow(-2) }),
-        followUp('marketingContact.replied', 'Riley Replied', { owner: 'Juhan', status: 'responded', followUpAt: daysFromNow(-1) }),
-        followUp('marketingContact.erics', 'Erin Elsewhere', { owner: 'Eric', followUpAt: daysFromNow(1) }),
+        followUp('marketingContact.cold', 'Casey Cold', { owner: 'jules', followUpAt: daysFromNow(-2) }),
+        followUp('marketingContact.replied', 'Riley Replied', { owner: 'Jules', status: 'responded', followUpAt: daysFromNow(-1) }),
+        followUp('marketingContact.erics', 'Erin Elsewhere', { owner: 'Ezra', followUpAt: daysFromNow(1) }),
       ]),
     })
-    const resolveOwner = (raw: string) => (raw.toLowerCase() === 'juhan' ? 'Juhan' : raw)
-    const { blocks, text } = await prepCallList({ now: NOW, resolveOwner, personName: 'Juhan' })
+    const resolveOwner = (raw: string) => (raw.toLowerCase() === 'jules' ? 'Jules' : raw)
+    const { blocks, text } = await prepCallList({ now: NOW, resolveOwner, personName: 'Jules' })
     expectValidSlackBlocks(blocks)
     const rendered = JSON.stringify(blocks)
     expect(rendered.indexOf('Riley Replied')).toBeGreaterThan(-1)
     expect(rendered.indexOf('Riley Replied')).toBeLessThan(rendered.indexOf('Casey Cold'))
     expect(rendered).not.toContain('Erin Elsewhere')
-    // Ready for a first call: research reviewed, identity confirmed, owned by Juhan.
+    // Ready for a first call: research reviewed, identity confirmed, owned by Jules.
     expect(rendered).toContain('Jane Doe')
-    expect(rendered).toContain('Calls for Juhan')
+    expect(rendered).toContain('Calls for Jules')
     // The first line is the notification: who, how many, how many overdue.
-    expect(text).toMatch(/^Calls for Juhan — \d+ calls worth making, 2 overdue$/)
+    expect(text).toMatch(/^Calls for Jules — \d+ calls worth making, 2 overdue$/)
   })
 
   it('calls somebody "they know us" only when the relationship says so — never for merely being on file', async () => {
@@ -363,12 +363,12 @@ describe('prepCallList', () => {
       prep: {
         ...prepData([
           // Imported as "cool", never contacted: a guess, not a relationship.
-          followUp('marketingContact.never', 'Sam Rivera', { owner: 'Juhan', warmth: 'cool', status: 'researched', interactions: [], followUpAt: daysFromNow(1) }),
-          followUp('marketingContact.cool', 'Casey Cool', { owner: 'Juhan', warmth: 'cool', followUpAt: daysFromNow(1) }),
+          followUp('marketingContact.never', 'Sam Rivera', { owner: 'Jules', warmth: 'cool', status: 'researched', interactions: [], followUpAt: daysFromNow(1) }),
+          followUp('marketingContact.cool', 'Casey Cool', { owner: 'Jules', warmth: 'cool', followUpAt: daysFromNow(1) }),
         ]),
       },
     })
-    const { blocks } = await prepCallList({ now: NOW, personName: 'Juhan', resolveOwner: (raw) => raw })
+    const { blocks } = await prepCallList({ now: NOW, personName: 'Jules', resolveOwner: (raw) => raw })
     const line = (name: string) => String(blocks.find((block) => String(block.text?.text || '').includes(name))?.text?.text || '')
     expect(line('Casey Cool')).toContain('they know us')
     expect(line('Sam Rivera')).not.toContain('they know us')
@@ -387,14 +387,14 @@ describe('addContactFromSlack', () => {
   it('creates the typed person once, with a deterministic id', async () => {
     routeOutreach({ existingById: null })
     const ref = decodeContactRef(encodeContactRef({ name: 'Chris Nobody', organization: 'Unknown Co', note: 'met at a conference' }))!
-    const first = await addContactFromSlack({ ref, ownerName: 'Juhan', now: NOW })
+    const first = await addContactFromSlack({ ref, ownerName: 'Jules', now: NOW })
     expect(first).toMatchObject({ ok: true, created: true, label: 'Chris Nobody (Unknown Co)' })
     const document = mocks.outreach.createIfNotExists.mock.calls[0][0] as Record<string, unknown>
     expect(document).toMatchObject({
       _type: 'marketingContact',
       name: 'Chris Nobody',
       organization: 'Unknown Co',
-      owner: 'Juhan',
+      owner: 'Jules',
       status: 'new',
       warmth: 'unknown',
       howWeKnow: 'met at a conference',
@@ -404,7 +404,7 @@ describe('addContactFromSlack', () => {
 
     // A retry finds the record the first press made: no second create.
     routeOutreach({ existingById: { _id: document._id } })
-    const again = await addContactFromSlack({ ref, ownerName: 'Juhan', now: NOW })
+    const again = await addContactFromSlack({ ref, ownerName: 'Jules', now: NOW })
     expect(again).toMatchObject({ ok: true, created: false, contactId: document._id })
     expect(mocks.outreach.createIfNotExists).toHaveBeenCalledTimes(1)
   })
@@ -413,7 +413,7 @@ describe('addContactFromSlack', () => {
     routeOutreach({})
     const result = await addContactFromSlack({
       ref: { contactId: '', organization: '', name: 'someone', role: 'CIO', note: '', outcome: '' },
-      ownerName: 'Juhan',
+      ownerName: 'Jules',
       now: NOW,
     })
     expect(result).toEqual({ ok: false, message: 'Tell me a name or an organisation.' })
@@ -439,7 +439,7 @@ const quickLog = (extra: Partial<Parameters<typeof logCallFromSlack>[0]> = {}) =
     outcomeKey: 'voicemail',
     notes: 'Left a message about the pilot',
     followUp: 'default',
-    byName: 'Juhan',
+    byName: 'Jules',
     key: 'slack-V123',
     now: NOW,
     ...extra,
@@ -463,7 +463,7 @@ describe('logCallFromSlack', () => {
     expect(opsOf(patch, 'ifRevisionId')[0][0]).toBe('r1')
     const [where, path, entries] = opsOf(patch, 'insert')[0] as [string, string, Record<string, unknown>[]]
     expect([where, path]).toEqual(['after', 'interactions[-1]'])
-    expect(entries[0]).toMatchObject({ _key: 'slack-V123', by: 'Juhan', outcome: 'Left a voicemail', intel: 'Left a message about the pilot' })
+    expect(entries[0]).toMatchObject({ _key: 'slack-V123', by: 'Jules', outcome: 'Left a voicemail', intel: 'Left a message about the pilot' })
   })
 
   it('is a no-op when the same key is already on the record (a Slack retry)', async () => {
@@ -540,11 +540,11 @@ describe('undoCallLog', () => {
 
   it('removes exactly that interaction and restores the prior fields', async () => {
     routeOutreach({ logContact: afterLog })
-    const result = await undoCallLog(undo, 'Juhan')
+    const result = await undoCallLog(undo, 'Jules')
     expect(result.ok).toBe(true)
     // What the struck-through receipt needs, read off the interaction it removed.
     expect(result).toMatchObject({ label: 'Jane Doe', outcomeKey: 'voicemail' })
-    expect(result.message).toMatch(/Undone by Juhan: the call with Jane Doe is off the record — back to Researched/)
+    expect(result.message).toMatch(/Undone by Jules: the call with Jane Doe is off the record — back to Researched/)
     const [patch] = patchesFor('marketingContact.jane')
     expect(setOf(patch)).toEqual({ status: 'researched' })
     expect(unsetOf(patch)).toEqual(
@@ -555,7 +555,7 @@ describe('undoCallLog', () => {
 
   it('refuses when something was logged since', async () => {
     routeOutreach({ logContact: { ...afterLog, interactions: [{ _key: 'slack-V123' }, { _key: 'int-later' }] } })
-    const result = await undoCallLog(undo, 'Juhan')
+    const result = await undoCallLog(undo, 'Jules')
     expect(result.ok).toBe(false)
     expect(result.message).toMatch(/Something else was logged since/)
     expect(mocks.patches).toHaveLength(0)
@@ -563,7 +563,7 @@ describe('undoCallLog', () => {
 
   it('refuses a key that could not have come from us', async () => {
     routeOutreach({ logContact: afterLog })
-    const result = await undoCallLog({ ...undo, interactionKey: 'x"]|*[_type' }, 'Juhan')
+    const result = await undoCallLog({ ...undo, interactionKey: 'x"]|*[_type' }, 'Jules')
     expect(result.ok).toBe(false)
     expect(mocks.outreach.fetch).not.toHaveBeenCalled()
   })

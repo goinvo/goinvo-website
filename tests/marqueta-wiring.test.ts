@@ -283,16 +283,16 @@ const task = (overrides: Partial<CheckInTask> & { _id: string }): CheckInTask =>
 })
 
 const TASKS = {
-  open: task({ _id: 'op-open', ownerName: 'Shirley', slackUserId: 'U2' }),
-  blocked: task({ _id: 'op-blocked', ownerName: 'Juhan', slackUserId: 'U1', status: 'blocked', blocker: 'Waiting on legal' }),
-  slipping: task({ _id: 'op-slipping', ownerName: 'Eric', slackUserId: 'U3', status: 'queued', dueAt: '2026-09-01' }),
+  open: task({ _id: 'op-open', ownerName: 'Shay', slackUserId: 'U2' }),
+  blocked: task({ _id: 'op-blocked', ownerName: 'Jules', slackUserId: 'U1', status: 'blocked', blocker: 'Waiting on legal' }),
+  slipping: task({ _id: 'op-slipping', ownerName: 'Ezra', slackUserId: 'U3', status: 'queued', dueAt: '2026-09-01' }),
   unowned: task({ _id: 'op-merch', title: 'Arlington Town Day merch table', status: 'queued', ownerName: '' }),
   decision: task({ _id: 'op-decide', title: 'Decide: publish the F1–F8 taxonomy?', kind: 'decision', status: 'needsHuman', humanQuestion: 'Publish it?', ownerName: '' }),
-  ownDecision: task({ _id: 'op-own-decision', kind: 'decision', status: 'needsHuman', humanQuestion: 'Publish it?', ownerName: 'Juhan', slackUserId: 'U1' }),
-  done: task({ _id: 'op-done', ownerName: 'Shirley', slackUserId: 'U2', status: 'done' }),
-  dropped: task({ _id: 'op-dropped', ownerName: 'Shirley', slackUserId: 'U2', status: 'dismissed' }),
+  ownDecision: task({ _id: 'op-own-decision', kind: 'decision', status: 'needsHuman', humanQuestion: 'Publish it?', ownerName: 'Jules', slackUserId: 'U1' }),
+  done: task({ _id: 'op-done', ownerName: 'Shay', slackUserId: 'U2', status: 'done' }),
+  dropped: task({ _id: 'op-dropped', ownerName: 'Shay', slackUserId: 'U2', status: 'dismissed' }),
   exhausted: task({ _id: 'op-kit', title: 'Pin the kit on LinkedIn', status: 'queued', ownerName: '' }),
-  away: task({ _id: 'op-away', ownerName: 'Eric', slackUserId: 'U3', status: 'queued' }),
+  away: task({ _id: 'op-away', ownerName: 'Ezra', slackUserId: 'U3', status: 'queued' }),
 }
 
 /** Every card state in §2.5, in both modes where the mode changes the buttons. */
@@ -302,8 +302,8 @@ const CARD_CASES: Array<[string, CheckInTask, Omit<TaskCardOptions, 'now'>]> = [
   ['slipping (mine)', TASKS.slipping, { mode: 'mine' }],
   ['taken (plan)', TASKS.open, { mode: 'plan' }],
   ['unowned', TASKS.unowned, { mode: 'plan' }],
-  ['asked', TASKS.unowned, { mode: 'plan', ask: { slackUserId: 'U3', name: 'Eric', reason: 'suggested' } }],
-  ['away cover', TASKS.away, { mode: 'plan', context: 'away', awayNote: 'Eric is away · free this week: Juhan, Shirley' }],
+  ['asked', TASKS.unowned, { mode: 'plan', ask: { slackUserId: 'U3', name: 'Ezra', reason: 'suggested' } }],
+  ['away cover', TASKS.away, { mode: 'plan', context: 'away', awayNote: 'Ezra is away · free this week: Jules, Shay' }],
   ['exhausted', TASKS.exhausted, { mode: 'plan', context: 'exhausted' }],
   ['decision', TASKS.decision, { mode: 'plan' }],
   ['own decision (mine)', TASKS.ownDecision, { mode: 'mine' }],
@@ -325,11 +325,11 @@ const JANE_REF = encodeContactRef({ contactId: 'contact-jane', organization: 'Ma
 function runwayState(stored: StoredPosture, now: Date): MoneyRunway {
   return { summary: describeRunway(stored, now), checkIn: runwayCheckIn(stored, now), resolved: resolveRunwayPosture(stored, now) }
 }
-const STALE_RUNWAY = runwayState({ runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-20T00:00:00Z' } }, NOW)
-const FRESH_RUNWAY = runwayState({ runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-20T00:00:00Z' } }, NOW)
+const STALE_RUNWAY = runwayState({ runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-20T00:00:00Z' } }, NOW)
+const FRESH_RUNWAY = runwayState({ runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-20T00:00:00Z' } }, NOW)
 const SNAPSHOT = buildStrategySnapshot({
   now: NOW,
-  runwaySummary: '3.5 months of certain runway (to 11 Jan 2027) — Rebuild.',
+  runwaySummary: '3.5 months of certain runway (to 25 Jan 2027) — Rebuild.',
   postureId: 'rebuild',
   thisMonth: summarizeOutreach([], { ...monthWindow(NOW, 0), now: NOW }),
   lastMonth: summarizeOutreach([], { ...monthWindow(NOW, -1), now: NOW }),
@@ -358,7 +358,7 @@ function renderedMessages(): Array<{ where: string; blocks: Block[]; attachments
       weekLabel: weekOfLabel('2026-09-21', NOW),
       groups: [
         {
-          ownerName: 'Shirley',
+          ownerName: 'Shay',
           slackUserId: 'U2',
           tasks: [TASKS.open, TASKS.blocked, TASKS.slipping],
           hidden: 2,
@@ -383,14 +383,14 @@ function renderedMessages(): Array<{ where: string; blocks: Block[]; attachments
       planRecorded: true,
       needsOwner: { asked: [digestCard('asked')], away: [digestCard('away cover')], exhausted: [digestCard('exhausted')], open: [], more: 1 },
       decisions: [digestCard('decision')],
-      taken: [{ name: 'Juhan', slackUserId: 'U1', count: 2 }],
+      taken: [{ name: 'Jules', slackUserId: 'U1', count: 2 }],
       followUps: [{ label: '*Follow up with Jane Doe*', detail: 'due Tue 22 Sep', contactRef: JANE_REF }],
       followUpsTotal: 3,
       callSheet: [{ organization: 'Crossover Health', contacts: [{ _id: 'contact-sam' }], signal: 's', quote: 'q', sourceUrl: '', opening: '', offer: null, context: '' } as never],
       money,
       ideas: [{ title: 'Merch table' }],
       ideasTotal: 4,
-      unmappedOwners: ['Eric'],
+      unmappedOwners: ['Ezra'],
       studioBaseUrl: BASE,
     }),
   })
@@ -398,13 +398,13 @@ function renderedMessages(): Array<{ where: string; blocks: Block[]; attachments
   messages.push({ where: 'money: runway due', blocks: money })
   messages.push({ where: 'money: strategy only', blocks: buildMoneyAndDirectionBlocks({ now: NOW, runway: FRESH_RUNWAY, snapshot: SNAPSHOT, strategyDue: { due: true, reason: 'A month since the last check.' } }) })
   messages.push({ where: 'money: after Still right', blocks: buildMoneyAndDirectionBlocks({ now: NOW, runway: STALE_RUNWAY, snapshot: SNAPSHOT, strategyDue: { due: true, reason: 'x' }, receipt: { kind: 'runwayConfirmed', who: '<@U1>' } }) })
-  messages.push({ where: 'money: rethink receipt', blocks: buildMoneyAndDirectionBlocks({ now: NOW, runway: FRESH_RUNWAY, snapshot: SNAPSHOT, receipt: { kind: 'rethink', who: '<@U1>', decisionTaskId: 'op-rethink', suggestedTo: 'Juhan' }, studioBaseUrl: BASE }) })
+  messages.push({ where: 'money: rethink receipt', blocks: buildMoneyAndDirectionBlocks({ now: NOW, runway: FRESH_RUNWAY, snapshot: SNAPSHOT, receipt: { kind: 'rethink', who: '<@U1>', decisionTaskId: 'op-rethink', suggestedTo: 'Jules' }, studioBaseUrl: BASE }) })
   messages.push({ where: '`runway` answer', blocks: moneyAnswer({ now: NOW, runway: STALE_RUNWAY, snapshot: SNAPSHOT }).blocks })
   messages.push({ where: '`strategy` answer', blocks: strategyAnswer({ now: NOW, runway: FRESH_RUNWAY, snapshot: SNAPSHOT, due: { due: true, reason: 'A month since the last check.' } }).blocks })
 
-  messages.push({ where: 'idea capture', blocks: buildIdeaCaptureBlocks({ title: 'Merch table at Town Day', category: 'event', channel: 'CE4AA4BHP', ts: '1726000000.000100', studioUrl: studioViewUrl(BASE, 'thisWeek', { focus: 'caught' }) }) })
-  messages.push({ where: 'draft capture', blocks: buildDraftCaptureBlocks({ title: 'Newsletter: pre-mortem teaser', contentType: 'newsletter', channel: 'CE4AA4BHP', ts: '1726000000.000200', studioUrl: studioViewUrl(BASE, 'calendar') }) })
-  messages.push({ where: 'identity prompt', blocks: buildIdentityPromptBlocks(['Eric']) })
+  messages.push({ where: 'idea capture', blocks: buildIdeaCaptureBlocks({ title: 'Merch table at Town Day', category: 'event', channel: 'C0MKTGEN000', ts: '1726000000.000100', studioUrl: studioViewUrl(BASE, 'thisWeek', { focus: 'caught' }) }) })
+  messages.push({ where: 'draft capture', blocks: buildDraftCaptureBlocks({ title: 'Newsletter: pre-mortem teaser', contentType: 'newsletter', channel: 'C0MKTGEN000', ts: '1726000000.000200', studioUrl: studioViewUrl(BASE, 'calendar') }) })
+  messages.push({ where: 'identity prompt', blocks: buildIdentityPromptBlocks(['Ezra']) })
 
   messages.push({
     where: 'call-log receipt',
@@ -424,7 +424,7 @@ function renderedMessages(): Array<{ where: string; blocks: Block[]; attachments
     }),
   })
 
-  const outline = composeCallOutline({ match: { kind: 'contact', contact: JANE }, research: [], offers: [], evidence: [], senderName: 'Juhan', includeContactDetails: false, now: NOW })
+  const outline = composeCallOutline({ match: { kind: 'contact', contact: JANE }, research: [], offers: [], evidence: [], senderName: 'Jules', includeContactDetails: false, now: NOW })
   const prep = buildCallOutlineMessages(outline, {
     studioUrl: studioViewUrl(BASE, 'outreach', { contact: 'contact-jane', contactAction: 'prep' }),
     logRef: JANE_REF,
@@ -449,7 +449,7 @@ function renderedMessages(): Array<{ where: string; blocks: Block[]; attachments
     blocks: [],
     attachments: [
       buildTaskAttachment({ _id: 'op-legacy-open', title: 'Old card', status: 'queued' }),
-      buildTaskAttachment({ _id: 'op-legacy-owned', title: 'Old owned card', ownerName: 'Juhan', slackUserId: 'U1', status: 'working' }),
+      buildTaskAttachment({ _id: 'op-legacy-owned', title: 'Old owned card', ownerName: 'Jules', slackUserId: 'U1', status: 'working' }),
     ],
   })
   return messages
@@ -561,12 +561,12 @@ describe('each handler reads a button’s value with the decoder its builders en
     expect(actions).toContain('undoValue: encodeAvailabilityUndo(')
     expect(actions).toMatch(/decodeAvailabilityUndo\(input\.undo\)/)
     const undo = encodeAvailabilityUndo({
-      ownerName: 'Eric',
+      ownerName: 'Ezra',
       slackUserId: 'U3',
       wrote: { status: 'away', from: '2026-09-28', until: '2026-10-04', weeklyHours: null },
       prior: null,
     })
-    expect(decodeAvailabilityUndo(undo)).toMatchObject({ ownerName: 'Eric', slackUserId: 'U3', prior: null })
+    expect(decodeAvailabilityUndo(undo)).toMatchObject({ ownerName: 'Ezra', slackUserId: 'U3', prior: null })
   })
 
   it('reads a call-log Undo the way every receipt writes it', () => {
@@ -622,7 +622,7 @@ describe('every button the builders draw decodes back to what it was drawn for',
     }
     // The away cover's Take is the one that may move a task off its owner.
     const cover = controlsIn(card('away cover'), 'away cover').find((control) => control.action_id === MARQUETA_ACTION.taskTake)!
-    expect(decodeTaskCardValue(cover.value)).toMatchObject({ cover: true, ownerName: 'Eric' })
+    expect(decodeTaskCardValue(cover.value)).toMatchObject({ cover: true, ownerName: 'Ezra' })
   })
 
   it('points Prep and Log it… at a contact, and a log candidate at the person picked', () => {
@@ -641,7 +641,7 @@ describe('every button the builders draw decodes back to what it was drawn for',
 
   it('names the captured message on an idea or draft, and the month on a strategy answer', () => {
     for (const control of controls.filter((control) => control.action_id === MARKETING_ACTION.ideaKeep || control.action_id === MARKETING_ACTION.ideaDiscard)) {
-      expect(decodeIdeaValue(control.value)?.channel, control.where).toBe('CE4AA4BHP')
+      expect(decodeIdeaValue(control.value)?.channel, control.where).toBe('C0MKTGEN000')
     }
     for (const control of controls.filter((control) => control.action_id === MARQUETA_ACTION.strategyConfirm || control.action_id === MARQUETA_ACTION.strategyRethink)) {
       expect(decodeStrategyValue(control.value)?.monthKey, control.where).toBe('2026-09')
@@ -670,13 +670,13 @@ describe('every Studio link lands on something the Studio reads', () => {
   })
 
   it('reads every landing param a link can carry, and strips each one after landing', () => {
-    const url = studioViewUrl(BASE, 'outreach', { task: 'op-1', contact: 'contact-jane', contactAction: 'log', owner: 'Juhan', focus: 'followUps' })
+    const url = studioViewUrl(BASE, 'outreach', { task: 'op-1', contact: 'contact-jane', contactAction: 'log', owner: 'Jules', focus: 'followUps' })
     const params = new URL(url).searchParams
     for (const param of [MARKETING_TASK_QUERY_PARAM, MARKETING_CONTACT_QUERY_PARAM, MARKETING_CONTACT_ACTION_QUERY_PARAM, MARKETING_OWNER_QUERY_PARAM, MARKETING_FOCUS_QUERY_PARAM]) {
       expect(params.has(param), param).toBe(true)
     }
     // The host reads contact/action/owner/focus…
-    expect(readMarketingLandingParams(new URL(url).search)).toEqual({ contact: { id: 'contact-jane', action: 'log' }, owner: 'Juhan', focus: 'followUps' })
+    expect(readMarketingLandingParams(new URL(url).search)).toEqual({ contact: { id: 'contact-jane', action: 'log' }, owner: 'Jules', focus: 'followUps' })
     const stripped = new URL(marketingUrlWithoutLandingParams(url)).searchParams
     for (const param of [MARKETING_CONTACT_QUERY_PARAM, MARKETING_CONTACT_ACTION_QUERY_PARAM, MARKETING_OWNER_QUERY_PARAM, MARKETING_FOCUS_QUERY_PARAM]) {
       expect(stripped.has(param), param).toBe(false)

@@ -75,7 +75,7 @@ const JANE: PrepContact = {
   howWeKnow: 'worked together on the patient portal',
   researchReviewedAt: '2026-09-01T12:00:00.000Z',
   interactions: [
-    { _key: 'i1', at: '2026-09-15T14:00:00.000Z', by: 'Shirley', outcome: 'Left a voicemail', statusAfter: 'contacted', channel: 'phone' },
+    { _key: 'i1', at: '2026-09-15T14:00:00.000Z', by: 'Shay', outcome: 'Left a voicemail', statusAfter: 'contacted', channel: 'phone' },
   ],
 }
 const JANE_SMITH: PrepContact = { _id: 'marketingContact.smith', name: 'Jane Smith', organization: 'Acme Health', role: 'VP Product', warmth: 'cold', status: 'researched' }
@@ -98,7 +98,7 @@ const outlineFor = (contact: PrepContact): CallOutline =>
     research: [],
     offers: [],
     evidence: [],
-    senderName: 'Shirley',
+    senderName: 'Shay',
     includeContactDetails: false,
     now: NOW,
     request: null,
@@ -193,20 +193,20 @@ describe('the follow-up choices', () => {
 })
 
 describe('call history rows', () => {
-  it('read like Slack: “Thu 24 Sep — Shirley, phone”', () => {
-    expect(interactionHistoryLine({ at: '2026-09-24T14:00:00.000Z', by: 'Shirley Xu', channel: 'phone' }, NOW)).toBe(
-      'Thu 24 Sep — Shirley, phone',
+  it('read like Slack: “Thu 24 Sep — Shay, phone”', () => {
+    expect(interactionHistoryLine({ at: '2026-09-24T14:00:00.000Z', by: 'Shay Lund', channel: 'phone' }, NOW)).toBe(
+      'Thu 24 Sep — Shay, phone',
     )
     expect(interactionHistoryLine({ at: '2026-09-15T14:00:00.000Z', channel: 'inPerson' }, NOW)).toBe('Tue 15 Sep — in person')
-    expect(interactionHistoryLine({ at: '2025-09-21T14:00:00.000Z', by: 'Juhan', channel: 'email' }, NOW)).toBe(
-      'Sun 21 Sep 2025 — Juhan, email',
+    expect(interactionHistoryLine({ at: '2025-09-21T14:00:00.000Z', by: 'Jules', channel: 'email' }, NOW)).toBe(
+      'Sun 21 Sep 2025 — Jules, email',
     )
-    expect(interactionHistoryLine({ by: 'Eric' }, NOW)).toBe('Undated — Eric')
+    expect(interactionHistoryLine({ by: 'Ezra' }, NOW)).toBe('Undated — Ezra')
     expect(interactionHistoryLine({ at: '2026-09-24T14:00:00.000Z' }, NOW)).toBe('Thu 24 Sep')
   })
 
   it('never show an ISO date or a locale-formatted one', () => {
-    const line = interactionHistoryLine({ at: '2026-09-24T14:00:00.000Z', by: 'Shirley', channel: 'phone' }, NOW)
+    const line = interactionHistoryLine({ at: '2026-09-24T14:00:00.000Z', by: 'Shay', channel: 'phone' }, NOW)
     expect(line).not.toMatch(/\d{4}-\d{2}-\d{2}|\d+\/\d+\/\d+/)
   })
 })
@@ -248,7 +248,7 @@ describe('the outreach pulse sentence', () => {
   })
 
   it('leaves out a draft beside its published contact', () => {
-    const touched = { ...followUps[0], interactions: [{ at: '2026-09-22T14:00:00.000Z', by: 'Juhan', channel: 'phone', statusAfter: 'contacted' }] }
+    const touched = { ...followUps[0], interactions: [{ at: '2026-09-22T14:00:00.000Z', by: 'Jules', channel: 'phone', statusAfter: 'contacted' }] }
     expect(outreachPulseSentence([touched, { ...touched, _id: 'drafts.mon' }], NOW)).toBe(outreachPulseSentence([touched], NOW))
   })
 })
@@ -257,15 +257,15 @@ describe('dates on Outreach cards', () => {
   it('read like Slack’s — “Mon 28 Sep” — never “9/28/2026”', () => {
     expect(outreachDateLabel('2026-09-28T12:00:00.000Z', NOW)).toBe('Mon 28 Sep')
     expect(outreachDateLabel('2026-09-28', NOW)).toBe('Mon 28 Sep')
-    expect(outreachDateLabel('2027-01-11T12:00:00.000Z', NOW)).toBe('Mon 11 Jan 2027')
+    expect(outreachDateLabel('2027-01-25T12:00:00.000Z', NOW)).toBe('Mon 25 Jan 2027')
     for (const nothing of [undefined, null, '', 'not a date']) expect(outreachDateLabel(nothing, NOW)).toBe('—')
   })
 })
 
 describe('the sender name', () => {
   it('is the first word of the Studio user’s name, or nothing for the composer to fill', () => {
-    expect(studioSenderName('Shirley Xu')).toBe('Shirley')
-    expect(studioSenderName('  Juhan  ')).toBe('Juhan')
+    expect(studioSenderName('Shay Lund')).toBe('Shay')
+    expect(studioSenderName('  Jules  ')).toBe('Jules')
     expect(studioSenderName('')).toBe('')
     expect(studioSenderName(null)).toBe('')
     // Empty is left to the composer, which writes a placeholder rather than somebody else's name.
@@ -333,7 +333,7 @@ describe('the call outline in the Studio', () => {
   it('has no “If they say…” in a meeting, even from an outline that carries some', () => {
     const outline = outlineFor(LEO)
     expect(outline.mode).toBe('meeting')
-    const withObjections = { ...outline, ifTheySay: [{ theySay: 'Who is this?', youSay: 'It’s Shirley from GoInvo.' }] }
+    const withObjections = { ...outline, ifTheySay: [{ theySay: 'Who is this?', youSay: 'It’s Shay from GoInvo.' }] }
     const html = renderView(withObjections)
     expect(sectionsOf(html)).not.toContain('ifTheySay')
     expect(html).not.toContain('If they say')
@@ -381,7 +381,7 @@ describe('what the Studio outline cannot know', () => {
     // Slack composes with what the person typed; the Open Outreach link it
     // carries names only the contact and `prep`, and the panel passes
     // `request: null`. Named here so nobody assumes full parity.
-    const base = { match: { kind: 'contact' as const, contact: JANE_SMITH }, research: [], offers: [], evidence: [], senderName: 'Shirley', includeContactDetails: false, now: NOW }
+    const base = { match: { kind: 'contact' as const, contact: JANE_SMITH }, research: [], offers: [], evidence: [], senderName: 'Shay', includeContactDetails: false, now: NOW }
     const slack = composeCallOutline({ ...base, request: parsePrepRequest('prep me for my meeting with Jane Smith tomorrow') })
     const studio = composeCallOutline({ ...base, request: null })
     expect(slack.mode).toBe('meeting')
@@ -496,7 +496,7 @@ type OutreachFixture = {
   financialPosture?: Record<string, unknown> | string | null
 }
 
-const USER = { id: 'u-shirley', name: 'Shirley Xu', roles: [{ name: 'administrator' }] }
+const USER = { id: 'u-shay', name: 'Shay Lund', roles: [{ name: 'administrator' }] }
 
 function fakeClient(fixture: OutreachFixture = {}) {
   const contacts = fixture.contacts || [{ ...JANE, _rev: 'rev-1' }]
@@ -590,7 +590,7 @@ describe('landing on Outreach from Slack or This week', () => {
     expect(outline, 'the outline panel rendered').not.toBeNull()
     expect(outline?.textContent).toContain('On the call')
     // Spoken as the person reading it, not as whoever wrote the code.
-    expect(outline?.textContent).toContain('it’s Shirley from GoInvo')
+    expect(outline?.textContent).toContain('it’s Shay from GoInvo')
     expect(host.querySelector('#outreach-log-panel')).toBeNull()
   })
 

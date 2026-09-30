@@ -129,7 +129,7 @@ export function isoWeekKey(now: Date): string {
  * the banner and the digest already use.
  *
  * Not every needsHuman task is one. "Not me" leaves a task in needsHuman with
- * "Eric passed on this — who should pick it up?", which is a task looking for
+ * "Ezra passed on this — who should pick it up?", which is a task looking for
  * an owner. Counted as a decision it competed for the four decision slots —
  * and the seeded quarter's overdue gates fill all four — so it was deferred
  * "over budget", and the digest, which shows only what the plan holds, never

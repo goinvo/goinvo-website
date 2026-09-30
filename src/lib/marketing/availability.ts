@@ -20,7 +20,7 @@ export const TEAM_AVAILABILITY_TYPE = 'marketingTeamAvailability'
 export type AvailabilityStatus = 'available' | 'reduced' | 'away'
 
 export type TeamMemberAvailability = {
-  /** The name used as `ownerName` on operations, e.g. "Juhan". */
+  /** The name used as `ownerName` on operations, e.g. "Jules". */
   ownerName: string
   /** Slack user id, so the bot can @-mention and match interactions back. */
   slackUserId?: string
@@ -46,7 +46,7 @@ export function availabilityDocId(ownerName: string): string {
 /**
  * The board's name for the person who pressed a button in Slack.
  *
- * The board says "Juhan"; Slack says "Juhan Sonin", or a nickname, or whatever
+ * The board says "Jules"; Slack says "Jules Soren", or a nickname, or whatever
  * the display name is this month. Writing the Slack name as an owner splits one
  * person into two — two check-in groups, two loads when asking who has time,
  * and a `mine` that finds nothing. So the linked identity wins: the record
@@ -170,8 +170,8 @@ export function hoursForWeek(input: {
   const status = statusOn(input.entries, input.ownerName, input.dateKey)
   if (status === 'away') return 0
 
-  // weeklyHours is an ALLOCATION, not only a reduction. "Juhan does 4h of calls
-  // and Shirley does 4h of content" is two available people with different
+  // weeklyHours is an ALLOCATION, not only a reduction. "Jules does 4h of calls
+  // and Shay does 4h of content" is two available people with different
   // budgets, and reading the number only when status is "reduced" forced that
   // to be recorded as though both were working at less than normal capacity.
   const entry = input.entries.find(

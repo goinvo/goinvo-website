@@ -25,7 +25,7 @@ import { studioSenderName } from './CallOutlinePanel'
  * Only VERIFIED research appears. A signal whose quote was not found in the page
  * it cites must never reach the screen where somebody picks up the phone.
  *
- * The draft is signed by whoever is reading it. It used to be signed "— Juhan"
+ * The draft is signed by whoever is reading it. It used to be signed "— Jules"
  * whoever copied it, which put one person's name on another person's email.
  * With no name to go on it says "[your name]", the same placeholder the call
  * outline uses: a gap to fill is safer than somebody else's signature.
