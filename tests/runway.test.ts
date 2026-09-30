@@ -52,7 +52,7 @@ describe('resolveRunwayPosture', () => {
     const resolved = resolveRunwayPosture(
       {
         posture: 'survival',
-        setAt: '2026-07-11T15:19:37Z',
+        setAt: '2026-07-02T10:00:00Z',
         runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T09:00:00Z' },
       },
       AUG,
@@ -80,7 +80,7 @@ describe('resolveRunwayPosture', () => {
     const resolved = resolveRunwayPosture(
       {
         posture: 'survival',
-        setAt: '2026-07-11T15:19:37Z',
+        setAt: '2026-07-02T10:00:00Z',
         runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T09:00:00Z' },
       },
       AUG,

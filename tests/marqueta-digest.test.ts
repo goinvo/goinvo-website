@@ -765,7 +765,7 @@ describe('the busy week, as a phone shows it', () => {
   const BUSY_OPERATIONS = [
     { _id: 'op-article', title: 'Draft the pre-mortem article (v2)', kind: 'content', priority: 'normal', status: 'working', ownerName: 'Shay', estimatedMinutes: 120 },
     { _id: 'op-taxonomy', title: 'Decide: publish the F1–F8 taxonomy?', kind: 'decision', priority: 'high', status: 'needsHuman', humanQuestion: 'Do we publish the F1–F8 taxonomy?', dueAt: '2026-09-25T16:00:00Z' },
-    { _id: 'op-townday', title: 'Arlington Town Day merch table', kind: 'content', priority: 'normal', status: 'queued', suggestedOwner: 'Jules', estimatedMinutes: 45 },
+    { _id: 'op-townday', title: 'Riverside Town Day merch table', kind: 'content', priority: 'normal', status: 'queued', suggestedOwner: 'Jules', estimatedMinutes: 45 },
     { _id: 'op-teaser', title: 'Newsletter: pre-mortem teaser', kind: 'content', priority: 'normal', status: 'queued', suggestedOwner: 'Shay', estimatedMinutes: 30 },
     { _id: 'op-pin', title: 'Pin the kit on LinkedIn', kind: 'content', priority: 'low', status: 'queued', estimatedMinutes: 15, askHistory: askedBefore('UJULES', 'USHAY') },
     { _id: 'op-numbers', title: 'Case-study numbers for the kit', kind: 'content', priority: 'normal', status: 'blocked', ownerName: 'Jules', blocker: 'Waiting on the client’s sign-off' },

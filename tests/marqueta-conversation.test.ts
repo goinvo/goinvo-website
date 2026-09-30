@@ -1146,7 +1146,7 @@ describe('the new answers', () => {
   const WEEK = [
     { _id: 'w1', title: 'Draft the pre-mortem article (v2)', ownerName: 'Shay', status: 'working', dueAt: daysFromNow(1) },
     { _id: 'w2', title: 'Decide: publish the F1–F8 taxonomy?', status: 'needsHuman', kind: 'decision', humanQuestion: 'Publish it?' },
-    { _id: 'w3', title: 'Arlington Town Day merch table', status: 'queued' },
+    { _id: 'w3', title: 'Riverside Town Day merch table', status: 'queued' },
     { _id: 'w4', title: 'Newsletter: pre-mortem teaser', status: 'queued' },
     { _id: 'w5', title: 'Pin the kit on LinkedIn', status: 'queued' },
     { _id: 'w6', title: 'Fix the offer page', ownerName: 'Jules', status: 'blocked', blocker: 'Waiting on copy', dueAt: daysFromNow(-3) },
@@ -1246,7 +1246,7 @@ describe('the new answers', () => {
 
   it('a capture carries Keep it · Not an idea · Open This week, and says it was a guess', async () => {
     mocks.captureFromMessage.mockResolvedValue({ ok: true, kind: 'idea', idea: { title: 'Merch table at Town Day' } })
-    const reply = await ask('<@UBOT> we should do a merch table at Arlington Town Day, stickers and a tote', { ts: '555.5' })
+    const reply = await ask('<@UBOT> we should do a merch table at Riverside Town Day, stickers and a tote', { ts: '555.5' })
     expect(reply.text).toBe('Filed as an idea: Merch table at Town Day — keep it?')
     expect(buttonsIn(reply.blocks).map((element) => element.text.text)).toEqual(['Keep it', 'Not an idea', 'Open This week'])
     expect(JSON.parse(buttonsIn(reply.blocks)[1].value)).toEqual({ c: 'C1', ts: '555.5' })
@@ -1436,10 +1436,10 @@ describe('the events route', () => {
     it('reads a pasted quote the way Slack delivers it (&gt;), so a short draft is a draft', async () => {
       mocks.captureFromMessage.mockResolvedValue({ ok: true, kind: 'draft', draft: { title: 'Here’s a draft', contentType: 'newsletter' } })
       process.env.MARKETING_PUBLIC_BASE_URL = 'https://www.goinvo.com'
-      const delivered = 'Here’s a draft:\n&gt; Look across a parking lot.\n&gt; A bruise on our brains.'
+      const delivered = 'Here’s a draft:\n&gt; Look at any discharge form.\n&gt; A shrug, printed on paper.'
       await post({ channel: 'CBOT', user: 'UJULES', text: delivered, ts: '410.4' })
       const [call] = mocks.captureFromMessage.mock.calls
-      expect(call[0].text).toBe('Here’s a draft:\n> Look across a parking lot.\n> A bruise on our brains.')
+      expect(call[0].text).toBe('Here’s a draft:\n> Look at any discharge form.\n> A shrug, printed on paper.')
       // Said in her own room: the notification says what happened, and the link opens the Calendar.
       const posted = mocks.postSlackMessage.mock.calls[0][0]
       expect(posted).toMatchObject({ channel: 'CBOT', threadTs: '410.4', username: 'Marqueta', text: 'Put on the calendar as a draft: Here’s a draft' })
@@ -1450,7 +1450,7 @@ describe('the events route', () => {
     it('files an idea in her own room with the question in the notification', async () => {
       mocks.captureFromMessage.mockResolvedValue({ ok: true, kind: 'idea', idea: { title: 'Stickers & a tote', category: 'growth' } })
       process.env.MARKETING_PUBLIC_BASE_URL = 'https://www.goinvo.com'
-      await post({ channel: 'CBOT', user: 'UJULES', text: 'we should do a merch table at Arlington Town Day, stickers and a tote', ts: '411.4' })
+      await post({ channel: 'CBOT', user: 'UJULES', text: 'we should do a merch table at Riverside Town Day, stickers and a tote', ts: '411.4' })
       const posted = mocks.postSlackMessage.mock.calls[0][0]
       expect(posted.text).toBe('Filed as an idea: Stickers &amp; a tote — keep it?')
       expect(JSON.stringify(posted.blocks)).toContain('view=thisWeek&focus=caught')

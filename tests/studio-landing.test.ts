@@ -440,7 +440,7 @@ describe('money and direction in the Studio', () => {
     const record = {
       _id: 'marketingFinancialPosture',
       posture: 'survival',
-      setAt: '2026-07-11T15:19:37.000Z',
+      setAt: '2026-07-02T10:00:00.000Z',
       runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T12:00:00.000Z' },
     }
     const monday = new Date('2026-09-28T13:00:00Z')
@@ -461,7 +461,7 @@ describe('money and direction in the Studio', () => {
   it('shows an override in the select only while it is the one in charge, and can always pick any posture', () => {
     // The runway is in charge: the stored "Survival" is not what the plan uses.
     const runwayInCharge = runwayStateFrom(
-      { posture: 'survival', setAt: '2026-07-11T15:19:37.000Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T12:00:00.000Z' } },
+      { posture: 'survival', setAt: '2026-07-02T10:00:00.000Z', runway: { certainUntil: '2027-01-25', confirmedAt: '2026-08-27T12:00:00.000Z' } },
       NOW,
     )
     expect(runwayInCharge.resolved.source).toBe('runway')

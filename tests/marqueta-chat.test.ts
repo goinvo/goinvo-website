@@ -962,7 +962,7 @@ describe('the new intents', () => {
 
   it('does not take every "signed" for signed work — the proposal behind it is filed', () => {
     // "Signed up for" was a proposal, and came back as "Signed work — record it".
-    expect(parseMarquetaIntent('we signed up for a table at Arlington Town Day, we should do stickers and a tote')).toMatchObject({
+    expect(parseMarquetaIntent('we signed up for a table at Riverside Town Day, we should do stickers and a tote')).toMatchObject({
       kind: 'capture',
       explicit: false,
     })

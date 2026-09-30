@@ -286,7 +286,7 @@ const TASKS = {
   open: task({ _id: 'op-open', ownerName: 'Shay', slackUserId: 'U2' }),
   blocked: task({ _id: 'op-blocked', ownerName: 'Jules', slackUserId: 'U1', status: 'blocked', blocker: 'Waiting on legal' }),
   slipping: task({ _id: 'op-slipping', ownerName: 'Ezra', slackUserId: 'U3', status: 'queued', dueAt: '2026-09-01' }),
-  unowned: task({ _id: 'op-merch', title: 'Arlington Town Day merch table', status: 'queued', ownerName: '' }),
+  unowned: task({ _id: 'op-merch', title: 'Riverside Town Day merch table', status: 'queued', ownerName: '' }),
   decision: task({ _id: 'op-decide', title: 'Decide: publish the F1–F8 taxonomy?', kind: 'decision', status: 'needsHuman', humanQuestion: 'Publish it?', ownerName: '' }),
   ownDecision: task({ _id: 'op-own-decision', kind: 'decision', status: 'needsHuman', humanQuestion: 'Publish it?', ownerName: 'Jules', slackUserId: 'U1' }),
   done: task({ _id: 'op-done', ownerName: 'Shay', slackUserId: 'U2', status: 'done' }),
