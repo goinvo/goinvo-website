@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, type SanityClient } from '@sanity/client'
-import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
+import { apiVersion, dataset, previewToken, projectId, writeToken } from '@/sanity/env'
 import { isAllowedChatRequest } from '@/lib/chat/config'
 import { isLikelyBot } from '@/lib/marketing/botFilter'
 import { getKvClient } from '@/lib/marketing/drainSink'
 import { isRevisionConflict } from '@/lib/marketing/apiBoundary'
 import { sendGa4MpEvents } from '@/lib/marketing/ga4MeasurementProtocol'
+import { datasetForType } from '@/lib/marketing/datasetRouting'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { normalizeOutreachEmail } from '@/lib/marketing/outreach'
 import {
@@ -105,14 +106,29 @@ async function readBoundedJson(request: NextRequest): Promise<Record<string, unk
   }
 }
 
-// The magnet registry lives in the world-readable production dataset; the
-// contact PII goes ONLY to the private outreach dataset (never production).
+// Site content (the team list) is read from production with a token, which works once that dataset is private
+// (task_1008). The magnet registry is an internal type and lives where datasetForType puts it (outreach). The contact
+// PII goes ONLY to the private outreach dataset (never production).
 let productionClient: SanityClient | null = null
 function getProductionClient() {
   if (!productionClient) {
-    productionClient = createClient({ projectId, dataset, apiVersion, useCdn: false })
+    productionClient = createClient({ projectId, dataset, apiVersion, useCdn: false, token: previewToken || undefined })
   }
   return productionClient
+}
+
+let magnetClient: SanityClient | null = null
+function getMagnetClient() {
+  if (!magnetClient) {
+    magnetClient = createClient({
+      projectId,
+      dataset: datasetForType('marketingLeadMagnet', dataset),
+      apiVersion,
+      useCdn: false,
+      token: previewToken || undefined,
+    })
+  }
+  return magnetClient
 }
 
 let outreachClient: SanityClient | null = null
@@ -220,7 +236,7 @@ export async function POST(request: NextRequest) {
   const magnetSlug = sanitizeMagnetSlug(body.magnetSlug)
   let magnet: MagnetQueryResult | null = null
   if (magnetSlug) {
-    magnet = await getProductionClient().fetch<MagnetQueryResult | null>(
+    magnet = await getMagnetClient().fetch<MagnetQueryResult | null>(
       `*[_type == "marketingLeadMagnet" && slug.current == $slug && !(_id in path("drafts.**"))][0]{
         title,
         status,
