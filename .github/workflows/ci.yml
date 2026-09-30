@@ -33,6 +33,10 @@ jobs:
         # fast gate. The principal Marketing browser journey has its own served
         # acceptance job below; broader served-page coverage remains separate.
         run: npx vitest run --exclude "**/page-render.test.ts" --exclude "**/media-integrity.test.ts" --exclude "**/link-parity.test.ts"
+        env:
+          # The production dataset is private (2026-09-30): tests that read live content need a
+          # token. Viewer-only. These logs are PUBLIC, so no test may print a document's contents.
+          SANITY_API_READ_TOKEN: ${{ secrets.SANITY_API_READ_TOKEN }}
 
   build:
     name: Production build
