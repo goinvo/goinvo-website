@@ -9,7 +9,7 @@ import { resolveDownloadUrl } from '@/lib/shop/posterDownloads'
 import {
   shippingCentsFromSettings,
   isProductOrderable,
-  shopPriceCentsFor,
+  productPriceCents,
 } from '@/lib/shop/checkout'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { PosterChatCta } from '@/components/chat/PosterChatCta'
@@ -405,7 +405,7 @@ export default async function HealthVisualizationsPage() {
       downloadLink: card.downloadUrl,
       learnMoreLink: card.learnMoreLink,
       imageUrl: card.imageUrl,
-      price: product?.price ?? shopPriceCentsFor(card.slug) / 100,
+      price: productPriceCents(card.slug, product?.price) / 100,
       // Only a genuine reduction reaches the card: a compare-at at or below the
       // price is not an offer, it is a mistake, and it must not render.
       compareAtPrice:
