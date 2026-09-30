@@ -33,8 +33,7 @@ export const dynamic = 'force-dynamic'
  *
  * Replaces reliance on the third-party EmailOctopus embed script, which is
  * third-party and uninstrumented — GA4 has recorded no signup event from it,
- * ever. (An earlier version of this comment claimed a measured blocker-loss
- * rate; that claim was withdrawn in 2026-09.) The exchange: EmailOctopus owns
+ * ever. The exchange: EmailOctopus owns
  * the list, the
  * private outreach dataset gets a cold contact (per-magnet opt-out via
  * `createOutreachContacts`), GA4 gets a best-effort `newsletter_signup` event.

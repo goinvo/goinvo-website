@@ -828,8 +828,7 @@ openings sort first. Pure helpers + tests: `src/lib/marketing/orgResearch.ts`,
 - Live updates still work anonymously: the Live Content API delivers change tags on a private
   dataset (verified with a probe document), so published edits revalidate as before.
 - **`src/lib/sanity-actions.ts` is a PUBLIC endpoint** (server actions are POST-able by anyone).
-  `refetchQuery` runs only the two allowlisted page queries with `{slug}`; it once ran any GROQ with
-  the server token (task_2160). Never add a server action that takes a query, a type or a tag from
+  `refetchQuery` runs only the two allowlisted page queries with `{slug}`. Never add a server action that takes a query, a type or a tag from
   the caller. Guard: `tests/sanity-actions-allowlist.test.ts`.
 - CI reads live content with the repo secret `SANITY_API_READ_TOKEN` (Viewer; also used by the
   heartbeat watchdog). **GitHub Actions logs on this repo are public** — a test may count or assert

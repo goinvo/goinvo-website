@@ -101,8 +101,7 @@ are automated:
 out as "Measurement blocked" (4ffb832). That is the reason this decision exists.
 
 A third-party tag can also be stripped by ad/privacy blockers, but we have no measurement of how
-often that happens here. An earlier version of this ADR quantified it; that claim was withdrawn
-in 2026-09. The thin GA4 exposure numbers behind it came from our own instrumentation — a
+often that happens here. The thin GA4 exposure numbers behind it came from our own instrumentation — a
 CDN-cached canonical page that mounted no exposure component, and a proxy that short-circuited
 without `FLAGS_SECRET` (dc4d8fe) — not from blockers.
 

@@ -8,8 +8,7 @@
  * (the client gtag path is skipped for experiment events).
  *
  * A client tag can be blocked, but we have never measured the rate for this
- * audience and should not imply one. An earlier version of this comment
- * quantified it; that claim was withdrawn in 2026-09.
+ * audience and should not imply one.
  *
  * It is INERT until GA4_MP_API_SECRET is set: an unconfigured deploy forwards
  * nothing and never errors. Everything here is best-effort — short timeout,

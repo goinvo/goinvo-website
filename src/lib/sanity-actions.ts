@@ -9,8 +9,7 @@ import type { QueryParams } from '@sanity/client'
 
 /**
  * The only queries <LiveData> refetches. A server action's id ships in the public bundle, so this is callable by
- * anyone: it must never run a query the caller writes, or it reads the whole dataset with the server's token
- * (task_2160: an anonymous POST counted 20 chat threads this way).
+ * anyone: it must never run a query the caller writes, or it reads the whole dataset with the server's token.
  */
 const REFETCHABLE = new Set<string>([caseStudyBySlugQuery, featureBySlugQuery])
 const SLUG = /^[a-z0-9][a-z0-9-]{0,199}$/

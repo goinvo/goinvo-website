@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Rule: the public server actions in src/lib/sanity-actions.ts must never run a query or purge a tag the caller
 // chose. A server action is a public POST endpoint; refetchQuery runs with the server's read token, so an open query
-// string reads the whole dataset once production is private (task_2160, task_1008).
+// string reads the whole dataset once production is private.
 
 const fetch = vi.fn(async () => ({ ok: true }))
 const withConfig = vi.fn(() => ({ fetch }))
