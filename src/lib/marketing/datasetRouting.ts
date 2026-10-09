@@ -85,6 +85,12 @@ export const INTERNAL_MARKETING_TYPES: readonly string[] = [
   // introduced the type, per the rule above — an unlisted marketing type is
   // passed straight through to the PUBLIC dataset and reports success.
   'marketingModelCall',
+  // Marqueta as strategist. The intent names the studio's targets and the runway
+  // it was written against; a terrain scan says which pains we plan to chase and
+  // which weaknesses worry us. Both are candid, so both are private — listed in
+  // the same change that introduced them.
+  'marketingStrategyIntent',
+  'marketingTerrainScan',
 ]
 
 export function isInternalMarketingType(type: string): boolean {

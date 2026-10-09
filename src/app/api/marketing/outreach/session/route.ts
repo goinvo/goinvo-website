@@ -2,6 +2,8 @@ import { createClient, type SanityClient } from '@sanity/client'
 import { NextRequest } from 'next/server'
 
 import { isOutreachWriterRole, OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
+import { isHumanAclMember, mayUsePrivateMarketing } from '@/lib/marketing/teamAccess'
+import { readTeamAccess } from '@/lib/marketing/teamAccess.server'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import {
   isPlainRecord,
@@ -54,6 +56,8 @@ type HistoryTransaction = {
 type ProjectAcl = {
   role?: unknown
   roles?: unknown
+  /** True for an API token's identity. A cookie is never minted for one. */
+  isRobot?: unknown
 }
 
 let proofClient: SanityClient | null = null
@@ -228,7 +232,17 @@ async function readProofAuthorRole(author: string): Promise<string | null> {
   )
   if (!response.ok) throw new Error('Sanity project membership was unavailable.')
   const acl = JSON.parse(await readBoundedUpstreamText(response)) as ProjectAcl | null
-  return roleNames(acl || {}).find(isOutreachWriterRole) || null
+  // People only: an API token with a writer role (the shop webhook is an
+  // Editor) must not be able to mint a Studio cookie.
+  if (!isHumanAclMember(acl)) return null
+  const roles = roleNames(acl || {})
+  const writer = roles.find(isOutreachWriterRole)
+  if (writer) return writer
+  // Not a writer by role: under Team permissions 'equal' any person on the
+  // project gets the same access as the principals, and the cookie carries
+  // their real role so a later switch to 'byRole' takes effect at once.
+  if (roles[0] && mayUsePrivateMarketing({ access: await readTeamAccess(), roleNames: roles, isHuman: true })) return roles[0]
+  return null
 }
 
 function conflictStatus(error: unknown): boolean {

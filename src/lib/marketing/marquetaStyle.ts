@@ -78,6 +78,14 @@ export const LABEL = {
   IDEA_KEEP: 'Keep it',
   IDEA_DISCARD: 'Not an idea',
   DRAFT_DISCARD: 'Not for the calendar',
+  SUGGEST_DRAFT: 'Draft it',
+  SUGGEST_SAVE: 'Save as idea',
+  INTENT_APPROVE: 'Approve',
+  INTENT_CHANGE: 'Change…',
+  /** Creates a Rendomat project from a drafted script. Green: it makes something, it takes nothing over. */
+  MAKE_IN_RENDOMAT: 'Export to Rendomat',
+  /** A link to that project, drawn once it exists. */
+  OPEN_IN_RENDOMAT: 'Open in Rendomat',
   AWAY: 'I’m away this week',
 } as const
 
@@ -263,6 +271,18 @@ export function openViewButton(view: MarquetaView, url: string): Block | null {
 }
 
 /**
+ * A link button to somewhere outside the Studio (a Rendomat project), labelled
+ * from `LABEL`. Null without an absolute http(s) URL, for the same reason as
+ * `openViewButton`: one unparseable url makes Slack refuse the whole message.
+ */
+export function openExternalButton(label: string, url: string): Block | null {
+  const href = String(url || '').trim()
+  const text = String(label || '').trim()
+  if (!/^https?:\/\//i.test(href) || !text) return null
+  return { type: 'button', text: { type: 'plain_text', text, emoji: true }, url: href }
+}
+
+/**
  * One `actions` block from whichever elements exist, or none at all: Slack
  * rejects an actions block with no elements, and a message's last block is
  * often a row whose only button depends on configuration.
@@ -286,6 +306,7 @@ export type StateNoteKind =
   | 'reopened'
   | 'passed'
   | 'answered'
+  | 'exportedToRendomat'
 
 const MENTION = /^<@[UW][A-Z0-9]+>$/
 
@@ -330,6 +351,8 @@ export function stateNote(kind: StateNoteKind, who: string, now: Date): string {
       return `_${person} passed — still needs someone_`
     case 'answered':
       return `_Answered by ${person}${on}_`
+    case 'exportedToRendomat':
+      return `_Exported to Rendomat by ${person}${on}_`
     default:
       return `_Updated by ${person}${on}_`
   }

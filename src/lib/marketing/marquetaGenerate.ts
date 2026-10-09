@@ -178,6 +178,20 @@ export function sanitizeTopic(value: unknown): string {
  * The model's output: one shape per format, parsed into a common draft.
  * ------------------------------------------------------------------------- */
 
+/**
+ * One part of a script, kept as structure: the hook, each beat, the close.
+ *
+ * A video is made slide by slide, so flattening a script into one block of
+ * text (which is what Slack shows) throws away exactly what Rendomat needs.
+ * `spoken` is what is said; `onScreen` is the short line the slide shows.
+ */
+export type ScriptFrame = {
+  role: 'hook' | 'beat' | 'close'
+  label: string
+  spoken: string
+  onScreen: string
+}
+
 export type GeneratedContent = {
   format: GenerationFormat
   title: string
@@ -185,7 +199,19 @@ export type GeneratedContent = {
   body: string
   /** Email only: the subject line, surfaced separately. */
   subject?: string
+  /** Script only: the hook, beats and close as structure, for the calendar's draft frames. */
+  frames?: ScriptFrame[]
 }
+
+/** Labels for the two script frames that have no beat name of their own. */
+export const SCRIPT_FRAME_LABEL = { hook: 'Hook', close: 'Close' } as const
+
+/**
+ * What the model is told an on-screen line is. Guidance only: Rendomat measures
+ * each slide against its own layout and refuses one that does not fit, naming
+ * it, so this side keeps no second character budget that could drift from it.
+ */
+const ON_SCREEN_GUIDANCE = 'The short line shown on the slide while this is said: at most about 8 words, not a sentence of narration'
 
 /** The JSON shape the model is asked to return, per format. Prompt-facing. */
 export function outputContractForFormat(format: GenerationFormat): Record<string, unknown> {
@@ -201,8 +227,10 @@ export function outputContractForFormat(format: GenerationFormat): Record<string
     return {
       title: 'Working title',
       hook: 'The first 1-2 spoken lines that earn attention',
-      beats: [{ label: 'Beat name', body: 'What is said in this beat, spoken not written' }],
+      hookOnScreen: ON_SCREEN_GUIDANCE,
+      beats: [{ label: 'Beat name', body: 'What is said in this beat, spoken not written', onScreen: ON_SCREEN_GUIDANCE }],
       close: 'The spoken close and call to action',
+      closeOnScreen: ON_SCREEN_GUIDANCE,
     }
   }
   if (format === 'post') {
@@ -278,19 +306,27 @@ export function parseGeneration(format: GenerationFormat, text: string): Generat
     const hook = asString(parsed.hook)
     const beats = Array.isArray(parsed.beats) ? parsed.beats : []
     const lines: string[] = []
-    if (hook) lines.push(`*Hook:* ${hook}`, '')
+    const frames: ScriptFrame[] = []
+    if (hook) {
+      lines.push(`*Hook:* ${hook}`, '')
+      frames.push({ role: 'hook', label: SCRIPT_FRAME_LABEL.hook, spoken: hook, onScreen: asString(parsed.hookOnScreen) })
+    }
     for (const raw of beats) {
       const beat = (raw || {}) as Record<string, unknown>
       const label = asString(beat.label)
       const bodyText = asString(beat.body)
       if (!bodyText) continue
       lines.push(label ? `*${label}*` : '', bodyText, '')
+      frames.push({ role: 'beat', label, spoken: bodyText, onScreen: asString(beat.onScreen) })
     }
     const close = asString(parsed.close)
-    if (close) lines.push(`*Close:* ${close}`)
+    if (close) {
+      lines.push(`*Close:* ${close}`)
+      frames.push({ role: 'close', label: SCRIPT_FRAME_LABEL.close, spoken: close, onScreen: asString(parsed.closeOnScreen) })
+    }
     const body = lines.filter((line, index) => !(line === '' && lines[index - 1] === '')).join('\n').trim()
     if (!title && !body) return null
-    return { format, title: title || 'Script', body }
+    return { format, title: title || 'Script', body, ...(frames.length ? { frames } : {}) }
   }
 
   if (format === 'post') {
@@ -407,11 +443,13 @@ export function generatedToCalendarDraft(input: {
   generated: GeneratedContent
   channel: string
   ts: string
+  /** The thread the card is posted in, so a later message (the render is ready) can find it. */
+  threadTs?: string
   personName: string
   topic: string
   permalink?: string
   sources?: ResearchCitation[]
-}): CapturedDraft {
+}): GeneratedCalendarDraft {
   const briefParts = [
     `Drafted by Marqueta for ${input.personName || 'someone'} in Slack, on request.`,
     input.topic ? `Topic: ${input.topic}.` : '',
@@ -434,7 +472,41 @@ export function generatedToCalendarDraft(input: {
     contentDraft: input.generated.body,
     brief: briefParts.join(' '),
     autoPublish: false,
+    ...(input.generated.frames?.length ? { draftFrames: scriptFramesToDraftFrames(input.generated.frames) } : {}),
+    ...(input.channel ? { slackChannel: input.channel } : {}),
+    ...(input.threadTs ? { slackThreadTs: input.threadTs } : {}),
   }
+}
+
+/** A calendar `draftFrames` entry, as the schema stores it. */
+export type CalendarDraftFrame = {
+  _key: string
+  _type: 'draftFrame'
+  title: string
+  body: string
+  visualDirection: string
+}
+
+export type GeneratedCalendarDraft = CapturedDraft & {
+  draftFrames?: CalendarDraftFrame[]
+  slackChannel?: string
+  slackThreadTs?: string
+}
+
+/**
+ * A script's structure as the calendar keeps it: the frame title is the beat
+ * label ("Hook", a beat's name, "Close"), the body is what is said, and the
+ * visual direction is the on-screen line. Keys are positional, so the same
+ * script always produces the same frames.
+ */
+export function scriptFramesToDraftFrames(frames: ScriptFrame[]): CalendarDraftFrame[] {
+  return frames.map((frame, index) => ({
+    _key: `frame-${index + 1}`,
+    _type: 'draftFrame',
+    title: frame.label,
+    body: frame.spoken,
+    visualDirection: frame.onScreen,
+  }))
 }
 
 /**

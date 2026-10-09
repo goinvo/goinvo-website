@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
 import {
-  assertStudioOrApiKey,
   DEFAULT_CHANNELS,
   ensureMarketingChannel,
   getMarketingWriteClient,
-  MarketingAuthError,
 } from '@/lib/marketing'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 
 // POST /api/marketing/seed/channels
 //

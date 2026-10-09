@@ -6,10 +6,34 @@ import {
   getSlackUserProfile,
   openSlackModal,
   postSlackEphemeral,
+  getSlackPermalink,
   postSlackMessage,
   updateSlackMessage,
   verifySlackRequest,
 } from '@/lib/chat/slack'
+import { getMarketingWriteClientFor } from '@/lib/marketing/client'
+import { draftAlreadyFiled, draftAndPost } from '@/lib/marketing/marquetaDraftDelivery.server'
+import {
+  buildIntentBlocks,
+  buildIntentChangeView,
+  decodeIntentChangeMetadata,
+  decodeIntentValue,
+  encodeIntentChangeMetadata,
+  INTENT_CHANGE_BLOCK,
+  INTENT_CHANGE_CALLBACK,
+  readIntentChangeSubmission,
+} from '@/lib/marketing/strategyIntent'
+import { approveIntentAs, draftIntent } from '@/lib/marketing/strategyIntent.server'
+import { canApproveIntent, STRICT_TEAM_ACCESS } from '@/lib/marketing/teamAccess'
+import { readTeamAccess } from '@/lib/marketing/teamAccess.server'
+import {
+  decodeSuggestionValue,
+  suggestionDraftKey,
+  suggestionIdeaKey,
+  suggestionToIdea,
+  suggestionTopic,
+  withCardTs,
+} from '@/lib/marketing/marquetaSuggest'
 import {
   MARKETING_ACTION,
   buildActionAcknowledgement,
@@ -25,8 +49,14 @@ import {
   buildRunwayView,
   readRunwaySubmission,
   decodeIdeaValue,
+  encodeIdeaValue,
   MONEY_BLOCK_PREFIX,
+  ideaJudgementReceipt,
+  redrawSuggestion,
+  withIdeaJudgement,
+  withRendomatMade,
 } from '@/lib/marketing/slackDelegation'
+import { makeInRendomat } from '@/lib/marketing/makeInRendomat.server'
 import {
   buildCallLogReceiptBlocks,
   buildCallLogUndoneBlocks,
@@ -90,7 +120,7 @@ import {
   type TaskActionInput,
   type TaskActionResult,
 } from '@/lib/marketing/taskActions.server'
-import { MARKETING_VIEW_QUERY_PARAM, studioTaskUrl } from '@/lib/marketing/taskLinks'
+import { studioTaskUrl } from '@/lib/marketing/taskLinks'
 import { resolveOwnerNameForWrite, resolvePresserName } from '@/lib/marketing/team.server'
 import {
   buildTaskStuckView,
@@ -115,6 +145,12 @@ import { submitDisputeEvidence } from '@/lib/shop/disputeEvidence'
 import { stripeDisputeDocumentId } from '@/lib/shop/ids'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * Draft it on a suggestion runs the drafter (a model call over the grounding)
+ * behind after(); the function has to live long enough for it to finish.
+ */
+export const maxDuration = 120
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Block = Record<string, any>
@@ -779,6 +815,48 @@ async function handleMarqueta(payload: SlackInteractionPayload): Promise<NextRes
   }
 
   // ── The Stuck modal ───────────────────────────────────────────────────────
+  // ── Change our intent: the pushback, in words ──────────────────────────────
+  // Claimed by its callback id here, above the answer form's catch-all, or the
+  // submission would be read as an answer to a task. The redraft is a model
+  // call, so the form closes at once and the new draft arrives in the thread.
+  if (payload.type === 'view_submission' && payload.view?.callback_id === INTENT_CHANGE_CALLBACK) {
+    const instruction = readIntentChangeSubmission(payload.view.state?.values)
+    if (!instruction) {
+      return NextResponse.json({ response_action: 'errors', errors: { [INTENT_CHANGE_BLOCK]: 'Say what should change.' } })
+    }
+    const meta = decodeIntentChangeMetadata(payload.view.private_metadata)
+    after(async () => {
+      if (!meta) return
+      const where = { channel: meta.channel, threadTs: meta.threadTs }
+      const member = await teamMember(userId)
+      if (!member.ok) {
+        await tellPresser(where, userId, member.message)
+        return
+      }
+      const who = await presserName(userId, member.name)
+      const by = who.name || member.name
+      await postInThread(where, `Redrafting our intent with ${slackMention(userId, by)}’s change…`)
+      const result = await draftIntent({ by, instruction })
+      if (!result.ok) {
+        await postInThread(where, result.message)
+        return
+      }
+      const authority = ((await readTeamAccess()) || STRICT_TEAM_ACCESS)
+      await postInThread(
+        where,
+        `Draft intent, version ${result.intent.version}`,
+        buildIntentBlocks({
+          intent: result.intent,
+          now: new Date(),
+          access: authority,
+          viewerCanApprove: canApproveIntent(authority, by),
+          actionIds: { approve: MARQUETA_ACTION.intentApprove, change: MARQUETA_ACTION.intentChange },
+        }) as Block[],
+      )
+    })
+    return NextResponse.json({})
+  }
+
   if (payload.type === 'view_submission' && payload.view?.callback_id === TASK_STUCK_CALLBACK) {
     const blocker = readTaskStuckSubmission(payload.view.state?.values)
     if (!blocker) {
@@ -842,6 +920,215 @@ async function handleMarqueta(payload: SlackInteractionPayload): Promise<NextRes
   const responseUrl = payload.response_url
   const where = whereFrom(payload)
   const respond = (text: string, blocks?: Block[]) => postSlackResponse(responseUrl, text, blocks)
+
+  // Export to Rendomat, on a drafted video script. Acked at once and done in
+  // after(): Rendomat can take seconds to answer, and Slack wants its ack in
+  // three. The slides come from the calendar RECORD as it is now, so edits made
+  // on the Calendar since the card was posted are what get made.
+  //
+  // No reversing button follows the press. Its reverse would be deleting the
+  // Rendomat project, and a delete one press away in a channel is how an
+  // edited video disappears; a project is removed, when it must be, in
+  // Rendomat itself. The draft can still be binned from the same row.
+  if (actionId === MARQUETA_ACTION.makeInRendomat) {
+    const decoded = decodeIdeaValue(action?.value)
+    const userId = clean(payload.user?.id)
+    const pressedValue = action?.value
+
+    after(async () => {
+      if (!decoded) {
+        await postSlackResponse(responseUrl, errorLine('make that in Rendomat', 'The draft is still on the Calendar.'))
+        return
+      }
+      try {
+        const member = await teamMember(userId)
+        if (!member.ok) {
+          await postSlackResponse(responseUrl, member.message)
+          return
+        }
+        const result = await makeInRendomat(decoded)
+        if (!result.ok) {
+          // A refusal or a slide that does not fit is the presser's to fix, said
+          // in plain words (already escaped where it quotes the record); a
+          // failure is ours, and the draft is untouched either way.
+          await postSlackResponse(
+            responseUrl,
+            result.kind === 'failed'
+              ? errorLine('make that in Rendomat', 'The draft is still on the Calendar.')
+              : clipSlackText(result.message, 900),
+          )
+          return
+        }
+        const note = stateNote('exportedToRendomat', slackMention(userId), new Date())
+        const source = await readPressedMessage(where, payload.message)
+        const next = source ? withRendomatMade(source.blocks, { note, projectUrl: result.projectUrl, pressedValue }) : null
+        if (source && next && next !== source.blocks) {
+          const rewritten = await rewritePressedMessage(where, source, next)
+          if (!rewritten) await replaceSlackMessage(responseUrl, { text: source.text || note, blocks: next })
+          return
+        }
+        // An older card (or one already redrawn): nothing to redraw, so the
+        // link goes to the presser alone. Ephemeral messages carry no buttons.
+        await postSlackResponse(
+          responseUrl,
+          /^https?:\/\//i.test(result.projectUrl) ? `${note} <${result.projectUrl}|${LABEL.OPEN_IN_RENDOMAT}>` : note,
+        )
+      } catch (err) {
+        console.error('[slack] make in rendomat failed', err instanceof Error ? err.name : 'UnknownError')
+        await postSlackResponse(responseUrl, errorLine('make that in Rendomat', 'The draft is still on the Calendar.'))
+      }
+    })
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Our intent: Change… opens the form, on the request path ──────────────
+  // No Sanity read before views.open: the trigger lives about three seconds.
+  // The version comes from the button, so a redraft knows what was on screen.
+  if (actionId === MARQUETA_ACTION.intentChange) {
+    const member = await teamMember(userId)
+    if (!member.ok) {
+      after(() => respond(member.message))
+      return NextResponse.json({ ok: true })
+    }
+    const pressed = decodeIntentValue(action?.value)
+    const opened = await openSlackModal(
+      payload.trigger_id || '',
+      buildIntentChangeView(
+        encodeIntentChangeMetadata({ channel: where.channel, threadTs: where.threadTs, version: pressed?.version || 0 }),
+      ),
+    )
+    if (!opened) after(() => respond(formWouldNotOpen('Slack')))
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Our intent: Approve ───────────────────────────────────────────────────
+  // Checked against the Team permissions setting with the presser's verified
+  // identity, and against the version they saw: approving a card that has since
+  // been redrafted would approve words they never read.
+  if (actionId === MARQUETA_ACTION.intentApprove) {
+    const pressed = decodeIntentValue(action?.value)
+    const blocks = (payload.message?.blocks || []) as Block[]
+    after(async () => {
+      if (!pressed) {
+        await respond(errorLine('approve that', 'That button lost track of which version it was. Ask me for our intent again.'))
+        return
+      }
+      const member = await teamMember(userId)
+      if (!member.ok) {
+        await respond(member.message)
+        return
+      }
+      const who = await presserName(userId, member.name)
+      const result = await approveIntentAs({ version: pressed.version, personName: who.name || member.name, slackUserId: userId })
+      const authority = ((await readTeamAccess()) || STRICT_TEAM_ACCESS)
+      if (!result.ok) {
+        await tellPresser(where, userId, result.message)
+        if (result.reason === 'stale' && result.intent) {
+          await postInThread(
+            where,
+            `Our intent, version ${result.intent.version}`,
+            buildIntentBlocks({
+              intent: result.intent,
+              now: new Date(),
+              access: authority,
+              viewerCanApprove: canApproveIntent(authority, who.name || member.name),
+              actionIds: { approve: MARQUETA_ACTION.intentApprove, change: MARQUETA_ACTION.intentChange },
+            }) as Block[],
+          )
+        }
+        return
+      }
+      // Redraw the card as approved, in place: the Approve button goes, Change… stays.
+      await replaceSlackMessage(responseUrl, {
+        text: payload.message?.text || 'Our intent',
+        blocks: blocks.length
+          ? (buildIntentBlocks({
+              intent: result.intent,
+              now: new Date(),
+              access: authority,
+              viewerCanApprove: false,
+              actionIds: { approve: MARQUETA_ACTION.intentApprove, change: MARQUETA_ACTION.intentChange },
+            }) as Block[])
+          : undefined,
+      })
+      await postInThread(where, `${STATE_EMOJI.done} ${slackMention(userId, who.name || member.name)} approved our intent (version ${result.intent.version}). I’ll judge the terrain against it from now on.`)
+    })
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── A suggestion: Draft it / Save as idea ──────────────────────────────────
+  // Neither opens a form, so both answer Slack at once and do the work after.
+  // The value carries everything needed (no read before acting), and the
+  // card's own ts — unknown when the card was drawn — comes from the press.
+  if (actionId === MARQUETA_ACTION.suggestDraft || actionId === MARQUETA_ACTION.suggestSave) {
+    const pressed = actionId === MARQUETA_ACTION.suggestDraft ? 'draft' : 'save'
+    const decoded = decodeSuggestionValue(action?.value)
+    const blocks = (payload.message?.blocks || []) as Block[]
+    const messageText = clean(payload.message?.text) || 'Suggestions'
+    after(async () => {
+      if (!decoded || !where.channel || !where.messageTs) {
+        await respond(errorLine('do that', 'That button lost track of which suggestion it was. Ask me again.'))
+        return
+      }
+      const member = await teamMember(userId)
+      if (!member.ok) {
+        await respond(member.message)
+        return
+      }
+      const value = withCardTs(decoded, where.messageTs)
+      const who = slackMention(userId, member.name)
+      try {
+        if (pressed === 'save') {
+          const permalink = await getSlackPermalink(where.channel, where.messageTs)
+          await getMarketingWriteClientFor('marketingIdea').createIfNotExists(
+            suggestionToIdea({ value, personName: member.name, permalink }),
+          )
+          await replaceSlackMessage(responseUrl, {
+            text: messageText,
+            blocks: redrawSuggestion(blocks, {
+              index: value.index,
+              pressed: 'save',
+              note: `Saved as an idea by ${who}`,
+              ideaValue: encodeIdeaValue({ channel: value.channel, ts: suggestionIdeaKey(value.cardTs, value.index) }),
+            }),
+          })
+          return
+        }
+
+        const keyTs = suggestionDraftKey(value.cardTs, value.index)
+        if (await draftAlreadyFiled(where.channel, keyTs)) {
+          await respond('That one is already drafted — it’s further down this thread.')
+          return
+        }
+        await replaceSlackMessage(responseUrl, {
+          text: messageText,
+          blocks: redrawSuggestion(blocks, {
+            index: value.index,
+            pressed: 'draft',
+            note: `${who} asked for a draft — it’s coming in this thread`,
+          }),
+        })
+        await draftAndPost({
+          format: value.format,
+          topic: suggestionTopic({
+            title: value.title,
+            angle: value.angle,
+            workTitles: value.workTitles,
+            sourceTitle: value.sourceTitle,
+          }),
+          channel: where.channel,
+          threadTs: where.threadTs,
+          keyTs,
+          permalinkTs: where.messageTs,
+          personName: member.name,
+        })
+      } catch (err) {
+        console.error('[slack] suggestion press failed', err instanceof Error ? err.name : 'UnknownError')
+        await respond(errorLine(pressed === 'save' ? 'save that idea' : 'draft that', 'Try again in a moment.'))
+      }
+    })
+    return NextResponse.json({ ok: true })
+  }
 
   // ── Log it…: open the form, on the request path ───────────────────────────
   if (actionId === MARQUETA_ACTION.logCall) {
@@ -1344,37 +1631,6 @@ async function deliverPrep(
   }
 }
 
-/** Does this link open This week? (Where a caught idea waits to be judged, and nowhere after.) */
-function opensThisWeek(url: unknown): boolean {
-  try {
-    return new URL(String(url)).searchParams.get(MARKETING_VIEW_QUERY_PARAM) === 'thisWeek'
-  } catch {
-    return false
-  }
-}
-
-/**
- * A caught idea's message with its buttons swapped for the judgement: the
- * row holding Keep it / Not an idea becomes the receipt. A link to This week
- * goes with the buttons — that is where an idea waits to be judged, and a
- * judged one is no longer there (kept, it is in the idea backlog; binned, it
- * is gone), so the link would open a page without it. Any other link ("Open
- * Calendar" on a draft) stays under the receipt. A message with no such row
- * (an older one) becomes the receipt alone.
- */
-function withJudgement(blocks: Block[], receipt: string): Block[] {
-  const judged = new Set<string>([MARKETING_ACTION.ideaKeep, MARKETING_ACTION.ideaDiscard])
-  const row = blocks.findIndex(
-    (block) => block?.type === 'actions' && (block.elements || []).some((element: Block) => judged.has(element?.action_id)),
-  )
-  const line: Block = { type: 'context', elements: [{ type: 'mrkdwn', text: receipt }] }
-  if (row < 0) return [line]
-  const links = (blocks[row].elements || []).filter(
-    (element: Block) => element?.type === 'button' && element.url && !judged.has(element.action_id) && !opensThisWeek(element.url),
-  )
-  return [...blocks.slice(0, row), line, ...actionsBlock(...links), ...blocks.slice(row + 1)]
-}
-
 export async function POST(request: NextRequest) {
   const rawBody = await request.text()
 
@@ -1608,12 +1864,10 @@ export async function POST(request: NextRequest) {
         // Where it is now, in the Studio's words: a kept idea leaves This week's
         // "Caught in Slack" for the idea backlog on the SEO tab (the Studio's
         // own Keep says the same).
-        const receipt = keep
-          ? `${STATE_EMOJI.done} Kept by ${who} — it’s in the idea backlog on the SEO tab.`
-          : `Binned by ${who} — I’ll remember the miss.`
+        const receipt = ideaJudgementReceipt(keep, who)
         await replaceSlackMessage(responseUrl, {
           text: payload.message?.text || receipt,
-          blocks: withJudgement((payload.message?.blocks || []) as Block[], receipt),
+          blocks: withIdeaJudgement((payload.message?.blocks || []) as Block[], receipt, action.value),
         })
       } catch (err) {
         console.error('[slack] idea judgement failed', err)

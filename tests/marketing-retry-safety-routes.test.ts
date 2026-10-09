@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 type Doc = Record<string, unknown> & { _id: string; _type: string; _rev?: string }
 
@@ -14,8 +14,8 @@ vi.mock('@/lib/marketing', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/marketing')>()
   return {
     ...actual,
-    assertStudioOrApiKey: vi.fn(async () => undefined),
-    assertMarketingApiKey: vi.fn(() => undefined),
+    
+    
     getMarketingWriteClient: vi.fn(() => mocks.client),
     getMarketingWriteClientFor: vi.fn(() => mocks.client),
   }
@@ -220,6 +220,10 @@ describe('stateful Marketing writer retry safety', () => {
     mocks.schedulePublish.mockResolvedValue({ ok: true })
   })
 
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('converges concurrent research conversions on one atomic document set', async () => {
     const memory = memoryClient(researchFixture())
     mocks.client = memory.client
@@ -289,6 +293,8 @@ describe('stateful Marketing writer retry safety', () => {
   })
 
   it('claims a Rendomat video once under concurrency', async () => {
+    // The old publish_at pass is off by default; these pin its retry safety for when it is on.
+    vi.stubEnv('RENDOMAT_AUTOPOST_INGEST', 'on')
     const memory = memoryClient()
     mocks.client = memory.client
     mocks.listCompletedVideos.mockResolvedValue([{
@@ -307,6 +313,8 @@ describe('stateful Marketing writer retry safety', () => {
   })
 
   it('retries only scheduling for an existing Rendomat asset after enqueue failure', async () => {
+    // The old publish_at pass is off by default; these pin its retry safety for when it is on.
+    vi.stubEnv('RENDOMAT_AUTOPOST_INGEST', 'on')
     const memory = memoryClient()
     mocks.client = memory.client
     mocks.listCompletedVideos.mockResolvedValue([{
@@ -332,6 +340,8 @@ describe('stateful Marketing writer retry safety', () => {
   })
 
   it('releases a failed Rendomat attachment patch and can re-ingest cleanly', async () => {
+    // The old publish_at pass is off by default; these pin its retry safety for when it is on.
+    vi.stubEnv('RENDOMAT_AUTOPOST_INGEST', 'on')
     const memory = memoryClient()
     memory.failPatch()
     mocks.client = memory.client
@@ -353,4 +363,11 @@ describe('stateful Marketing writer retry safety', () => {
     expect(memory.assets.size).toBe(1)
     expect(mocks.downloadRendomatAsset).toHaveBeenCalledTimes(2)
   })
+})
+
+// Authentication is server-only; keep the existing route-test boundary mocks.
+vi.mock('@/lib/marketing/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/marketing/auth')>()
+  return { ...actual, assertStudioOrApiKey: vi.fn(async () => undefined),
+    assertMarketingApiKey: vi.fn(() => undefined) }
 })

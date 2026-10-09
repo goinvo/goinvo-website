@@ -354,6 +354,106 @@ STARTING POINT — filed on the calendar as `drafting` with **no date**, so it c
 - **Headless twin:** `POST /api/marketing/generate` runs the same core, fail-closed without
   `ANTHROPIC_API_KEY`. No new Slack scope.
 
+### Marqueta suggests what to make (built 2026-10-02)
+
+`Marqueta, suggest from our work` · `suggest from the field` · `suggest: <brief>` (attach or link
+documents for detail). A bare `suggest` gets a three-line menu, so nothing is spent on a guess.
+Up to 5 suggestions per card, each with **Draft it** (runs the same drafter as `draft <format>:`,
+in the thread) and **Save as idea** (→ `marketingIdea`, `needsReview: false`; reversed by the
+existing *Not an idea*).
+
+- **Anchoring is enforced, not requested.** The model sees our work and research only as ids
+  (W1/R1/D1), never URLs; links are drawn from our records afterwards. A `field` source survives
+  only if `web_search` actually returned that URL (`comparableUrl`). A work/field suggestion left
+  with no real anchor is DROPPED and counted on the card. Tests: `tests/marqueta-suggest.test.ts`
+  (each guard falsified once to prove it fires).
+- **Idea and draft keys differ** (`-s<i>` vs `-d<i>` on the card ts): the shared discard tries
+  the idea id first, so a shared key made "Not for the calendar" bin the saved idea.
+  `withJudgement` now redraws the PRESSED row (it used to take the first judged row in the message).
+- **Documents:** links are read from the RAW event text (`decodeSlackText` reduces
+  `<url|label>` to the label). Google Docs/Slides are read via their plain-text export (must be
+  shared "anyone with the link"). PDFs go to Claude as native document blocks
+  (`generateClaudeText({ pdfs })`). Every fetch passes `isFetchableUrl` on EVERY redirect hop.
+  Unreadable documents are named on the card with the reason.
+- **Slack attachments need `files:read`** (not granted; add it and reinstall). Without it Slack
+  answers with its sign-in page, which is detected and reported as "I need files:read".
+  Attachments arrive as `subtype: file_share`; only the Marqueta-addressed path accepts them.
+- **Gate:** suggestions AND drafting now go through `marquetaWorkRefusal` (team-only, and only in
+  her rooms or a DM). Drafting used to skip it, despite citing private research.
+- Code: `marquetaSuggest.ts` (pure), `marquetaSuggest.server.ts`, `marquetaDraftDelivery.server.ts`
+  (the shared draft → calendar → card path), `buildSuggestionBlocks`/`redrawSuggestion` in
+  `slackDelegation.ts`. Headless twin: `POST /api/marketing/suggest`
+  (`{source, details?, documents?: [{name,text}|{name,pdfBase64}|{url}]}`, 4 MB body cap).
+  `field` takes ~80s; the events route `maxDuration` is 300.
+
+### Marqueta as strategist — intent, terrain, sitrep (slice 1 built 2026-10-05)
+
+The owner asked for a "general": survey the terrain, decide where to focus while covering the flank,
+plan backwards from goals, recommend — and take pushback. Three slices; **slice 1 = intent + terrain
++ sitrep** (slice 2: allocation into the weekly planner + a recorded pushback loop + more blind spots;
+slice 3: backwards plan with decision points + a watch list).
+
+- **Intent** (`strategyIntent.ts` pure, `.server` reads/writes): one end state, ≤3 objectives, each
+  with ONE measure + target + date + early signs; what we won't do; limits; assumptions with check
+  dates. She drafts, people approve. **Approval follows Team permissions** (below: anyone under
+  `equal`, named approvers under `byRole`), checked with the presser's verified
+  Slack identity AND the card's version (a press on a redrafted card is refused as stale). An
+  objective without measure/target/date cannot be approved. Every version kept in `history`.
+  Over HTTP, `approve` needs `MARKETING_API_KEY` (a Studio session can't prove who `by` is).
+- **The goals are DATA, never code.** First draft: `npx tsx scripts/seed-strategy-intent.ts --notes
+  <file OUTSIDE the repo> --by <name> --write` (refuses a notes file inside the repo). The notes
+  live only in the private record (`contextNotes`).
+- **Terrain** (`terrainRecon.ts` pure, `.server` runs, `terrainScan.server.ts` reads): Sunday
+  22:00 UTC cron → `/api/marketing/strategy/recon` (CRON_SECRET; `?dryRun=1`). Keyless sources:
+  openFDA "use error" reports, App Store 1–2★ reviews of patient apps, HN comments, PubMed titles,
+  plus Claude `web_search`. **Reddit's API is NOT called**: its terms make business monitoring
+  commercial (manual contract); Reddit threads arrive via web search. Bluesky search needs auth.
+  Rules (tests + falsified once): a web finding survives only if search returned its URL (dropped
+  ones counted); quotes shown only once found in the fetched page; pains point at signal ids
+  (invented ids → nothing; no signal → pain dropped); "opening" needs our work behind it; a signal
+  seen in an earlier scan is not recounted; trends are arithmetic (`painTrend`: rising needs ×1.5
+  AND +2). One record per ISO week keyed to the week it INFORMS (Sunday run → Monday's week).
+- **openFDA gotchas:** data lags 6+ weeks (nothing received in the last 30 days is published), so
+  the window is 75 days with dedupe; a search with no matches is **HTTP 404** = empty, not failure.
+- **Time budget:** a real run took 161 s (route maxDuration 300). The model is capped at 8 web
+  quotes + 8 pains — uncapped, 15 quotes overflowed 6k output tokens and the run took 262 s.
+  Quote checks run together under one 25 s deadline (late pages stay unverified, never dropped).
+- **Untrusted text:** complaints and pages are written by strangers; both prompts say to treat them
+  as data. Links in the sitrep come only from records (`noUrls` strips any the model writes).
+- **Reads are writer-only:** `GET /api/marketing/strategy/intent` needs a Studio WRITER or the API
+  key (private data read with the write token), like the other outreach reads.
+- **Sitrep** (`sitrep.ts`): BLIND SPOTS are rules over records (draft intent, unmeasured or stale
+  objective, lapsed assumption, failed source, rising pain on our flank); SEE / RECOMMEND / WATCH
+  come from the model, each recommendation tagged with what it serves (objective key | flank |
+  reserve). No model → a rules version that says so. Stored on the scan; Monday's digest shows 3
+  lines under the week line; a scan older than 8 days says so instead.
+- **Slack:** `Marqueta, sitrep` · `terrain` · `intent` (stored-record lookups, gated to her rooms +
+  team) · `draft our intent` (model, behind `after()`). Intent card: **Approve** (green, only when
+  allowed and unblocked) · **Change…** (form → she redrafts with your words → new DRAFT version).
+- **Watchdog:** `marketingHeartbeat.recon`; `check-heartbeat.mjs` fails on never-ran/failed/stale,
+  warns only when some sources failed. Both new types are in `INTERNAL_MARKETING_TYPES`.
+
+### Team permissions — everyone has the principals' permissions (built 2026-10-05)
+
+The owner's call: GoInvo is small, so **everyone on the team has the same permissions as the
+principals**. It is a setting, `marketingSettings.teamAccess` (Settings → Business → Team
+permissions; pure rules in `teamAccess.ts`, cached server read in `teamAccess.server.ts`, Studio
+hook `useTeamAccess`):
+
+- `equal` (DEFAULT): any PERSON on the Sanity project passes `assertStudioWriterOrApiKey`, gets the
+  Outreach session cookie and the Outreach screen's actions, whatever their Sanity role; anyone can
+  approve the intent. `byRole`: the old rule (administrator/developer/editor) + named approvers.
+- **People only, in both modes.** An API token also answers `users/me` and can carry a role, so a
+  role alone never proves a person: `users/me` must show a sign-in provider + email
+  (`provider: "sanity-token"` = robot) and the ACL must say `isRobot: false`. Server-to-server
+  callers use `MARKETING_API_KEY`. `assertStudioOrApiKey` refuses tokens too.
+- An unreadable setting is the STRICTER rule (`STRICT_TEAM_ACCESS`), never the wider one.
+- Unchanged, and it applies to the principals too: Slack guests / other workspaces are refused, and
+  Marqueta keeps money, outreach and strategy talk to her own channels + DMs (a channel can hold
+  outsiders; she has no `channels:read` to check).
+- Tests: `tests/team-access.test.ts` + the security-boundary and outreach-session suites
+  (fixtures model a PERSON explicitly).
+
 ## The weekly tick — the suite finally runs on its own (built 2026-09-02)
 
 Nothing was ever scheduled. The planner, digest, runway check-in, identity prompt and
@@ -980,10 +1080,14 @@ extension of the core, **fail-closed**: with no platform credentials nothing is 
 
 ## Rendomat → Instagram ingest (auto-post rendered videos as Reels, built 2026-06)
 
+> **OFF since 2026-10-06** unless `RENDOMAT_AUTOPOST_INGEST=on` — renders now come back privately
+> through *Export to Rendomat* (below). Kept for reference and as the switch's "on" behaviour.
+
 Pulls completed renders from **Rendomat** (the `vsl-generator` project at
 `C:\Users\quest\Programming\vsl-generator`) and turns them into scheduled, auto-publishing
-Instagram **Reels**. Rendomat is export-only (it renders; our calendar owns scheduling + tokens),
-which matches the publishing suite exactly.
+Instagram **Reels**. This pass treats Rendomat as export-only (it renders; our calendar owns
+scheduling + tokens). Videos Marqueta asks Rendomat to MAKE follow the private path in "Make it in
+Rendomat" below and never go through this pass.
 
 - **Flow:** `POST /api/marketing/rendomat/ingest` lists completed Rendomat videos with a `publish_at`
   in a look-ahead window, **dedupes by `rendomatVideoId`**, pulls each export manifest, downloads
@@ -1000,14 +1104,90 @@ which matches the publishing suite exactly.
 - **Connect Rendomat:** `RENDOMAT_API_BASE` (the Rendomat app URL) + `RENDOMAT_API_KEY` (an `rmk_…`
   key with `read` scope, from Rendomat **Account → API keys**). The external API only exposes the
   rendered **video** (no per-slide images), so Instagram posts are **Reels**, not image carousels.
-- **Trigger:** call `/ingest` from a QStash schedule or a Vercel cron (or Rendomat's planned
-  `export.ready` webhook). Verify: `curl -X POST -H "Authorization: Bearer $KEY" "localhost:3000/api/marketing/rendomat/ingest?dryRun=1"`.
+- **Trigger:** a daily Vercel cron (`GET`, `CRON_SECRET` only, `30 12 * * *`) — or a manual `POST`.
+  A video made for a Marqueta draft (`external_ref` set, or its item carries `rendomatProjectUrl`) is
+  **never** taken by this publish_at pass; the linked pass below attaches it privately instead. Verify: `curl -X POST -H "Authorization: Bearer $KEY" "localhost:3000/api/marketing/rendomat/ingest?dryRun=1"`.
 - **Storage note:** each ingested render is **re-hosted to Sanity** (a public `cdn.sanity.io` file
   URL) so Instagram can fetch it independently of Rendomat uptime — it counts against Sanity asset
   storage/bandwidth, and the asset stays public (these are marketing videos bound for a public IG
   post anyway). Downloads are timeout-bounded (25s) to stay within the serverless limit. If a
   render's `publish_at` is past, schedulePublish enqueues it for immediate posting; if QStash is
   unset the item is still created (status scheduled) and a periodic `/publish/run` sweep posts it.
+
+## Export to Rendomat — Marqueta's scripts become videos, renders come back privately (built 2026-10-06)
+
+`Marqueta, draft script: <topic>` files a video script on the Calendar (no date, `drafting`) and the
+card gains **Export to Rendomat** (green, leftmost, one row with *Not for the calendar* + *Open
+Calendar*). The press creates a Rendomat project in the GoInvo organization with GoInvo's brand
+kit; the finished render comes back onto the SAME calendar item, **privately**, because a client may
+have to sign off first. **Nothing Marqueta drafts ever posts itself or goes public on its own.**
+Slack is only where the export starts: the video's home is the calendar item, its file is in Blob.
+
+- **Structure is kept:** the script contract asks for a short `onScreen` line per hook / beat / close
+  (spoken `body` unchanged); `parseGeneration` returns `frames`; `generatedToCalendarDraft` writes
+  them to `draftFrames` (title = beat label, body = spoken, visualDirection = on-screen) and records
+  `slackChannel` + `slackThreadTs` so a later message can find the thread.
+- **The press** (`makeInRendomat.server.ts`, route branch `MARQUETA_ACTION.makeInRendomat`): ack, then
+  `after()`: team-only, reads the item with `getOutreachClient()`, refuses missing / binned / non-video,
+  answers an already-linked item from the record, builds slides from the **record's** `draftFrames` at
+  press time (Calendar edits count; the flattened draft only as fallback), `POST /api/v1/videos`
+  (`mode: "script"`, `external_ref` = item `_id`, `brand_kit_id: goinvo-health`, 9:16), writes ONLY
+  `rendomatVideoId` / `rendomatProjectUrl` / `rendomatLinkedAt` (`setIfMissing`), redraws the row as
+  `stateNote('exportedToRendomat')` over [Open in Rendomat · Not for the calendar · Open Calendar].
+  **No reversing button, on purpose:** its reverse is deleting a Rendomat project, which must not be
+  one press away in a channel; it is done in Rendomat. A Rendomat 400 `{problems:[{slide, field,
+  reason}]}` becomes an ephemeral line naming the beat ("shorten it on the Calendar and press again").
+  **Rendomat's fit check is the only one** — this side keeps no character budget that could drift.
+- **The contract** (both sides): 400 problems with 0-based `slide`; optional `narration` on every
+  slide (the hook's spoken text goes on the cover); `editor_url` absolute (fallback
+  `RENDOMAT_API_BASE/videos/<id>`); GET one/list return `external_ref` (list filters `?external_ref=`);
+  a repeated `external_ref` answers 200 `existing: true`, never a second video; `rmk_` key with
+  `write` for POST, `read` for GET. The key is sent only to Rendomat's own origin (`isRendomatOrigin`).
+- **The private copy** (`rendomatPrivateCopy.server.ts`, the ingest route's linked pass): for items
+  with `rendomatProjectUrl` and no `privateVideo`, GET the video; attach only when `completed` +
+  `download_url` + `external_ref == item._id` (each skip says why); bounded download → **private
+  Vercel Blob** (`access: 'private'`, `marketing/rendomat/<item id>/<video id>.mp4`, multipart above
+  50 MB) → patch ONLY `privateVideo` + `clientSignOff: {status: 'pending'}` (`PRIVATE_COPY_FIELDS`).
+  Then Marqueta says in the draft's thread that it is ready to watch in the Studio, private until
+  signed off. **Why Blob, not Sanity:** every Sanity asset on this plan is a public CDN URL (private
+  assets are an Enterprise add-on and do not cover video), so the item stores a blob PATHNAME, never
+  a URL.
+- **Storage is swappable.** Only `privateMedia.server.ts` imports `@vercel/blob`; everything else
+  goes through it and stores a pathname. Moving to cheaper storage later = replace that one file
+  (keep its put / sign / copy-to-public functions) and move the existing objects.
+- **The old auto-posting pass is OFF** (owner, 2026-10-06). The ingest route's `publish_at` pass
+  (copy a render to the public Sanity CDN and schedule an Instagram Reel) runs only when
+  `RENDOMAT_AUTOPOST_INGEST=on`; otherwise every unlinked render is skipped with that reason
+  (`publishAtPassDecision` in `rendomatLink.ts`). Linked renders never take that path either way.
+- **Studio** (`PrivateVideoPanel.tsx` in the calendar item editor): plays the file through
+  `POST /api/marketing/private-media/sign` (15-minute signed GET URL scoped to that pathname);
+  records the client's answer via `POST /api/marketing/private-media/sign-off`
+  (`pending | approved | changesRequested`, the typed name + the VERIFIED Sanity user id); and only
+  after approval offers **Copy to public media for posting…** (`POST /api/marketing/private-media/publish`,
+  needs `confirmed: true` after a plain "anyone with the link can watch it" confirmation) which fills
+  `socialVideo` and schedules nothing. All three routes are `assertStudioWriterOrApiKey`.
+- **Fail-closed:** no button unless `RENDOMAT_API_BASE` + `RENDOMAT_API_KEY` + `RENDOMAT_CLIENT_ID`;
+  the press re-checks. The cron `GET` answers 200 `{skipped, reason}` without Rendomat or the private
+  store (POST keeps its 503); sign/publish 503 without the store.
+- **Tests (each rule falsified once):** `tests/rendomat-link.test.ts` (frames, card, slides from the
+  record, refusal words, attach decision, patch fields), `tests/make-in-rendomat.test.ts` (the press +
+  the client: idempotent, key only to Rendomat's origin), `tests/rendomat-private-copy.test.ts` ("a
+  linked item never auto-posts and never goes public", through the real ingest route, and the old
+  pass is off unless switched on),
+  `tests/slack-interactions-rendomat.test.ts` (the press is LIVE through the real interactions route),
+  plus the wiring/style guards and the `make-video` capture scene.
+- **GOTCHA:** `handleMarqueta` in the interactions route answers EVERY `goinvo_marqueta_*` id and falls
+  through to an ack. A new Marqueta button's branch must live INSIDE it; one placed after it in `POST`
+  is unreachable, and the source-reading wiring guard still passes. Prove it with a route-level test.
+- **Owner steps (nothing works until these are done):**
+  1. Vercel → goinvo-website → Storage → Create → **Blob → Private** → connect it to the project
+     (sets `BLOB_READ_WRITE_TOKEN`). It must be a PRIVATE store.
+  2. Sign in to Rendomat with a verified GoInvo Google account; create (or share with the team) the
+     GoInvo organization and note its id; mint an `rmk_` key with **read + write** (shown once).
+  3. Set `RENDOMAT_API_BASE=https://rendomat.vercel.app` (the app's Vercel URL — read from env, never
+     hard-coded), `RENDOMAT_API_KEY`, `RENDOMAT_CLIENT_ID` on Vercel, then **redeploy** (env is baked
+     at build).
+  4. Rendomat's side must be deployed first with `external_ref` (its own schema push is an owner step there).
 
 ## Posting-time research — "best time to post" per channel (built 2026-06, runs on Claude)
 

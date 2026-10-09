@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import {
-  assertStudioOrApiKey,
   buildCreatePayload,
   buildLinkFromPost,
   getMarketingWriteClientFor,
   marketingCloneDocumentId,
-  MarketingAuthError,
   MarketingValidationError,
   type CalendarItemForLink,
 } from '@/lib/marketing'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 
 // POST /api/marketing/clone/link-from-post
 //

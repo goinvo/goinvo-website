@@ -120,8 +120,14 @@ import { summarizeOutreach } from './outreachPulse'
 import { setMarketingAvailability } from './slackActions.server'
 import { MARKETING_ACTION } from './slackDelegation'
 import { clipSlackText, decodeSlackText, escapeSlackText, SLACK_LIMITS, slackLink } from './slackText'
+import { buildSitrepBlocks, buildTerrainBlocks } from './sitrep'
 import { moneyAnswer, pipelineAnswer, strategyAnswer } from './strategyCheck'
 import { loadStrategySnapshot } from './strategyCheck.server'
+import { buildIntentBlocks } from './strategyIntent'
+import { readIntent } from './strategyIntent.server'
+import { canApproveIntent, STRICT_TEAM_ACCESS } from './teamAccess'
+import { readTeamAccess } from './teamAccess.server'
+import { readLatestScan } from './terrainScan.server'
 import { studioViewUrl, type StudioFocus } from './taskLinks'
 import { loadTeamAvailability, resolveOwnerNameForWrite, resolvePresserName, slackIdForOwner } from './team.server'
 import { buildCheckInTaskBlocks, buildTaskCard, isDecisionTask, isSlipping, type CheckInTask } from './weeklyCheckIn'
@@ -327,6 +333,26 @@ function internalChannels(): Set<string> {
 }
 
 const answerableHere = (channel: string) => IN_A_DM(channel) || internalChannels().has(clean(channel))
+
+/**
+ * The gate for a request that answers with the studio's work — drafting and
+ * suggestions — which run behind the route rather than through
+ * `answerMarqueta`, and so would otherwise skip the checks every other answer
+ * gets. Both cite the private organisation research and spend model credits,
+ * so: only in a room whose audience is the studio, and only for the team.
+ *
+ * Null when it may go ahead; otherwise what to say, and whether to say it
+ * privately (a failed lookup is for the asker alone, like every failure).
+ */
+export async function marquetaWorkRefusal(input: {
+  slackUserId: string | undefined
+  channel: string
+}): Promise<{ text: string; privately: boolean } | null> {
+  if (!answerableHere(input.channel)) return { text: askMeElsewhere(), privately: false }
+  const refusal = await teamOnly(input.slackUserId)
+  if (!refusal) return null
+  return { text: refusal, privately: refusal !== TEAM_ONLY }
+}
 
 /** Where to ask instead: her own room when it is configured, and a DM only when DMs are wired up. */
 function askMeElsewhere(): string {
@@ -607,6 +633,53 @@ async function answerMoney(now: Date): Promise<MarquetaReply> {
 async function answerStrategy(now: Date): Promise<MarquetaReply> {
   const loaded = await loadStrategySnapshot(now)
   return strategyAnswer({ now, snapshot: loaded.snapshot, due: loaded.due, runway: loaded.runway })
+}
+
+// ── The strategist: sitrep, terrain, intent ──────────────────────────────────
+
+/** Said when there is no scan yet — what runs it and when, not just "nothing". */
+const NO_SCAN_YET =
+  'I haven’t surveyed the terrain yet. The scan runs Sunday night, so the first sitrep arrives with the next Monday plan.'
+
+/**
+ * The latest sitrep, as written when the scan ran — never recomposed here, so
+ * what she says on Wednesday is what she said on Monday, and a model is never
+ * called to answer a question.
+ */
+async function answerSitrep(now: Date): Promise<MarquetaReply> {
+  const [scan, intent] = await Promise.all([readLatestScan(), readIntent().catch(() => null)])
+  if (!scan?.sitrep) return { text: NO_SCAN_YET }
+  const blocks = buildSitrepBlocks({ sitrep: scan.sitrep, intent, week: scan.week, now })
+  return { text: `Sitrep for ${scan.week}`, blocks }
+}
+
+async function answerTerrain(now: Date): Promise<MarquetaReply> {
+  const scan = await readLatestScan()
+  if (!scan) return { text: NO_SCAN_YET }
+  return { text: `The terrain, ${scan.week}`, blocks: buildTerrainBlocks({ scan, now }) }
+}
+
+/**
+ * The intent card. Approve is drawn only for somebody the authority setting
+ * allows — the press is checked again, so the drawing is a courtesy, not the
+ * guard.
+ */
+async function answerIntent(input: { who: ReturnType<typeof presser>; now: Date }): Promise<MarquetaReply> {
+  const [intent, authority] = await Promise.all([readIntent(), readTeamAccess().then((value) => value || STRICT_TEAM_ACCESS)])
+  if (!intent) {
+    return {
+      text: `We don’t have a stated intent yet. Say ${askMarqueta('draft our intent')} and I’ll draft one from what we’ve already decided, for you to change and approve.`,
+    }
+  }
+  const name = (await input.who.boardName().catch(() => null)) || ''
+  const blocks = buildIntentBlocks({
+    intent,
+    now: input.now,
+    access: authority,
+    viewerCanApprove: canApproveIntent(authority, name),
+    actionIds: { approve: MARQUETA_ACTION.intentApprove, change: MARQUETA_ACTION.intentChange },
+  })
+  return { text: intent.status === 'approved' ? 'Our intent' : 'Our intent (draft)', blocks }
 }
 
 /** Counts only — never who logged what, which in a channel is a leaderboard. */
@@ -1475,6 +1548,12 @@ export async function answerMarqueta(input: {
           return answerStrategy(now)
         case 'pipeline':
           return answerPipeline(now)
+        case 'sitrep':
+          return answerSitrep(now)
+        case 'terrain':
+          return answerTerrain(now)
+        case 'intent':
+          return answerIntent({ who, now })
         case 'ideas':
           return answerIdeas()
         case 'heartbeat':

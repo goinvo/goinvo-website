@@ -26,6 +26,7 @@ import {
   formatSlackRange,
   LABEL,
   MARQUETA_IDENTITY,
+  openExternalButton,
   openViewButton,
   replaceBlocksByPrefix,
   RETIRED_LABELS,
@@ -153,6 +154,17 @@ describe('the Studio tabs Slack links to', () => {
     expect(openViewButton('calendar', 'javascript:alert(1)')).toBeNull()
   })
 
+  it('link outside the Studio (a Rendomat project) only with a label from LABEL and an http(s) URL', () => {
+    expect(openExternalButton(LABEL.OPEN_IN_RENDOMAT, 'https://rendomat.example.org/videos/7')).toEqual({
+      type: 'button',
+      text: { type: 'plain_text', text: 'Open in Rendomat', emoji: true },
+      url: 'https://rendomat.example.org/videos/7',
+    })
+    expect(openExternalButton(LABEL.OPEN_IN_RENDOMAT, '')).toBeNull()
+    expect(openExternalButton(LABEL.OPEN_IN_RENDOMAT, 'javascript:alert(1)')).toBeNull()
+    expect(openExternalButton('', 'https://rendomat.example.org/videos/7')).toBeNull()
+  })
+
   it('leave no empty actions block behind when the link cannot be made', () => {
     expect(actionsRow([openViewButton('thisWeek', ''), null, false])).toEqual([])
     const row = actionsRow([openViewButton('calendar', 'https://x.test/studio'), undefined], 'mq_footer')
@@ -174,6 +186,7 @@ describe('stateNote', () => {
     reopened: '_Reopened by <@U1>_',
     passed: '_<@U1> passed — still needs someone_',
     answered: '_Answered by <@U1> · Thu 24 Sep_',
+    exportedToRendomat: '_Exported to Rendomat by <@U1> · Thu 24 Sep_',
   }
 
   it('says who did what, and when where it matters — with no pronouns', () => {
@@ -255,7 +268,7 @@ describe('LABEL', () => {
 
   it('ends in "…" exactly where pressing opens a form', () => {
     expect(labels.filter((label) => label.endsWith('…')).sort()).toEqual(
-      [LABEL.DETAILS, LABEL.ANSWER, LABEL.STUCK, LABEL.LOG, LABEL.RUNWAY_SIGNED, LABEL.RUNWAY_CHANGED].sort(),
+      [LABEL.DETAILS, LABEL.ANSWER, LABEL.STUCK, LABEL.LOG, LABEL.RUNWAY_SIGNED, LABEL.RUNWAY_CHANGED, LABEL.INTENT_CHANGE].sort(),
     )
   })
 

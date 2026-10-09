@@ -7,10 +7,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/marketing', () => ({
-  assertMarketingApiKey: vi.fn(),
+  
   getMarketingWriteClient: () => ({ fetch: mocks.fetch }),
   getMarketingWriteClientFor: () => ({ fetch: mocks.fetch }),
-  MarketingAuthError: class extends Error {},
+  
 }))
 
 vi.mock('@/lib/marketing/publishers', () => ({
@@ -109,4 +109,11 @@ describe('publish schedule route boundaries', () => {
     expect(mocks.run).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ id: 'calendar-1', onlyIfDue: true }))
     expect(mocks.schedule).not.toHaveBeenCalled()
   })
+})
+
+// Authentication is server-only; keep the existing route-test boundary mocks.
+vi.mock('@/lib/marketing/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/marketing/auth')>()
+  return { ...actual, assertMarketingApiKey: vi.fn(),
+    MarketingAuthError: class extends Error {} }
 })

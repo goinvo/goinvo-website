@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server'
 import {
-  assertStudioOrApiKey,
   buildCreatePayload,
   buildProofPointFromResult,
   getMarketingWriteClientFor,
   marketingCloneDocumentId,
-  MarketingAuthError,
   MarketingValidationError,
   refsFromIds,
   type ResearchProjectForProof,
   type ResearchResultForProof,
 } from '@/lib/marketing'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 
 // POST /api/marketing/clone/proof-from-result
 //

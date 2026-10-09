@@ -54,19 +54,32 @@ import { summarizeOutreach } from '@/lib/marketing/outreachPulse'
 import { describeRunway, resolveRunwayPosture, runwayCheckIn, type StoredPosture } from '@/lib/marketing/runway'
 import {
   buildDraftCaptureBlocks,
+  buildGenerationResultBlocks,
+  withRendomatMade,
   buildIdeaCaptureBlocks,
   buildIdentityPromptBlocks,
   buildRunwayView,
+  buildSuggestionBlocks,
   buildTaskAttachment,
   buildTaskDetailView,
   buildWeeklyDigestBlocks,
   decodeActionValue,
   decodeIdeaValue,
+  encodeIdeaValue,
   MARKETING_ACTION,
   MARKETING_ANSWER_CALLBACK,
   MARKETING_RUNWAY_CALLBACK,
+  redrawSuggestion,
   type DigestCard,
 } from '@/lib/marketing/slackDelegation'
+import { decodeSuggestionValue, suggestionIdeaKey, type Suggestion } from '@/lib/marketing/marquetaSuggest'
+import {
+  buildIntentBlocks,
+  buildIntentChangeView,
+  decodeIntentValue,
+  INTENT_CHANGE_CALLBACK,
+  normalizeIntent,
+} from '@/lib/marketing/strategyIntent'
 import {
   buildMoneyAndDirectionBlocks,
   buildStrategySnapshot,
@@ -141,6 +154,12 @@ const VALUE_READER: Record<string, Reader | null> = {
   [MARQUETA_ACTION.strategyRethink]: { calls: 'decodeStrategyValue', decode: decodeStrategyValue },
   // Decoded inside slackActions.server (and checked there against the presser).
   [MARQUETA_ACTION.availabilityUndo]: { calls: 'restoreMarketingAvailability', decode: decodeAvailabilityUndo },
+  [MARQUETA_ACTION.suggestDraft]: { calls: 'decodeSuggestionValue', decode: decodeSuggestionValue },
+  [MARQUETA_ACTION.suggestSave]: { calls: 'decodeSuggestionValue', decode: decodeSuggestionValue },
+  [MARQUETA_ACTION.intentApprove]: { calls: 'decodeIntentValue', decode: decodeIntentValue },
+  [MARQUETA_ACTION.intentChange]: { calls: 'decodeIntentValue', decode: decodeIntentValue },
+  // The same `{c, ts}` as the draft's discard: both name the one calendar item.
+  [MARQUETA_ACTION.makeInRendomat]: { calls: 'decodeIdeaValue', decode: decodeIdeaValue },
   [MARKETING_ACTION.claim]: taskCard,
   [MARKETING_ACTION.decline]: taskCard,
   // `decodeActionValue` reads the `{t,o,s}` every task card value starts with.
@@ -320,6 +339,28 @@ const digestCard = (name: string): DigestCard => {
   return { taskId: found[1]._id, blocks: card(name) }
 }
 
+const INTENT = normalizeIntent({
+  status: 'draft',
+  version: 2,
+  endState: 'Where the studio wants to be.',
+  horizon: '2027-06-30',
+  objectives: [{ key: 'first', statement: 'A goal', measure: 'signed engagements', target: 3, by: '2027-03-31', leadingIndicators: ['calls booked'] }],
+  draftedBy: 'Marqueta',
+  draftedAt: '2026-09-20T00:00:00Z',
+  history: [{ version: 2, status: 'draft', by: 'Marqueta', at: '2026-09-20T00:00:00Z', note: 'Second draft.' }],
+})!
+
+const SUGGESTIONS: Suggestion[] = [0, 1].map((index) => ({
+  title: `Suggestion ${index + 1}`,
+  format: index ? 'post' : 'outline',
+  angle: 'What the piece argues, and who it is for.',
+  whyUs: 'We made the thing it is about.',
+  work: [{ id: 'W1', title: 'Determinants of Health', url: `${BASE}/vision/determinants-of-health`, kind: 'essay' }],
+  research: [],
+  documents: [],
+  sources: [],
+}))
+
 const JANE_REF = encodeContactRef({ contactId: 'contact-jane', organization: 'Mass General Brigham', name: 'Jane Doe' })
 
 function runwayState(stored: StoredPosture, now: Date): MoneyRunway {
@@ -405,6 +446,50 @@ function renderedMessages(): Array<{ where: string; blocks: Block[]; attachments
   messages.push({ where: 'idea capture', blocks: buildIdeaCaptureBlocks({ title: 'Merch table at Town Day', category: 'event', channel: 'C0MKTGEN000', ts: '1726000000.000100', studioUrl: studioViewUrl(BASE, 'thisWeek', { focus: 'caught' }) }) })
   messages.push({ where: 'draft capture', blocks: buildDraftCaptureBlocks({ title: 'Newsletter: pre-mortem teaser', contentType: 'newsletter', channel: 'C0MKTGEN000', ts: '1726000000.000200', studioUrl: studioViewUrl(BASE, 'calendar') }) })
   messages.push({ where: 'identity prompt', blocks: buildIdentityPromptBlocks(['Ezra']) })
+
+  // A drafted video script, with Rendomat connected: Export to Rendomat, then
+  // the same row redrawn once the project exists.
+  const script = buildGenerationResultBlocks({
+    formatLabel: 'video script',
+    title: 'The five minutes that lose a patient',
+    bodyChunks: ['*Hook:* Most patients quit at the setup screen.'],
+    sourceCount: 0,
+    channel: 'C0MKTGEN000',
+    ts: '1726000000.000400',
+    studioUrl: studioViewUrl(BASE, 'calendar'),
+    format: 'script',
+    rendomat: { configured: true },
+  })
+  messages.push({ where: 'generation result (script)', blocks: script })
+  messages.push({
+    where: 'generation result (script, made in Rendomat)',
+    blocks: withRendomatMade(script, { note: '_Exported to Rendomat by <@U1> · Thu 24 Sep_', projectUrl: 'https://rendomat.example.org/videos/7' }),
+  })
+
+  const suggestions = buildSuggestionBlocks({ sourceLabel: 'from our work', suggestions: SUGGESTIONS, channel: 'C0MKTGEN000' })
+  messages.push({ where: 'suggestions', blocks: suggestions })
+
+  // Our intent, as a draft somebody may approve: both buttons drawn.
+  messages.push({
+    where: 'intent (draft)',
+    blocks: buildIntentBlocks({
+      intent: INTENT,
+      now: NOW,
+      access: { mode: 'equal', approvers: [] },
+      viewerCanApprove: true,
+      actionIds: { approve: MARQUETA_ACTION.intentApprove, change: MARQUETA_ACTION.intentChange },
+    }),
+  })
+  // After Save as idea on the second: its Draft it stays, Not an idea reverses the save.
+  messages.push({
+    where: 'suggestions (second saved)',
+    blocks: redrawSuggestion(suggestions, {
+      index: 1,
+      pressed: 'save',
+      note: 'Saved as an idea by <@U1>',
+      ideaValue: encodeIdeaValue({ channel: 'C0MKTGEN000', ts: suggestionIdeaKey('1726000000.000300', 1) }),
+    }),
+  })
 
   messages.push({
     where: 'call-log receipt',
@@ -517,9 +602,10 @@ describe('every Marqueta button has a handler', () => {
       ['CALL_LOG_CALLBACK', buildCallLogView({ contactLabel: 'Jane Doe', metadata: '{}' })],
       ['TASK_STUCK_CALLBACK', buildTaskStuckView({ taskTitle: 'A task', metadata: '{}' })],
       ['MARKETING_RUNWAY_CALLBACK', buildRunwayView('update')],
+      ['INTENT_CHANGE_CALLBACK', buildIntentChangeView('{}')],
     ]
     for (const [name, view] of views) {
-      expect(view.callback_id, name).toBe({ CALL_LOG_CALLBACK, TASK_STUCK_CALLBACK, MARKETING_RUNWAY_CALLBACK }[name])
+      expect(view.callback_id, name).toBe({ CALL_LOG_CALLBACK, TASK_STUCK_CALLBACK, MARKETING_RUNWAY_CALLBACK, INTENT_CHANGE_CALLBACK }[name])
       const handler = route.indexOf(`payload.view?.callback_id === ${name}`)
       expect(handler, name).toBeGreaterThan(0)
       expect(handler, name).toBeLessThan(catchAll)
@@ -646,6 +732,10 @@ describe('every button the builders draw decodes back to what it was drawn for',
     for (const control of controls.filter((control) => control.action_id === MARQUETA_ACTION.strategyConfirm || control.action_id === MARQUETA_ACTION.strategyRethink)) {
       expect(decodeStrategyValue(control.value)?.monthKey, control.where).toBe('2026-09')
     }
+    // Each suggestion's buttons point at that suggestion, in the channel it was drawn for.
+    const suggestionControls = controls.filter((control) => control.where === 'suggestions' && VALUE_READER[control.action_id]?.calls === 'decodeSuggestionValue')
+    expect(suggestionControls.map((control) => decodeSuggestionValue(control.value)?.index)).toEqual([0, 0, 1, 1])
+    for (const control of suggestionControls) expect(decodeSuggestionValue(control.value)?.channel, control.label).toBe('C0MKTGEN000')
     const undo = controls.find((control) => control.action_id === MARQUETA_ACTION.callLogUndo)!
     expect(decodeCallLogUndo(undo.value)).toMatchObject({ contactId: 'contact-jane', interactionKey: 'slack-C1-1' })
   })

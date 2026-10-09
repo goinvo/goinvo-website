@@ -8,7 +8,7 @@ vi.mock('@/lib/marketing', async () => {
   const actual = await vi.importActual<typeof import('@/lib/marketing')>('@/lib/marketing')
   return {
     ...actual,
-    assertStudioOrApiKey: vi.fn(async () => {}),
+    
     getMarketingWriteClient: () => ({ fetch: fetchMock }),
     getMarketingWriteClientFor: () => ({ fetch: fetchMock }),
   }
@@ -100,4 +100,10 @@ describe('publish preview endpoint', () => {
     expect(json.content.text).toBe('')
     expect(warns(json, /2200-character limit/i)).toBe(true)
   })
+})
+
+// Authentication is server-only; keep the existing route-test boundary mocks.
+vi.mock('@/lib/marketing/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/marketing/auth')>()
+  return { ...actual, assertStudioOrApiKey: vi.fn(async () => {}) }
 })

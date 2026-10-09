@@ -159,7 +159,7 @@ describe('marketing guide and tutorial behavior', () => {
     ).replace(/\s+/g, ' ')
 
     expect(source).toContain("id: 'marketing.overview.order'")
-    expect(source).toContain('Tell Marqueta what changed')
+    expect(source).toContain('Share a work update')
     expect(dashboardGuide).toContain("id: 'marketing.dashboard.tell-marketing'")
     expect(dashboardGuide).toContain('not sent through a form')
     expect(dashboardGuide).toContain('Nothing is saved before that')

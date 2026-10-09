@@ -33,6 +33,31 @@ export default defineType({
       validation: (Rule) => Rule.min(0.5).max(40),
     }),
     defineField({
+      name: 'teamAccess',
+      title: 'Team permissions',
+      description:
+        'Whether everyone on the team has the principals’ permissions in the marketing suite (the default), or ' +
+        'access follows Sanity roles with named approvers for the intent. API tokens never count as the team. ' +
+        'Edited from Settings in the Marketing tool.',
+      type: 'object',
+      fields: [
+        defineField({
+          name: 'mode',
+          title: 'Who',
+          type: 'string',
+          options: {
+            list: [
+              { title: 'Everyone has the principals’ permissions', value: 'equal' },
+              { title: 'By Sanity role', value: 'byRole' },
+            ],
+            layout: 'radio',
+          },
+          initialValue: 'equal',
+        }),
+        defineField({ name: 'approvers', title: 'Who approves our intent (by Sanity role only)', type: 'array', of: [{ type: 'string' }] }),
+      ],
+    }),
+    defineField({
       name: 'aiModel',
       title: 'AI model for the marketing suite',
       description:

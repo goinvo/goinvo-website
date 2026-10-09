@@ -14,6 +14,7 @@ import { funnelStageOptions } from '../../schemas/marketingFunnel'
 import { linkItemStatusOptions } from '../../schemas/marketingLinkItem'
 import { PublishConnectionStatus } from './PublishConnectionStatus'
 import { PublishPreview } from './PublishPreview'
+import { PrivateVideoPanel } from './PrivateVideoPanel'
 // Shared data-model types, UI primitives, and helpers that remain owned by the
 // marketing tool (used across all workspaces) are imported back from it. This is
 // a deliberate circular import: the tool imports CalendarWorkspace only for JSX
@@ -1116,6 +1117,8 @@ function CalendarItemEditor({
         {item && (channelKey === 'linkedin' || channelKey === 'instagram') && (
           <PublishPreview key={item._id} itemId={item._id} hasUnsavedChanges={dirty} />
         )}
+        {/* Renders nothing unless this item was made in Rendomat. */}
+        {item && <PrivateVideoPanel key={`private-video-${item._id}`} itemId={item._id} />}
         <InputField label="Who owns this item?" help="Assign the teammate responsible for getting the artifact ready.">
           <Select
             ariaLabel="Calendar item owner"

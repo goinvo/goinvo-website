@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import type { SanityClient } from '@sanity/client'
-import { assertMarketingApiKey, getMarketingWriteClientFor } from '@/lib/marketing'
+import {
+  getMarketingWriteClientFor,
+} from '@/lib/marketing'
+import { assertMarketingApiKey } from '@/lib/marketing/auth'
 import { schedulePublish } from '@/lib/marketing/publishers'
 import {
   buildCalendarItemFields,
@@ -11,6 +14,9 @@ import {
   rendomatCalendarItemId,
   type RendomatVideo,
 } from '@/lib/marketing/rendomat'
+import { isPrivateBlobConfigured } from '@/lib/marketing/privateMedia.server'
+import { attachLinkedRenders, linkedPassUnavailable } from '@/lib/marketing/rendomatPrivateCopy.server'
+import { publishAtPassDecision } from '@/lib/marketing/rendomatLink'
 
 // POST /api/marketing/rendomat/ingest — pull completed Rendomat renders that
 // carry a publish_at, create scheduled auto-publishing Instagram-Reel calendar
@@ -21,6 +27,16 @@ import {
 // manual call all work). Fail-closed: nothing ingests unless RENDOMAT_API_BASE +
 // RENDOMAT_API_KEY are set. ?dryRun=1 previews without writing; ?days=N sets the
 // look-ahead window (default 30).
+//
+// A second, LINKED pass attaches renders Marqueta asked for (a calendar item
+// with a Rendomat project link) to that same item, PRIVATELY: the file goes to
+// the private Blob store and the item waits for the client's sign-off. Those
+// videos are never touched by the publish_at pass above, whatever their
+// publish_at: nothing Marqueta drafts posts itself or goes public on its own.
+//
+// GET is the daily Vercel cron (crons issue GET), CRON_SECRET only. Without
+// Rendomat or the private store it answers 200 {skipped, reason}, so an
+// unconnected deployment does not page anyone; POST keeps its 503.
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -34,6 +50,7 @@ const INGEST_ITEM_QUERY = `*[
   status,
   publishAt,
   rendomatVideoId,
+  rendomatProjectUrl,
   rendomatIngestState,
   rendomatIngestClaim,
   rendomatIngestClaimedAt,
@@ -50,6 +67,7 @@ type RendomatIngestItem = {
   status?: string
   publishAt?: string
   rendomatVideoId?: string
+  rendomatProjectUrl?: string
   rendomatIngestState?: 'ingesting' | 'scheduling' | 'scheduleFailed' | 'scheduled' | 'failed'
   rendomatIngestClaim?: string
   rendomatIngestClaimedAt?: string
@@ -167,9 +185,13 @@ async function releaseFailedClaim(
     .commit()
 }
 
-function authorize(req: Request): boolean {
+function hasCronSecret(req: Request): boolean {
   const cronSecret = process.env.CRON_SECRET || process.env.MARKETING_VERCEL_DRAIN_SECRET || ''
-  if (cronSecret && req.headers.get('authorization') === `Bearer ${cronSecret}`) return true
+  return Boolean(cronSecret) && req.headers.get('authorization') === `Bearer ${cronSecret}`
+}
+
+function authorize(req: Request): boolean {
+  if (hasCronSecret(req)) return true
   try {
     assertMarketingApiKey(req)
     return true
@@ -188,6 +210,16 @@ type IngestResult = {
   scheduled?: boolean
 }
 
+/** The daily cron. Shares the POST's work; a deployment without Rendomat or the private store skips, loudly. */
+export async function GET(req: Request) {
+  if (!hasCronSecret(req)) {
+    return NextResponse.json({ error: 'Unauthorized ingest request.' }, { status: 401 })
+  }
+  const unavailable = linkedPassUnavailable()
+  if (unavailable) return NextResponse.json({ skipped: true, reason: unavailable })
+  return ingest(req)
+}
+
 export async function POST(req: Request) {
   if (!authorize(req)) {
     return NextResponse.json({ error: 'Unauthorized ingest request.' }, { status: 401 })
@@ -198,7 +230,10 @@ export async function POST(req: Request) {
       { status: 503 },
     )
   }
+  return ingest(req)
+}
 
+async function ingest(req: Request) {
   const url = new URL(req.url)
   const dryRun = url.searchParams.get('dryRun') === '1' || url.searchParams.get('dryRun') === 'true'
   const daysRaw = Number.parseInt(url.searchParams.get('days') || '30', 10)
@@ -235,8 +270,17 @@ export async function POST(req: Request) {
       continue
     }
 
+    // A video made for a Marqueta draft is the linked pass's to attach,
+    // privately. Never here, where it would become a public auto-posting Reel.
+    const linkedTo = await fetchIngestItem(client, video.id)
+    const pass = publishAtPassDecision(video, linkedTo)
+    if (!pass.proceed) {
+      results.push({ rendomatVideoId: video.id, action: 'skipped', reason: pass.reason, itemId: linkedTo?._id })
+      continue
+    }
+
     if (dryRun) {
-      const existing = await fetchIngestItem(client, video.id)
+      const existing = linkedTo
       if (existing?.rendomatIngestState === 'scheduled' && existing.rendomatScheduledAt) {
         results.push({
           rendomatVideoId: video.id,
@@ -373,6 +417,16 @@ export async function POST(req: Request) {
     }
   }
 
+  // The linked pass: renders made from Marqueta's scripts, attached privately.
+  let linked: Awaited<ReturnType<typeof attachLinkedRenders>> | { skipped: false; error: string }
+  try {
+    linked = isPrivateBlobConfigured()
+      ? await attachLinkedRenders({ dryRun, limit })
+      : { skipped: true, reason: linkedPassUnavailable() || 'The private video store is not connected.' }
+  } catch (error) {
+    linked = { skipped: false, error: error instanceof Error ? error.message : 'Linked pass failed.' }
+  }
+
   return NextResponse.json({
     ranAt: now.toISOString(),
     dryRun,
@@ -382,5 +436,6 @@ export async function POST(req: Request) {
     skipped: results.filter((r) => r.action === 'skipped').length,
     errors: results.filter((r) => r.action === 'error').length,
     results,
+    linked,
   })
 }

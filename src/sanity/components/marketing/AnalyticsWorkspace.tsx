@@ -116,7 +116,7 @@ export function AnalyticsWorkspace({
         <section style={styles.panel}>
           <PanelHeading
             title="Analytics Dashboard"
-            description="Connect measurement sources to marketing work once, then reuse those connections across campaigns, funnels, and channels."
+            description="Add a measurement source, then connect it to your work."
           />
           <div style={metricGridStyle}>
             <AnalyticsMetricCard label="Sources" value={`${connectedSourceCount}/${data.analyticsSources.length}`} detail="connected" />
@@ -146,7 +146,7 @@ export function AnalyticsWorkspace({
 
         <AnalyticsConnectionSection
           title="Campaign measurement"
-          description="Attach sources to campaigns so success metrics, content, and reporting all point to the same measurement surface."
+          description="Choose which source measures each campaign."
           emptyTitle="No campaigns yet"
           items={data.campaigns}
           sources={usableSources}
@@ -165,7 +165,7 @@ export function AnalyticsWorkspace({
 
         <AnalyticsConnectionSection
           title="Funnel measurement"
-          description="Attach sources to reusable funnel maps so every connected campaign inherits the same measurement logic."
+          description="Choose which source measures each funnel."
           emptyTitle="No funnels yet"
           items={data.funnels}
           sources={usableSources}
@@ -183,7 +183,7 @@ export function AnalyticsWorkspace({
 
         <AnalyticsConnectionSection
           title="Channel measurement"
-          description="Attach default analytics sources to channels so new campaigns and content know how each channel is measured."
+          description="Set the default measurement source for each channel."
           emptyTitle="No channels yet"
           items={data.channels}
           sources={usableSources}

@@ -11,6 +11,8 @@
 import { projectId } from '@/sanity/env'
 import { isOutreachWriterRole } from '@/lib/marketing/outreachEnums'
 import { readValidOutreachSessionCookie } from '@/lib/marketing/outreachSession'
+import { isHumanSessionUser, mayUsePrivateMarketing } from '@/lib/marketing/teamAccess'
+import { readTeamAccess } from '@/lib/marketing/teamAccess.server'
 
 // Marketing routes operate with the server's Sanity write token after this
 // check. A valid Studio login alone is therefore not sufficient: passing a
@@ -24,6 +26,10 @@ type SanitySessionUser = {
   role?: unknown
   /** Also accept the richer current-user shape used by some Sanity clients. */
   roles?: unknown
+  /** "sanity-token" for an API token; the sign-in provider (google, …) for a person. */
+  provider?: unknown
+  /** Set for a person, null for an API token. */
+  email?: unknown
 }
 
 /** Thrown when a request does not present a valid marketing API key. */
@@ -140,8 +146,11 @@ async function readSanitySessionUser(token: string): Promise<SanitySessionUser |
 export async function assertStudioOrApiKey(req: Request): Promise<void> {
   if (hasValidApiKey(req)) return
 
+  // A Studio session is a PERSON. An API token also answers users/me, and some
+  // (the CI read token) would otherwise pass as a Studio user and spend model
+  // credits; server-to-server callers use the marketing API key instead.
   const session = req.headers.get('x-sanity-session')
-  if (session && (await readSanitySessionUser(session))) return
+  if (session && isHumanSessionUser(await readSanitySessionUser(session))) return
 
   throw new MarketingAuthError()
 }
@@ -157,14 +166,49 @@ export async function assertStudioWriterOrApiKey(req: Request): Promise<void> {
   // Cookie-mode Studio auth does not expose a bearer token to JavaScript. The
   // short-lived cookie is issued only after the server consumes a one-time
   // private-dataset proof and verifies its Sanity transaction author.
+  // The cookie is minted only for a person (the session route checks the
+  // project ACL's isRobot), so its role is the only question left.
   const cookieSession = readValidOutreachSessionCookie(req)
-  if (cookieSession && isOutreachWriterRole(cookieSession.role)) return
+  if (cookieSession) {
+    if (isOutreachWriterRole(cookieSession.role)) return
+    if (mayUsePrivateMarketing({ access: await readTeamAccess(), roleNames: [cookieSession.role], isHuman: true })) return
+  }
 
   const session = req.headers.get('x-sanity-session')
-  if (!session) throw new MarketingAuthError()
+  if (!session) {
+    if (cookieSession) throw new MarketingPermissionError()
+    throw new MarketingAuthError()
+  }
   const user = await readSanitySessionUser(session)
   if (!user) throw new MarketingAuthError()
-  if (readSanityRoleNames(user).some(isOutreachWriterRole)) return
+  // An API token is never a Studio session here: these routes run with the
+  // write token, and the shop webhook's token carries the Editor role.
+  if (!isHumanSessionUser(user)) {
+    throw new MarketingPermissionError('API tokens cannot act as a Studio session. Use the marketing API key.')
+  }
+  const roleNames = readSanityRoleNames(user)
+  if (roleNames.some(isOutreachWriterRole)) return
+  // Not a writer by role: the Team permissions setting decides (read only now,
+  // so the common case — a principal — costs no extra lookup).
+  if (mayUsePrivateMarketing({ access: await readTeamAccess(), roleNames, isHuman: true })) return
 
   throw new MarketingPermissionError()
+}
+
+/**
+ * The verified Sanity user id behind a request that has ALREADY passed
+ * `assertStudioWriterOrApiKey`, or null when it came with the API key (a
+ * server-to-server caller is nobody in particular). Used to stamp who recorded
+ * something — a client's sign-off — with an id the caller cannot choose.
+ * Never an authorization check on its own.
+ */
+export async function verifiedStudioUserId(req: Request): Promise<string | null> {
+  if (hasValidApiKey(req)) return null
+  const cookieSession = readValidOutreachSessionCookie(req)
+  if (cookieSession?.sub) return cookieSession.sub
+  const session = req.headers.get('x-sanity-session')
+  if (!session) return null
+  const user = await readSanitySessionUser(session)
+  if (!user || !isHumanSessionUser(user) || typeof user.id !== 'string') return null
+  return user.id.trim() || null
 }

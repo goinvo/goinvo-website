@@ -326,9 +326,10 @@ function ItemDetails({ item }: { item: MarketingOperation }) {
   return (
     <details style={{ marginTop: 8 }}>
       <summary style={{ minHeight: 30, cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>
-        Why, evidence, and recent activity
+        Details and sources
       </summary>
       <div style={{ display: 'grid', gap: 8, marginTop: 8, ...styles.small }}>
+        {item.summary && <div>{item.summary}</div>}
         {item.whyNow && <div><strong style={{ color: 'var(--card-fg-color)' }}>Why now: </strong>{item.whyNow}</div>}
         {item.lastOutcome && <div><strong style={{ color: 'var(--card-fg-color)' }}>Latest: </strong>{item.lastOutcome}</div>}
         {item.humanQuestion && <div><strong style={{ color: 'var(--card-fg-color)' }}>Needed from a person: </strong>{item.humanQuestion}</div>}
@@ -688,7 +689,7 @@ export function MarketingOperationsBoardContent({
     return (
       <div style={{ display: 'grid', gap: 7, marginTop: 9 }}>
         <label style={{ ...styles.small, fontWeight: 800, color: 'var(--card-fg-color)' }}>
-          Team answer
+          {item.humanQuestion || 'Team answer'}
           <textarea
             aria-label={`Answer Marketing for ${item.title}`}
             rows={3}
@@ -751,19 +752,16 @@ export function MarketingOperationsBoardContent({
       `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ maxWidth: 780 }}>
-          <div style={{ ...styles.small, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, color: '#4dc4d6' }}>
-            Shared operating loop
-          </div>
           <h2 id="marketing-operations-title" style={{ margin: '5px 0 0', fontSize: 26 }}>Marketing’s desk</h2>
           <p style={{ ...styles.small, margin: '6px 0 0', fontSize: 13 }}>
-            Marqueta handles safe internal work, keeps the next move visible, and stops when a person must decide, provide a fact, or approve an external action.
+            Start with the items that need a decision. Open Details and sources for the background.
           </p>
           <button
             type="button"
             style={{ ...styles.button, minHeight: 44, border: 0, padding: '8px 0', color: '#4dc4d6' }}
             onClick={() => onOpenView('thisWeek')}
           >
-            This week’s plan lives on This week →
+            Open this week’s plan →
           </button>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -786,10 +784,6 @@ export function MarketingOperationsBoardContent({
             <span style={styles.small}>{label}</span>
           </div>
         ))}
-      </div>
-
-      <div style={{ ...styles.small, marginTop: 10 }}>
-        Ready for Marqueta when this workspace is open. Shared assignments, dates, blockers, and outcomes persist privately for the team.
       </div>
 
       <div data-marketing-ops-filters="true" role="group" aria-label="Filter Marketing’s desk" style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 14 }}>
@@ -867,7 +861,7 @@ export function MarketingOperationsBoardContent({
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--card-border-color)' }}>
                   <th scope="col" style={{ width: '14%', padding: '9px 8px' }}>Status</th>
-                  <th scope="col" style={{ width: '33%', padding: '9px 8px' }}>Work / why now</th>
+                  <th scope="col" style={{ width: '33%', padding: '9px 8px' }}>Work</th>
                   <th scope="col" style={{ width: '22%', padding: '9px 8px' }}>Next move</th>
                   <th scope="col" style={{ width: '17%', padding: '9px 8px' }}>Owner / due</th>
                   <th scope="col" style={{ width: '14%', padding: '9px 8px' }}>Action</th>
@@ -879,7 +873,6 @@ export function MarketingOperationsBoardContent({
                     <td style={{ padding: '12px 8px' }}><StatusPill item={item} /><div style={{ ...styles.small, marginTop: 5, textTransform: 'capitalize' }}>{item.priority}</div></td>
                     <td style={{ padding: '12px 8px', overflowWrap: 'anywhere' }}>
                       <strong style={{ display: 'block' }}>{item.title}</strong>
-                      {item.summary && <div style={{ ...styles.small, marginTop: 4 }}>{item.summary}</div>}
                       <ItemDetails item={item} />
                     </td>
                     <td style={{ padding: '12px 8px', ...styles.small }}>
@@ -904,7 +897,6 @@ export function MarketingOperationsBoardContent({
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: 17 }}>{item.title}</h3>
-                  {item.summary && <div style={{ ...styles.small, marginTop: 5 }}>{item.summary}</div>}
                 </div>
                 <div style={styles.small}><strong style={{ color: 'var(--card-fg-color)' }}>Next move: </strong>{item.nextAction}</div>
                 {renderHumanAnswer(item)}
@@ -980,10 +972,11 @@ export function MarketingOperationsBoardContent({
         </details>
       )}
 
-      <div style={{ marginTop: 14, border: '1px solid rgba(77, 196, 214, 0.3)', borderRadius: 8, padding: 10, background: 'rgba(0, 115, 133, 0.07)', ...styles.small }}>
-        <strong style={{ color: 'var(--card-fg-color)' }}>Where Marqueta stops: </strong>
-        It may inspect shared records, organize work, and prepare private drafts. Publishing, outreach, paid research, claim approval, deletion, and brand-voice changes always wait for a person.
-      </div>
+      <details style={{ marginTop: 14 }}>
+        <summary style={{ minHeight: 36, cursor: 'pointer', fontSize: 13, fontWeight: 750 }}>How Marqueta handles this work</summary>
+        <p style={styles.small}>Marqueta can organize private work and check existing GoInvo content while this workspace is open. Owners, dates and outcomes stay saved for the team.</p>
+        <p style={styles.small}>Publishing, outreach, paid research, claim approval, deletion, and brand-voice changes always wait for a person.</p>
+      </details>
     </section>
   )
 }

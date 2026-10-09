@@ -25,6 +25,7 @@ import {
   GENERATION_TRIGGER_EXAMPLES,
   type GenerationFormat,
 } from '@/lib/marketing/marquetaGenerate'
+import { SUGGEST_TRIGGER_EXAMPLES } from '@/lib/marketing/marquetaSuggest'
 
 /** The phrases that must reach generation, one per advertised format. */
 const GENERATION_TRIGGERS: { text: string; format: GenerationFormat }[] = [
@@ -105,5 +106,94 @@ describe('Marqueta trigger words: generation and call prep never both claim a ph
     }
     // Add a colon to a prep trigger that has no "draft" verb and it is still prep's.
     expect(detectGenerationRequest('outline: the Q4 story')).toBeNull()
+  })
+})
+
+/**
+ * Suggestions are the third feature in this vocabulary. `suggest …` is
+ * verb-led and anchored, so it should claim nothing the others own — and
+ * nothing of theirs should reach it. Both directions, as above.
+ */
+describe('Marqueta trigger words: suggestions claim only "suggest …"', () => {
+  const SUGGEST_TRIGGERS = [
+    'suggest from our work',
+    'suggest from the field',
+    'suggest: a post for our birthday',
+    'suggest some content ideas from our work',
+    'can you suggest a newsletter for October',
+    'suggest',
+  ]
+
+  // Every other feature's phrases, including the ones that sit nearest.
+  const OTHERS = [
+    ...GENERATION_TRIGGERS.map(({ text }) => text),
+    ...PREP_TRIGGERS,
+    'capture a booth at Town Day',
+    'called Jane at MGB, left a voicemail',
+    'ideas',
+    'any suggestions?',
+    'what are your suggestions for this week',
+    'I’d suggest we hold off on the post',
+  ]
+
+  it('sends every suggestion trigger to suggest', () => {
+    for (const text of SUGGEST_TRIGGERS) {
+      expect(parseMarquetaIntent(text).kind, `"${text}" should reach suggestions`).toBe('suggest')
+    }
+  })
+
+  it('takes nothing from drafting, prep, logging or capture', () => {
+    for (const text of OTHERS) {
+      expect(parseMarquetaIntent(text).kind, `"${text}" is not a suggestion request`).not.toBe('suggest')
+    }
+    // And drafting still gets every phrase it had.
+    for (const { text } of GENERATION_TRIGGERS) expect(parseMarquetaIntent(text).kind, text).toBe('generate')
+  })
+
+  it('advertises only phrases that reach it', () => {
+    for (const example of SUGGEST_TRIGGER_EXAMPLES) {
+      const real = example.replace('<brief>', 'a post for our birthday')
+      expect(parseMarquetaIntent(real).kind, `advertised "${example}" does not parse`).toBe('suggest')
+    }
+  })
+})
+
+/**
+ * The strategist's commands are whole phrases. They must reach their own
+ * answers, and must not take a sentence that only mentions goals or the
+ * terrain — or prep's "draft …", or the money check's "direction".
+ */
+describe('Marqueta trigger words: the strategist claims only whole phrases', () => {
+  const OWN: Array<[string, string]> = [
+    ['sitrep', 'sitrep'],
+    ['situation report', 'sitrep'],
+    ['what do you see?', 'sitrep'],
+    ['terrain', 'terrain'],
+    ['what are people complaining about', 'terrain'],
+    ['our intent', 'intent'],
+    ['goals', 'intent'],
+    ['where are we going?', 'intent'],
+    ['what are our goals', 'intent'],
+    ['draft our intent', 'intentDraft'],
+    ['redraft the intent', 'intentDraft'],
+  ]
+
+  const NOT_OURS: Array<[string, string]> = [
+    ['our goals feel too vague, we should rethink them next week', 'intent'],
+    ['the terrain team is out today', 'terrain'],
+    ['draft an email to Jane at MGB', 'intentDraft'],
+    ['draft post: our intent for 2027', 'intentDraft'],
+    ['strategy', 'sitrep'],
+    ['what are our priorities', 'intent'],
+  ]
+
+  it('sends each phrase to its own answer', () => {
+    for (const [text, kind] of OWN) expect(parseMarquetaIntent(text).kind, text).toBe(kind)
+  })
+
+  it('leaves everything else where it was', () => {
+    for (const [text, notKind] of NOT_OURS) expect(parseMarquetaIntent(text).kind, text).not.toBe(notKind)
+    expect(parseMarquetaIntent('draft post: our intent for 2027').kind).toBe('generate')
+    expect(parseMarquetaIntent('strategy').kind).toBe('strategy')
   })
 })

@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
 import {
-  assertStudioOrApiKey,
   createResearchProjectRecords,
   getMarketingWriteClientFor,
-  MarketingAuthError,
   type CascadeResearchProject,
 } from '@/lib/marketing'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 
 // POST /api/marketing/cascade/research-records
 //

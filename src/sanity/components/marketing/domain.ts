@@ -144,103 +144,103 @@ export const MARKETING_TOOL_VIEWS: Array<{
   {
     id: 'thisWeek',
     title: 'This week',
-    description: 'The marketing that fits the hours you have, in the order to do it.',
+    description: 'See this week’s priorities, owners and decisions.',
     icon: DashboardIcon,
   },
   {
     id: 'dashboard',
     title: 'Dashboard',
-    description: 'See content runway, strategy gaps, and the next best fixes.',
+    description: 'Share an update and review the work queue.',
     icon: DashboardIcon,
   },
   {
     id: 'research',
     title: 'Research',
-    description: 'Turn strategy inputs, SEO, and collaborators into release opportunities.',
+    description: 'Collect sources, check findings and create drafts.',
     icon: SearchIcon,
   },
   {
     id: 'seo',
     title: 'SEO',
-    description: 'Live Search Console + GA4 opportunities and a cached citation checker.',
+    description: 'Find search opportunities and check citations.',
     icon: TrendUpwardIcon,
   },
   {
     id: 'strategy',
     title: 'Strategy',
-    description: 'Answer the reusable questions content needs before design work starts.',
+    description: 'Save the audience, message and proof for future drafts.',
     icon: TargetIcon,
   },
   {
     id: 'strategyBrief',
     title: 'Strategy Brief',
-    description: 'The positioning + plan: who we are, the money terms, AI visibility, and the Red Team play',
+    description: 'Review the proposed positioning and its supporting research.',
     icon: RocketIcon,
   },
   {
     id: 'outreach',
     title: 'Outreach',
-    description: 'Dump warm contacts, research each for opportunity fit, and work a ranked call plan.',
+    description: 'Add contacts, review research and record follow-ups.',
     icon: UsersIcon,
   },
   {
     id: 'workEvidence',
     title: 'Evidence',
-    description: 'Capability evidence extracted from real case studies — what research matches contacts against.',
+    description: 'Check the case-study evidence used in contact research.',
     icon: SearchIcon,
   },
   {
     id: 'abTesting',
     title: 'Measure',
-    description: 'A/B tests plus analytics sources and measurement readiness.',
+    description: 'Compare page tests and connect measurement sources.',
     icon: TrendUpwardIcon,
   },
   {
     id: 'calendar',
     title: 'Calendar',
-    description: 'Plan publishing dates, channels, owners, and campaign timing.',
+    description: 'Draft content, review it and choose a publication date.',
     icon: CalendarIcon,
   },
   {
     id: 'campaigns',
     title: 'Campaigns',
-    description: 'Edit strategy, audience, channels, timing, and success metrics.',
+    description: 'Group content around one audience and goal.',
     icon: TargetIcon,
   },
   {
     id: 'funnels',
     title: 'Funnels',
-    description: 'Manage reusable funnel stages and CTAs across sites.',
+    description: 'Map the next action after someone sees your content.',
     icon: MasterDetailIcon,
   },
   {
     id: 'templates',
     title: 'Templates',
-    description: 'Manage reusable campaign and funnel setup patterns.',
+    description: 'Reuse a starting pattern for a campaign or funnel.',
     icon: DashboardIcon,
   },
   {
     id: 'channels',
     title: 'Channels',
-    description: 'Manage Instagram, LinkedIn, email, and their content types.',
+    description: 'Set up channels and the formats they support.',
     icon: TagIcon,
   },
   {
     id: 'analytics',
     title: 'Analytics',
-    description: 'Track GA4, GTM, Vercel, and reporting connections.',
+    description: 'Connect the sources that measure your marketing.',
     icon: TrendUpwardIcon,
   },
   {
     id: 'linkTree',
     title: 'Quick Links',
-    description: 'Manage the public /links page for Instagram and social posts.',
+    description: 'Choose the links shown on the public links page.',
     icon: LinkIcon,
   },
   {
     id: 'shop',
     title: 'Shop',
-    description: 'Run the storefront, products, inventory, customers, orders, and payments.',
+    description: 'Manage products, stock, customers and orders.',
     icon: BasketIcon,
   },
 ]
@@ -277,7 +277,7 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'home',
     title: 'Home',
-    description: 'Your next best actions, ranked. Start here.',
+    description: 'See this week’s work or share a new update.',
     icon: DashboardIcon,
     landingView: 'thisWeek',
     tabs: [
@@ -288,7 +288,7 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'plan',
     title: 'Plan',
-    description: 'Research, SEO, and the strategy questions content needs before design.',
+    description: 'Check sources and decide what the content should say.',
     icon: SearchIcon,
     landingView: 'research',
     tabs: [
@@ -301,7 +301,7 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'outreach',
     title: 'Outreach',
-    description: 'Reach out to people you already know — paste contacts, get a researched call plan.',
+    description: 'Prepare contact research and review your next follow-up.',
     icon: UsersIcon,
     landingView: 'outreach',
     tabs: [
@@ -312,7 +312,7 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'make',
     title: 'Make',
-    description: 'Build and schedule content, plus the campaigns and funnels behind it.',
+    description: 'Draft, review and schedule content.',
     icon: CalendarIcon,
     landingView: 'calendar',
     tabs: [
@@ -326,7 +326,7 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'measure',
     title: 'Measure',
-    description: 'A/B tests plus analytics sources and measurement readiness.',
+    description: 'Compare page tests and connect measurement sources.',
     icon: TrendUpwardIcon,
     landingView: 'abTesting',
     tabs: [
@@ -337,7 +337,7 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'shop',
     title: 'Shop',
-    description: 'Sell products and resources, track stock, and connect customers to marketing.',
+    description: 'Manage the storefront and its orders.',
     icon: BasketIcon,
     landingView: 'shop',
     tabs: [{ view: 'shop', label: 'Storefront & operations' }],
@@ -345,7 +345,7 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'settings',
     title: 'Settings',
-    description: 'Brand voices, channels, publishing defaults, and the AI model.',
+    description: 'Set channels, writing voices, team access and AI preferences.',
     icon: TagIcon,
     landingView: 'channels',
     tabs: [{ view: 'channels', label: 'Preferences & channels' }],

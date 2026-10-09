@@ -1,8 +1,7 @@
 import {
-  assertStudioOrApiKey,
   getMarketingWriteClientFor,
-  MarketingAuthError,
 } from '@/lib/marketing'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import {
   buildPublishContent,
   resolveSocialPlatform,

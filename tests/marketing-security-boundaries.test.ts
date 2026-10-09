@@ -10,6 +10,11 @@ vi.mock('@/lib/marketing/seoCrawl', () => ({
   crawlSite: crawlSiteMock,
 }))
 
+// Team permissions, pinned per test: 'byRole' unless a test says otherwise, so
+// the role rules these tests were written for stay the rules under test.
+const teamAccessMock = vi.hoisted(() => ({ value: { mode: 'byRole', approvers: [] } as { mode: string; approvers: string[] } | null }))
+vi.mock('@/lib/marketing/teamAccess.server', () => ({ readTeamAccess: async () => teamAccessMock.value }))
+
 vi.mock('@/sanity/env', () => ({
   projectId: 'security-test-project',
   dataset: 'production',
@@ -49,6 +54,10 @@ function apiRequest(path: string) {
   })
 }
 
+/** What Sanity's users/me says for a PERSON (an API token says provider "sanity-token" and has no email). */
+const PERSON = { provider: 'google', email: 'person@example.org' }
+const TOKEN_IDENTITY = { provider: 'sanity-token', email: null }
+
 describe('marketing API authentication boundaries', () => {
   beforeEach(() => {
     vi.stubEnv('MARKETING_API_KEY', API_KEY)
@@ -82,10 +91,10 @@ describe('marketing API authentication boundaries', () => {
   })
 
   it.each([
-    ['administrator', { id: 'studio-user', role: 'administrator' }],
-    ['viewer', { id: 'studio-viewer', role: 'viewer' }],
-    ['custom role', { id: 'studio-custom', role: 'campaign-manager' }],
-    ['role-less member response', { id: 'studio-member' }],
+    ['administrator', { id: 'studio-user', role: 'administrator', ...PERSON }],
+    ['viewer', { id: 'studio-viewer', role: 'viewer', ...PERSON }],
+    ['custom role', { id: 'studio-custom', role: 'campaign-manager', ...PERSON }],
+    ['role-less member response', { id: 'studio-member', ...PERSON }],
   ])(
     'accepts a validated Studio member with a %s session on ordinary marketing routes',
     async (_label, user) => {
@@ -120,7 +129,7 @@ describe('marketing API authentication boundaries', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async () =>
-          new Response(JSON.stringify({ id: 'studio-writer', roles: [{ name: role }] }), {
+          new Response(JSON.stringify({ id: 'studio-writer', roles: [{ name: role }], ...PERSON }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           }),
@@ -138,11 +147,11 @@ describe('marketing API authentication boundaries', () => {
   )
 
   it.each([
-    ['Viewer', { id: 'studio-viewer', role: 'viewer' }],
-    ['Contributor', { id: 'studio-contributor', role: 'contributor' }],
-    ['unknown custom role', { id: 'studio-custom', role: 'campaign-manager' }],
-    ['missing role', { id: 'studio-user' }],
-  ])('returns a permission error for a valid Studio session with %s membership', async (_label, user) => {
+    ['Viewer', { id: 'studio-viewer', role: 'viewer', ...PERSON }],
+    ['Contributor', { id: 'studio-contributor', role: 'contributor', ...PERSON }],
+    ['unknown custom role', { id: 'studio-custom', role: 'campaign-manager', ...PERSON }],
+    ['missing role', { id: 'studio-user', ...PERSON }],
+  ])('returns a permission error for a valid Studio session with %s membership under byRole', async (_label, user) => {
     vi.stubEnv('MARKETING_API_KEY', '')
     const sanityFetch = vi.fn(async () =>
       new Response(JSON.stringify(user), {
@@ -333,5 +342,50 @@ describe('public experiment beacon validation', () => {
     { eventName: 'attacker_event' },
   ])('rejects a forged experiment dimension: %o', (override) => {
     expect(validateExperimentBeacon({ ...valid, eventName: 'experiment_exposure', ...override })).toBeNull()
+  })
+})
+
+describe('Team permissions on the private marketing routes (people only)', () => {
+  const privateRequest = () =>
+    new Request('https://www.goinvo.com/api/marketing/outreach/plan', { headers: { 'x-sanity-session': 'a-studio-token' } })
+  const usersMe = (user: Record<string, unknown>) =>
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(user), { status: 200, headers: { 'Content-Type': 'application/json' } })))
+
+  beforeEach(() => {
+    vi.stubEnv('MARKETING_API_KEY', '')
+  })
+  afterEach(() => {
+    teamAccessMock.value = { mode: 'byRole', approvers: [] }
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('gives a Viewer the principals’ access when the setting is "equal"', async () => {
+    teamAccessMock.value = { mode: 'equal', approvers: [] }
+    usersMe({ id: 'p-viewer', role: 'viewer', ...PERSON })
+    await expect(assertStudioWriterOrApiKey(privateRequest())).resolves.toBeUndefined()
+  })
+
+  it('keeps a Viewer out when the setting is "byRole", or when it cannot be read', async () => {
+    usersMe({ id: 'p-viewer', role: 'viewer', ...PERSON })
+    await expect(assertStudioWriterOrApiKey(privateRequest())).rejects.toMatchObject({ status: 403 })
+    teamAccessMock.value = null
+    await expect(assertStudioWriterOrApiKey(privateRequest())).rejects.toMatchObject({ status: 403 })
+  })
+
+  it('never lets an API token act as a Studio session, even with a writer role and "equal"', async () => {
+    teamAccessMock.value = { mode: 'equal', approvers: [] }
+    for (const role of ['editor', 'viewer', 'administrator']) {
+      usersMe({ id: 'p-robot', role, ...TOKEN_IDENTITY })
+      await expect(assertStudioWriterOrApiKey(privateRequest()), role).rejects.toMatchObject({ status: 403 })
+    }
+  })
+
+  it('refuses an API token on the ordinary routes too, so a leaked read token cannot spend credits', async () => {
+    usersMe({ id: 'p-robot', role: 'read', roles: [{ name: 'viewer' }], ...TOKEN_IDENTITY })
+    const response = await getSeoAudit(
+      new Request('https://www.goinvo.com/api/marketing/seo-audit?url=https://www.goinvo.com/', { headers: { 'x-sanity-session': 'ci-read-token' } }),
+    )
+    expect(response.status).toBe(401)
   })
 })

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
-import { assertMarketingApiKey, getMarketingWriteClientFor } from '@/lib/marketing'
+import {
+  getMarketingWriteClientFor,
+} from '@/lib/marketing'
+import { assertMarketingApiKey } from '@/lib/marketing/auth'
 import { runPublish, scheduleFinalize } from '@/lib/marketing/publishers'
 import {
   assertBoundedJson,

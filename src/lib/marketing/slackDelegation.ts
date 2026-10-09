@@ -24,6 +24,8 @@
 import type { CallSheetEntry } from './callSheet'
 import { formatMinutes } from './effort'
 import { encodeContactRef, MARQUETA_ACTION } from './marquetaActions'
+import { FORMAT_LABEL, type GenerationFormat } from './marquetaGenerate'
+import { encodeSuggestionValue, type Suggestion } from './marquetaSuggest'
 import {
   actionsRow,
   askMarqueta,
@@ -31,6 +33,7 @@ import {
   formatEffort,
   formatSlackDay,
   LABEL,
+  openExternalButton,
   openViewButton,
   slackReadable,
   STATE_EMOJI,
@@ -42,7 +45,7 @@ import { MARKETING_OPERATION_STATUSES, marketingOperationHash } from './operatio
 import { askMentionsText, type OwnerAsk } from './ownerAsk'
 import { formatMonths } from './runway'
 import { clipSlackText, escapeSlackText, SLACK_LIMITS, slackLink, slackMention } from './slackText'
-import { isDecisionTask, resolveTaskView, studioViewUrl } from './taskLinks'
+import { isDecisionTask, MARKETING_VIEW_QUERY_PARAM, resolveTaskView, studioViewUrl } from './taskLinks'
 
 /** Namespaced like the chat and dispute actions already in the interactions route. */
 export const MARKETING_ACTION = {
@@ -324,6 +327,12 @@ export type DigestInput = {
   undraftedPosts?: Array<{ title?: string | null }>
   /** The money-and-direction group (strategyCheck.ts), ids already on it. */
   money?: Block[]
+  /**
+   * Marqueta's sitrep (sitrep.ts `digestSitrepBlocks`): what she sees, what she
+   * recommends, one thing to watch. Drawn right under the week line — it is the
+   * frame for everything below it — and empty when there is no fresh scan.
+   */
+  sitrep?: Block[]
   /** Ideas caught in Slack nobody has judged — titles for the first few. */
   ideas?: Array<{ title: string }>
   /** How many are waiting in all, when more than `ideas` holds. */
@@ -428,6 +437,9 @@ function composeDigest(input: DigestInput, trimmed: Set<TrimGroup>): Block[] {
       ),
     )
   }
+
+  const sitrep = (input.sitrep || []).filter(Boolean)
+  if (sitrep.length) blocks.push(...sitrep, { type: 'divider' })
 
   const lastWeek = clean(input.lastWeek)
   if (lastWeek) blocks.push(context(recordText(lastWeek, 600)))
@@ -981,6 +993,51 @@ function ideaReviewLine(ideas: Array<{ title: string }>, total: number | undefin
  * to miss. Without this an unreviewed idea sits in limbo forever — present on
  * the board, trusted by nobody, because no one ever said whether it was real.
  */
+/** Does this link open This week? (Where a caught idea waits to be judged, and nowhere after.) */
+function opensThisWeek(url: unknown): boolean {
+  try {
+    return new URL(String(url)).searchParams.get(MARKETING_VIEW_QUERY_PARAM) === 'thisWeek'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * What a Keep it / Not an idea press leaves on the message, saying who judged
+ * it and where a kept idea went (the Studio's own Keep says the same).
+ */
+export function ideaJudgementReceipt(keep: boolean, who: string): string {
+  return keep
+    ? `${STATE_EMOJI.done} Kept by ${who} — it’s in the idea backlog on the SEO tab.`
+    : `Binned by ${who} — I’ll remember the miss.`
+}
+
+/**
+ * A caught idea's message with its buttons swapped for the judgement: the
+ * row holding Keep it / Not an idea becomes the receipt. A link to This week
+ * goes with the buttons — that is where an idea waits to be judged, and a
+ * judged one is no longer there (kept, it is in the idea backlog; binned, it
+ * is gone), so the link would open a page without it. Any other link ("Open
+ * Calendar" on a draft) stays under the receipt. A message with no such row
+ * (an older one) becomes the receipt alone.
+ */
+export function withIdeaJudgement(blocks: Block[], receipt: string, pressedValue?: string): Block[] {
+  const judged = new Set<string>([MARKETING_ACTION.ideaKeep, MARKETING_ACTION.ideaDiscard])
+  const isJudgedRow = (block: Block, value?: string) =>
+    block?.type === 'actions' &&
+    (block.elements || []).some((element: Block) => judged.has(element?.action_id) && (value === undefined || element?.value === value))
+  // The row that was pressed. A suggestions card carries one judged row per
+  // saved suggestion, and redrawing the first instead would settle the wrong one.
+  const pressedRow = pressedValue ? blocks.findIndex((block) => isJudgedRow(block, pressedValue)) : -1
+  const row = pressedRow >= 0 ? pressedRow : blocks.findIndex((block) => isJudgedRow(block))
+  const line: Block = { type: 'context', elements: [{ type: 'mrkdwn', text: receipt }] }
+  if (row < 0) return [line]
+  const links = (blocks[row].elements || []).filter(
+    (element: Block) => element?.type === 'button' && element.url && !judged.has(element.action_id) && !opensThisWeek(element.url),
+  )
+  return [...blocks.slice(0, row), line, ...(links.length ? [{ type: 'actions', elements: links }] : []), ...blocks.slice(row + 1)]
+}
+
 export function buildIdeaReviewBlocks(
   ideas: Array<{ title: string }>,
   opts: { total?: number; studioBaseUrl?: string } = {},
@@ -1046,6 +1103,10 @@ export function buildGenerationResultBlocks(input: {
   channel: string
   ts: string
   studioUrl?: string
+  /** Which format was drafted: only a script can be made into a video. */
+  format?: GenerationFormat
+  /** Whether Rendomat can be asked to make one (base URL, key and organization all set). */
+  rendomat?: { configured: boolean }
 }): Block[] {
   const value = JSON.stringify({ c: input.channel, ts: input.ts }).slice(0, 1900)
   const sources = input.sourceCount || 0
@@ -1075,13 +1136,216 @@ export function buildGenerationResultBlocks(input: {
     for (const chunk of citations) blocks.push(section(chunk))
   }
 
+  // One row, so a later "Not for the calendar" settles Export to Rendomat too.
+  // Make is the one green button and sits leftmost: it creates something, it
+  // takes nothing over and drops nothing. Three buttons at most.
+  const makeable = input.format === 'script' && input.rendomat?.configured === true
   blocks.push(
     ...actionsRow([
+      makeable ? button(MARQUETA_ACTION.makeInRendomat, LABEL.MAKE_IN_RENDOMAT, value, true) : null,
       button(MARKETING_ACTION.ideaDiscard, LABEL.DRAFT_DISCARD, value),
       openViewButton('calendar', input.studioUrl || ''),
     ]),
   )
   return blocks
+}
+
+/**
+ * A script's card after *Export to Rendomat*: the pressed row becomes a state
+ * note over [Open in Rendomat, Not for the calendar, Open Calendar].
+ *
+ * There is deliberately NO reversing button. The reverse of making a project
+ * would be deleting it in Rendomat, and a delete one press away in a channel
+ * is how somebody's edited video disappears; the project is reversed, when it
+ * must be, in Rendomat itself. The draft can still be binned from here.
+ *
+ * Returns the SAME array when the row is not on the message (an older card,
+ * or one already redrawn), so the caller can tell that apart from a redraw.
+ */
+export function withRendomatMade(
+  blocks: Block[],
+  input: { note: string; projectUrl: string; pressedValue?: string },
+): Block[] {
+  if (!Array.isArray(blocks)) return blocks
+  const isMakeRow = (block: Block) =>
+    block?.type === 'actions' &&
+    (block.elements || []).some(
+      (element: Block) =>
+        element?.action_id === MARQUETA_ACTION.makeInRendomat &&
+        (input.pressedValue === undefined || element?.value === input.pressedValue),
+    )
+  const row = blocks.findIndex(isMakeRow)
+  if (row < 0) return blocks
+  const rest = ((blocks[row].elements || []) as Block[]).filter(
+    (element) => element?.action_id !== MARQUETA_ACTION.makeInRendomat,
+  )
+  const replacement = [
+    context(input.note),
+    ...actionsRow([openExternalButton(LABEL.OPEN_IN_RENDOMAT, input.projectUrl), ...rest]),
+  ]
+  return [...blocks.slice(0, row), ...replacement, ...blocks.slice(row + 1)]
+}
+
+/** Block ids for one suggestion on a suggestions card, so a press redraws exactly that one. */
+export const suggestionBlockId = (index: number) => `mq_suggest_${index}`
+export const suggestionActionsBlockId = (index: number) => `mq_suggest_actions_${index}`
+export const suggestionNoteBlockId = (index: number) => `mq_suggest_note_${index}`
+
+/**
+ * What Marqueta posts when asked for suggestions.
+ *
+ * One card per suggestion: what to make and in what format, the angle, and —
+ * the part that makes it worth reading — why it is OURS to say, linked to the
+ * case study or essay it stands on. Field suggestions also say what live
+ * conversation they join, linked to the piece the search found. Every link is
+ * drawn here from our records, never from the model.
+ *
+ * Two buttons per suggestion: *Draft it* (the one green button, leftmost)
+ * writes a first draft in the thread through the same drafter `draft <format>:`
+ * uses; *Save as idea* puts it on the idea list. Neither publishes anything.
+ *
+ * The header context says what she read and what she threw away. A suggestion
+ * dropped for leaning on nothing real is reported as a count with the reason,
+ * so a short list never looks like the whole answer.
+ */
+export function buildSuggestionBlocks(input: {
+  sourceLabel: string
+  details?: string
+  suggestions: Suggestion[]
+  dropped?: { title: string; reason: string }[]
+  documentsRead?: string[]
+  documentProblems?: { name: string; reason: string }[]
+  brandVoiceName?: string
+  channel: string
+}): Block[] {
+  const header = `*Suggestions ${recordText(input.sourceLabel, 40)}*${
+    input.details ? ` — ${recordText(input.details, 200)}` : ''
+  }`
+  const dropped = input.dropped || []
+  const meta = [
+    countLabel(input.suggestions.length, 'suggestion'),
+    dropped.length
+      ? `${countLabel(dropped.length, 'more', 'more')} dropped — ${recordText(
+          [...new Set(dropped.map((entry) => entry.reason))].join('; '),
+          160,
+        )}`
+      : '',
+    input.documentsRead?.length ? `read: ${recordText(input.documentsRead.join(', '), 200)}` : '',
+    input.brandVoiceName ? `voice: ${recordText(input.brandVoiceName, 40)}` : '',
+  ]
+    .filter(Boolean)
+    .join('  ·  ')
+
+  const blocks: Block[] = [section(header), context(meta)]
+
+  const problems = input.documentProblems || []
+  if (problems.length) {
+    blocks.push(
+      context(
+        `Couldn’t read ${problems
+          .slice(0, 4)
+          .map((problem) => `${recordText(problem.name, 60)} (${recordText(problem.reason, 120)})`)
+          .join(', ')}.`,
+      ),
+    )
+  }
+
+  input.suggestions.forEach((suggestion, index) => {
+    const lines = [
+      `*${index + 1}. ${recordText(suggestion.title, 160)}*  ·  _${recordText(FORMAT_LABEL[suggestion.format], 30)}_`,
+      recordText(suggestion.angle, 600),
+    ]
+    const work = suggestion.work.map((item) => slackLink(item.url, item.title)).join(', ')
+    if (suggestion.whyUs || work) {
+      lines.push(`*Why us:* ${recordText(suggestion.whyUs, 400)}${work ? `${suggestion.whyUs ? ' — ' : ''}${work}` : ''}`)
+    }
+    const field = suggestion.sources.map((source) => slackLink(source.url, source.title)).join(', ')
+    if (suggestion.whyNow || field) {
+      lines.push(`*Why now:* ${recordText(suggestion.whyNow || '', 400)}${field ? `${suggestion.whyNow ? ' — ' : ''}${field}` : ''}`)
+    }
+    for (const citation of suggestion.research.slice(0, 2)) {
+      lines.push(
+        `*Research:* ${recordText(citation.organization, 80)} — “${recordText(citation.quote, 240)}” ${slackLink(citation.sourceUrl, 'source')}`,
+      )
+    }
+    if (suggestion.documents.length) {
+      lines.push(`*From:* ${recordText(suggestion.documents.map((doc) => doc.name).join(', '), 200)}`)
+    }
+    blocks.push(section(lines.join('\n'), { block_id: suggestionBlockId(index) }))
+
+    const value = encodeSuggestionValue({
+      channel: input.channel,
+      cardTs: '',
+      index,
+      format: suggestion.format,
+      title: suggestion.title,
+      angle: suggestion.angle,
+      why: [suggestion.whyUs, suggestion.whyNow].filter(Boolean).join(' '),
+      workTitles: suggestion.work.map((item) => item.title),
+      sourceTitle: suggestion.sources[0]?.title,
+      sourceUrl: suggestion.sources[0]?.url,
+    })
+    blocks.push(
+      ...actionsRow(
+        [
+          button(MARQUETA_ACTION.suggestDraft, LABEL.SUGGEST_DRAFT, value, true),
+          button(MARQUETA_ACTION.suggestSave, LABEL.SUGGEST_SAVE, value),
+        ],
+        suggestionActionsBlockId(index),
+      ),
+    )
+  })
+
+  blocks.push(
+    context(
+      `${LABEL.SUGGEST_DRAFT} writes a first draft in this thread and files it on the ${VIEW_TITLE.calendar} with no date — it never posts itself.`,
+    ),
+  )
+  return blocks
+}
+
+/**
+ * Redraw ONE suggestion after a press, leaving the others alone.
+ *
+ * Draft it goes away once pressed (a second press would only find the draft it
+ * already made); Save as idea becomes *Not an idea*, the existing button that
+ * reverses it. The receipt sits in a context line under the suggestion and
+ * accumulates, so "drafted by X" survives a later "saved by Y".
+ */
+export function redrawSuggestion(
+  blocks: Block[],
+  input: { index: number; pressed: 'draft' | 'save'; note: string; ideaValue?: string },
+): Block[] {
+  const actionsId = suggestionActionsBlockId(input.index)
+  const noteId = suggestionNoteBlockId(input.index)
+  const at = blocks.findIndex((block) => block?.block_id === actionsId)
+  if (at < 0) return blocks
+
+  const kept = ((blocks[at].elements || []) as Block[]).filter((element) =>
+    input.pressed === 'draft'
+      ? element?.action_id !== MARQUETA_ACTION.suggestDraft
+      : element?.action_id !== MARQUETA_ACTION.suggestSave,
+  )
+  const elements =
+    input.pressed === 'save' && input.ideaValue
+      ? [...kept, button(MARKETING_ACTION.ideaDiscard, LABEL.IDEA_DISCARD, input.ideaValue)]
+      : kept
+
+  const priorNote = blocks.find((block) => block?.block_id === noteId)
+  const priorText = String(priorNote?.elements?.[0]?.text || '')
+  const noteText = priorText ? `${priorText}  ·  ${input.note}` : input.note
+  const note = context(noteText, { block_id: noteId })
+
+  const rest = blocks.filter((block, index) => index !== at && block?.block_id !== noteId)
+  const insertAt = rest.findIndex((block) => block?.block_id === suggestionBlockId(input.index)) + 1
+  const replacement = [note, ...actionsRow(elements, actionsId)]
+  if (insertAt <= 0) return [...rest, ...replacement]
+  return [...rest.slice(0, insertAt), ...replacement, ...rest.slice(insertAt)]
+}
+
+/** The value a Keep / Not-an-idea button carries — read back by `decodeIdeaValue`. */
+export function encodeIdeaValue(input: { channel: string; ts: string }): string {
+  return JSON.stringify({ c: input.channel, ts: input.ts }).slice(0, 1900)
 }
 
 /** Which message a Keep / Not-an-idea press refers to. */

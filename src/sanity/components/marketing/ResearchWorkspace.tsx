@@ -833,7 +833,7 @@ function ResearchProjectEditor({
 
       {researchPage === 'review' && (
       <section data-tour-id="autopilot-research-review" style={styles.panel}>
-        <PanelHeading title="Choose what is useful enough to guide drafts" description="Mark only the findings, sources, or inspiration that are credible and relevant enough to influence setup drafts. This does not publish anything." />
+        <PanelHeading title="Review the findings" description="Choose credible findings to use in drafts. Nothing is published." />
         <ResearchReviewExplainer />
         {projectResults.length === 0 ? (
           <EmptyInline title="No findings yet. Get evidence to fetch SEO scores, scan CMS content, and summarize source pages." />
@@ -951,7 +951,7 @@ function ResearchProjectEditor({
 
       {researchPage === 'synthesize' && (
       <section data-tour-id="autopilot-research-create-setup" style={styles.panel}>
-        <PanelHeading title="Make setup drafts from trusted findings" description="Use the trusted items you selected to create editable drafts. Nothing is published." />
+        <PanelHeading title="Create drafts from reviewed findings" description="Use the trusted items you selected to create editable drafts. Nothing is published." />
         <div style={{ ...styles.card, boxShadow: 'none', padding: 12, marginBottom: 12, background: 'rgba(0, 115, 133, 0.08)' }}>
           <strong style={{ fontSize: 14 }}>What this creates</strong>
           <p style={{ ...styles.small, ...styles.muted, margin: '6px 0 0', lineHeight: 1.5 }}>
@@ -1040,7 +1040,7 @@ function ResearchProjectEditor({
 
       <ResearchArrayModule
         title="Collaborators and interns"
-        description="Add people and capacity signals before research synthesis so timing can shift around real availability."
+        description="Add collaborators and their availability."
         actionLabel="Add collaborator"
         onAdd={addCollaborator}
       >

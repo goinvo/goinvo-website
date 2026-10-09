@@ -190,11 +190,12 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('More')
     const marketingToolSource = readFileSync(new URL('../src/sanity/tools/marketingTool.tsx', import.meta.url), 'utf8')
     const moreMenuStart = marketingToolSource.indexOf('{actionsOpen && (')
-    const navigationStart = marketingToolSource.indexOf('<nav data-mobile-scroll="true"')
+    const navigationStart = marketingToolSource.indexOf('<MarketingSectionNavigation')
     const copyViewLinkUsage = marketingToolSource.indexOf('<CopyViewLinkButton')
     expect(moreMenuStart).toBeGreaterThan(-1)
     expect(copyViewLinkUsage).toBeGreaterThan(moreMenuStart)
-    expect(copyViewLinkUsage).toBeLessThan(navigationStart)
+    expect(navigationStart).toBeGreaterThan(-1)
+    expect(copyViewLinkUsage).toBeLessThan(marketingToolSource.indexOf('Guided tutorials', moreMenuStart))
     expect(marketingToolSource.slice(copyViewLinkUsage, copyViewLinkUsage + 100)).toContain('menuItem')
     // The More menu holds only actions with no home in the top nav — the view shortcuts
     // (campaigns/funnels/analytics/templates) were pruned; sub-tabs cover every section.

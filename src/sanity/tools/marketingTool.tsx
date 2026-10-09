@@ -26,6 +26,7 @@ import { AbTestingWorkspace } from '../components/marketing/AbTestingWorkspace'
 import { AnalyticsWorkspace } from '../components/marketing/AnalyticsWorkspace'
 import { MarketingAiModelSetting } from '../components/marketing/MarketingAiModelSetting'
 import { MarketingWeeklyHoursSetting } from '../components/marketing/MarketingWeeklyHoursSetting'
+import { MarketingTeamAccessSetting } from '../components/marketing/MarketingTeamAccessSetting'
 import { MarketingBrandVoiceSetting } from '../components/marketing/MarketingBrandVoiceSetting'
 import { BrandVoiceLearningReview } from '../components/marketing/BrandVoiceLearningReview'
 import { authenticatedMarketingRequest } from '../components/marketing/authenticatedMarketingRequest'
@@ -44,6 +45,7 @@ import { LinkTreeWorkspace } from '../components/marketing/LinkTreeWorkspace'
 import { ResearchWorkspace } from '../components/marketing/ResearchWorkspace'
 import { StrategyWorkspace } from '../components/marketing/StrategyWorkspace'
 import { TemplateWorkspace } from '../components/marketing/TemplateWorkspace'
+import { MarketingSectionNavigation } from '../components/marketing/MarketingSectionNavigation'
 import { WorkUpdateIntake } from '../components/marketing/WorkUpdateIntake'
 import {
   MARKETER_BRIEF_UNSAVED_ID,
@@ -280,6 +282,28 @@ const MARKETING_CONTROL_CSS = `
       height: 84px !important;
       min-height: 84px !important;
     }
+  }
+`
+
+const MARKETING_FOCUS_CSS = `
+  [data-marqueta-layout] { display:grid; grid-template-columns:220px minmax(0,1fr); gap:36px; max-width:1480px; margin:0 auto; }
+  [data-marketing-sidebar] { position:sticky; top:24px; max-height:calc(100vh - 48px); overflow:auto; border-right:1px solid var(--card-border-color); padding-right:24px; }
+  .marketing-nav-brand { font-size:22px; font-weight:650; margin-bottom:32px; }
+  .marketing-nav-group { margin-bottom:10px; }
+  .marketing-nav-heading { border:0; background:transparent; color:var(--card-muted-fg-color); width:100%; text-align:left; padding:10px 12px; font:inherit; font-size:14px; }
+  .marketing-nav-heading[aria-expanded="true"] { color:var(--card-fg-color); font-weight:650; }
+  .marketing-nav-items { display:grid; gap:3px; border-left:1px solid var(--card-border-color); margin-left:12px; padding-left:12px; }
+  .marketing-nav-items button { background:transparent; border:0; color:var(--card-muted-fg-color); padding:10px 12px; text-align:left; font:inherit; font-size:13px; min-height:40px; }
+  .marketing-nav-items button[aria-current="page"] { background:rgba(0,115,133,.15); color:#7ddae3; font-weight:650; }
+  [data-marketing-mobile-navigation] { display:none; }
+  [data-marqueta-focus] { min-width:0; width:100%; }
+  [data-marketing-tool] [hidden] { display:none !important; }
+  @media(max-width:760px) {
+    [data-marqueta-layout] { display:block; }
+    [data-marketing-sidebar] { display:none; }
+    [data-marketing-mobile-navigation] { display:grid; gap:6px; margin-bottom:22px; }
+    [data-marketing-mobile-navigation] label { font-size:12px; color:var(--card-muted-fg-color); }
+    [data-marketing-mobile-navigation] select { width:100%; min-height:44px; padding:10px; background:var(--card-bg-color); color:var(--card-fg-color); border:1px solid var(--card-border-color); }
   }
 `
 
@@ -3062,6 +3086,8 @@ function MarketingComponent() {
   useEffect(() => {
     saveStoredMarketingRole(role)
   }, [role])
+  const [homeSection, setHomeSection] = useState<'update' | 'desk' | 'overview'>('update')
+  const [settingsSection, setSettingsSection] = useState('business')
   const [data, setData] = useState<MarketingData>(EMPTY_DATA)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -3611,6 +3637,18 @@ function MarketingComponent() {
   const activeView = MARKETING_TOOL_VIEWS.find((candidate) => candidate.id === view) || MARKETING_TOOL_VIEWS[0]
   const guideArticle = MARKETING_GUIDE_ARTICLE_BY_VIEW[view]
   const attentionCount = loading ? 0 : operationsAttentionCount
+  const sectionGroups = MARKETING_SURFACES.map(surface => ({ id: surface.id, title: surface.title, items: surface.id === 'home'
+    ? [{value:'thisWeek',label:'This week'},{value:'dashboard:update',label:'Share an update'},{value:'dashboard:desk',label:'Work queue'},{value:'dashboard:overview',label:'Planning overview'}]
+    : surface.id === 'settings'
+      ? [{value:'channels:business',label:'Business context'},{value:'channels:team',label:'Team access'},{value:'channels:voices',label:'Brand voices'},{value:'channels:ai',label:'AI model'},{value:'channels:hours',label:'Weekly hours'},{value:'channels:formats',label:'Channels & formats'}]
+      : surface.tabs.map(tab => ({value:tab.view,label:tab.label})) }))
+  const sectionValue = view === 'dashboard' ? 'dashboard:' + homeSection : view === 'channels' ? 'channels:' + settingsSection : view
+  const selectSection = (value: string) => {
+    const [nextView, section] = value.split(':')
+    if (nextView !== view && !requestMarketingView(nextView as MarketingViewId)) return
+    if (nextView === 'dashboard') setHomeSection(section as 'update' | 'desk' | 'overview')
+    if (nextView === 'channels') setSettingsSection(section)
+  }
   // Both layouts reserve bottom space so the fixed Autopilot button never covers content (e.g. Save rows).
   const shellStyle: CSSProperties = compactLayout ? { ...styles.shell, padding: 12, paddingBottom: 92 } : { ...styles.shell, paddingBottom: 92 }
   const headerStyle: CSSProperties = compactLayout
@@ -3637,13 +3675,15 @@ function MarketingComponent() {
   return (
     <MarketingUnsavedChangesContext.Provider value={unsavedGuardValue}>
     <div data-marketing-tool="true" style={shellStyle}>
-      <style>{MARKETING_CONTROL_CSS}</style>
-      <div style={styles.page}>
+      <style>{MARKETING_CONTROL_CSS + MARKETING_FOCUS_CSS}</style>
+      <div data-marqueta-layout style={{ ...styles.page, maxWidth: 'none' }}>
+        <MarketingSectionNavigation groups={sectionGroups} value={sectionValue} onSelect={selectSection} />
+        <main data-marqueta-focus>
         <div style={headerStyle}>
           <div>
-            <h1 style={headingStyle}>Marketing</h1>
+            <h1 style={{ ...headingStyle, fontSize: 26 }}>{activeView.title}</h1>
             <p style={styles.subtitle}>
-              Plan strategy, research, publishing, channels, and public links from one operational workspace.
+              {activeView.description}
             </p>
           </div>
           <div style={headerActionsStyle}>
@@ -3666,6 +3706,7 @@ function MarketingComponent() {
               }}
               onClick={() => {
                 if (requestMarketingView('dashboard')) {
+                  setHomeSection('desk')
                   setActionsOpen(false)
                   window.setTimeout(() => document.getElementById('marketing-operations-inbox')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
                 }
@@ -3803,22 +3844,7 @@ function MarketingComponent() {
           </div>
         </div>
 
-        <nav data-mobile-scroll="true" style={navStyle} aria-label="Marketing sections">
-          {MARKETING_SURFACES.map((surface) => (
-            <MarketingNavButton
-              key={surface.id}
-              view={surface}
-              active={surface.tabs.some((tab) => tab.view === activeView.id)}
-              onClick={() => {
-                // Re-clicking the surface you're already in must NOT jump you back to its landing
-                // tab (and trigger a spurious unsaved-changes prompt) — guard on surface identity.
-                if (getMarketingSurfaceForView(activeView.id).id !== surface.id) {
-                  requestMarketingView(surface.landingView)
-                }
-              }}
-            />
-          ))}
-        </nav>
+
 
         {!loading && (
           <MarketingGuidanceWidget
@@ -3877,12 +3903,6 @@ function MarketingComponent() {
           <div style={styles.panel}>Loading marketing workspace...</div>
         ) : (
           <>
-            <MarketingSurfaceHeader surface={getMarketingSurfaceForView(view)} />
-            <MarketingSubTabs
-              surface={getMarketingSurfaceForView(view)}
-              activeView={view}
-              onSelect={requestMarketingView}
-            />
             {/* Above every view, not just the dashboard: a Slack deep link can
                 land on any of them, and the reason you came must arrive with
                 you rather than staying behind in Slack. */}
@@ -3895,6 +3915,7 @@ function MarketingComponent() {
                   onPostureChange={setFinancialPostureId}
                 />
                 <MarketingDashboard
+                  focusSection={homeSection}
                   data={data}
                   financialPostureId={financialPostureId}
                   onOpenView={requestMarketingView}
@@ -3904,6 +3925,7 @@ function MarketingComponent() {
                   focusOperationId={lastOperationId}
                   onOperationsAttentionChange={setOperationsAttentionCount}
                   onOpenOperations={(result) => {
+                    setHomeSection('desk')
                     setLastOperationId(result.operationId)
                     window.setTimeout(() => document.getElementById('marketing-operations-inbox')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
                   }}
@@ -3998,38 +4020,14 @@ function MarketingComponent() {
                 commitPatch={commitPatch}
               />
             )}
-            {view === 'channels' && (
-              <>
-                <nav aria-label="Settings sections" style={{ ...styles.panel, display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16, boxShadow: 'none' }}>
-                  <a href="#marketing-settings-business" style={styles.button}>Business context</a>
-                  <a href="#marketing-settings-voice" style={styles.button}>Brand voices</a>
-                  <a href="#marketing-settings-ai" style={styles.button}>AI model</a>
-                  <a href="#marketing-settings-channels" style={styles.button}>Channels & formats</a>
-                </nav>
-                <div style={{ marginBottom: 16, display: 'grid', gap: 12 }}>
-                  <div id="marketing-settings-business" style={{ scrollMarginTop: 16 }}>
-                    <MarketingFinancialPostureSetting onPostureChange={setFinancialPostureId} />
-                  </div>
-                  <div id="marketing-settings-voice" style={{ scrollMarginTop: 16 }}>
-                    <MarketingBrandVoiceSetting />
-                  </div>
-                  <div id="marketing-settings-ai" style={{ scrollMarginTop: 16 }}>
-                    <MarketingAiModelSetting />
-                    <MarketingWeeklyHoursSetting />
-                  </div>
-                </div>
-                <div id="marketing-settings-channels" style={{ scrollMarginTop: 16 }}>
-                  <ChannelWorkspace
-                    client={marketingClient}
-                    data={data}
-                    savingId={savingId}
-                    createDocument={createDocument}
-                    loadData={reloadWorkspaceData}
-                    commitPatch={commitPatch}
-                  />
-                </div>
-              </>
-            )}
+            {view === 'channels' && <>
+              <div hidden={settingsSection !== 'business'}><MarketingFinancialPostureSetting onPostureChange={setFinancialPostureId} /></div>
+              <div hidden={settingsSection !== 'team'}><MarketingTeamAccessSetting /></div>
+              <div hidden={settingsSection !== 'voices'}><MarketingBrandVoiceSetting /></div>
+              <div hidden={settingsSection !== 'ai'}><MarketingAiModelSetting /></div>
+              <div hidden={settingsSection !== 'hours'}><MarketingWeeklyHoursSetting /></div>
+              <div hidden={settingsSection !== 'formats'}><ChannelWorkspace client={marketingClient} data={data} savingId={savingId} createDocument={createDocument} loadData={reloadWorkspaceData} commitPatch={commitPatch} /></div>
+            </>}
             {view === 'thisWeek' && (
               <WeeklyPlanWorkspace
                 proofClient={outreachClient}
@@ -4065,6 +4063,7 @@ function MarketingComponent() {
             )}
           </>
         )}
+        </main>
       </div>
     </div>
     </MarketingUnsavedChangesContext.Provider>
@@ -4266,6 +4265,7 @@ export function getNextActionsDisplay<T>(actions: T[], expanded: boolean) {
 }
 
 function MarketingDashboard({
+  focusSection,
   data,
   financialPostureId,
   onOpenView,
@@ -4277,6 +4277,7 @@ function MarketingDashboard({
   onOpenOperations,
   onOpenWorkUpdateResearch,
 }: {
+  focusSection: 'update' | 'desk' | 'overview'
   data: MarketingData
   financialPostureId: FinancialPostureId
   onOpenView: MarketingViewOpener
@@ -4322,13 +4323,13 @@ function MarketingDashboard({
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
-      <section style={styles.panel}>
+      <section hidden={focusSection !== 'update'} data-home-section="update" style={styles.panel}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0, maxWidth: 760 }}>
             <div style={{ ...styles.kicker, marginBottom: 6 }}>Start here</div>
-            <h2 style={{ margin: 0, fontSize: 26 }}>Tell Marqueta what changed</h2>
+            <h2 style={{ margin: 0, fontSize: 26 }}>Share a work update</h2>
             <p style={{ ...styles.muted, margin: '6px 0 0', lineHeight: 1.55 }}>
-              Paste a rough update—project, deadline, result, or change of plan. Marqueta connects it to the suite and shows one review before saving.
+              Marqueta helps turn your update into a brief you can edit.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -4348,15 +4349,18 @@ function MarketingDashboard({
 
       </section>
 
-      <MarketingOperationsBoard
+      <div hidden={focusSection !== 'desk'} data-home-section="desk"><MarketingOperationsBoard
         gaps={gaps}
         owners={data.teamMembers || []}
         refreshToken={operationsRefreshToken}
         focusOperationId={focusOperationId}
         onAttentionCountChange={onOperationsAttentionChange}
         onOpenView={(targetView) => onOpenView(targetView)}
-      />
+      /></div>
 
+      <details hidden={focusSection !== 'overview'} open data-home-section="overview" data-marketing-planning-overview="true" style={styles.panel}>
+        <summary style={{ cursor: 'pointer', minHeight: 44, fontWeight: 750, fontSize: 16 }}>Planning overview and more tools</summary>
+        <div style={{ display: 'grid', gap: 16, marginTop: 16 }}>
       <section style={styles.panel}>
         <PanelHeading
           title="Health at a glance"
@@ -4610,6 +4614,8 @@ function MarketingDashboard({
           </div>
         )}
       </section>
+        </div>
+      </details>
     </div>
   )
 }
@@ -9310,11 +9316,11 @@ export function MarketingAiAssistPanel({
 
   return (
     <div data-testid={`marketing-ai-assist-${kind}`} style={{ ...styles.guidePanel, boxShadow: 'none', padding: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>
-          <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Auto-fill from existing content</h3>
+          <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Draft with AI</h3>
           <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
-            Auto-fills a starter {copy.target} from existing GoInvo site content, saved strategy answers, research, analytics notes, and the current draft.
+            Suggest an editable {copy.target} from saved GoInvo content. Check it before saving.
           </p>
         </div>
         <button
@@ -9324,9 +9330,11 @@ export function MarketingAiAssistPanel({
           disabled={loading}
           onClick={() => void requestSuggestion()}
         >
-          {loading ? 'Thinking...' : 'Auto-fill draft'}
+          {loading ? 'Preparing draft…' : 'Draft with AI'}
         </button>
       </div>
+      <details style={{ marginTop: 10 }}><summary style={{ cursor: 'pointer', minHeight: 36, fontSize: 13, fontWeight: 750 }}>Sources, voice and optional guidance</summary>
+      <p style={{ ...styles.small, ...styles.muted }}>AI uses the current draft and saved GoInvo articles, case studies, strategy, research and analytics. Only include information approved for that use.</p>
       {usesBrandVoice && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 10 }}>
           <label style={{ ...styles.small, fontWeight: 800 }}>
@@ -9369,8 +9377,9 @@ export function MarketingAiAssistPanel({
           <GuidedAutofillControls questions={guidedQuestions} values={guidedAnswers} onChange={setGuidedAnswers} />
         </div>
       </details>
+      </details>
       {error && (
-        <div style={{ ...styles.small, color: '#E36216', marginTop: 8 }}>
+        <div role="alert" style={{ ...styles.small, color: '#E36216', marginTop: 8 }}>
           {error}
         </div>
       )}
@@ -9378,15 +9387,6 @@ export function MarketingAiAssistPanel({
         <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
           <div style={{ ...styles.card, boxShadow: 'none', padding: 10 }}>
             <strong style={{ fontSize: 13 }}>{suggestion.summary || 'Suggested setup'}</strong>
-            {suggestion.rationale && suggestion.rationale.length > 0 && (
-              <div style={{ display: 'grid', gap: 5, marginTop: 8 }}>
-                {suggestion.rationale.slice(0, 4).map((item) => (
-                  <div key={item} style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
-                    {item}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             <span
@@ -9412,16 +9412,6 @@ export function MarketingAiAssistPanel({
               </span>
             )}
           </div>
-          {suggestion.siteReferences && suggestion.siteReferences.length > 0 && (
-            <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
-              <strong style={{ color: 'var(--card-fg-color)' }}>Site context: </strong>
-              {suggestion.siteReferences
-                .slice(0, 3)
-                .map((reference) => reference.title)
-                .filter(Boolean)
-                .join(', ')}
-            </div>
-          )}
           {suggestedFields.length > 0 && (
             <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
               <strong style={{ color: 'var(--card-fg-color)' }}>Will fill: </strong>
@@ -9438,9 +9428,23 @@ export function MarketingAiAssistPanel({
               </span>
             </div>
           )}
+          <details style={{ marginTop: 4 }}>
+            <summary style={{ cursor: 'pointer', minHeight: 36, fontSize: 13, fontWeight: 750 }}>Sources and reasoning</summary>
+            {suggestion.rationale && suggestion.rationale.length > 0 && (
+              <div style={{ display: 'grid', gap: 5, marginTop: 8 }}>
+                {suggestion.rationale.slice(0, 4).map((item) => (
+                  <div key={item} style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(suggestion.siteReferences || []).length > 0 ? <ul style={{ ...styles.small, margin: '8px 0', paddingLeft: 20 }}>{suggestion.siteReferences!.map((reference, index) => <li key={index}>{reference.url ? <a href={reference.url} target="_blank" rel="noreferrer">{reference.title || reference.url}</a> : reference.title}{reference.note ? ' — ' + reference.note : ''}</li>)}</ul> : <p style={styles.small}>No source links were returned. Check the relevant records before using the draft.</p>}
+          </details>
           {section && (
             <details style={{ border: '1px solid var(--card-border-color)', borderRadius: 6, padding: 10 }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>Preview exact fields</summary>
+              <summary style={{ cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>Advanced: exact fields</summary>
               <pre style={{ ...styles.small, whiteSpace: 'pre-wrap', margin: '8px 0 0', color: 'var(--card-muted-fg-color)' }}>
                 {JSON.stringify(section, null, 2)}
               </pre>
@@ -9860,17 +9864,14 @@ export function GuidanceChecklist({
   const done = items.filter((item) => item.done).length
 
   return (
-    <div
+    <details
       id={id}
       aria-label={`${title}: ${done} of ${items.length} complete`}
       role="group"
       style={{ ...styles.panel, boxShadow: 'none', padding: 12, borderColor: done === items.length ? 'rgba(54, 139, 87, 0.35)' : 'var(--card-border-color)', scrollMarginTop: 18 }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-        <h3 style={{ margin: 0, fontSize: 16 }}>{title}</h3>
-        <span style={{ ...styles.small, ...styles.muted }}>{done}/{items.length}</span>
-      </div>
-      <div role="list" style={{ display: 'grid', gap: 7 }}>
+      <summary style={{ cursor: 'pointer', minHeight: 36, fontSize: 14, fontWeight: 750 }}>{title} <span style={{ ...styles.small, ...styles.muted, marginLeft: 8 }}>{done}/{items.length} complete</span></summary>
+      <div role="list" style={{ display: 'grid', gap: 7, marginTop: 8 }}>
         {items.map((item) => (
           <div key={item.label} role="listitem" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13 }}>
             <span
@@ -9902,7 +9903,7 @@ export function GuidanceChecklist({
           </div>
         ))}
       </div>
-    </div>
+    </details>
   )
 }
 

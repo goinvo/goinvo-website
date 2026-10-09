@@ -39,6 +39,7 @@
 
 import { classifyMessage } from './ideaCapture'
 import { detectGenerationRequest, type GenerationFormat } from './marquetaGenerate'
+import { detectSuggestionRequest, type SuggestionSource } from './marquetaSuggest'
 import { askMarqueta } from './marquetaStyle'
 import { clipSlackText, escapeSlackText } from './slackText'
 
@@ -104,6 +105,13 @@ export type MarquetaIntent =
    */
   | { kind: 'generate'; format: GenerationFormat; topic: string }
   /**
+   * "suggest from our work" / "suggest from the field" / "suggest: <brief>" —
+   * what should we make? `source` is null for a bare "suggest", which she
+   * answers with the three ways to ask (or reads as a brief when documents are
+   * attached). See `detectSuggestionRequest`.
+   */
+  | { kind: 'suggest'; source: SuggestionSource | null; details: string }
+  /**
    * "Called Jane at Acme, left a voicemail". `text` is the whole message — it
    * is what happened, so it is the note and what the outcome is guessed from
    * (up to 2,000 characters, which is all the log form holds).
@@ -114,6 +122,17 @@ export type MarquetaIntent =
    * when the message names nobody ("left a voicemail") — ask who, never guess.
    */
   | { kind: 'logCall'; text: string; target: string }
+  /**
+   * Marqueta as strategist (slice 1): what she sees and recommends, what the
+   * field is complaining about, and the intent everything is judged against.
+   * The first three are lookups of stored records; `intentDraft` asks her to
+   * (re)draft the intent from the records, which is a model call and slow, so
+   * the route runs it behind `after()` like drafting. See `detectStrategyCommand`.
+   */
+  | { kind: 'sitrep' }
+  | { kind: 'terrain' }
+  | { kind: 'intent' }
+  | { kind: 'intentDraft' }
   | { kind: 'strategy' }
   | { kind: 'pipeline' }
   | { kind: 'mine' }
@@ -897,6 +916,9 @@ export function damerauLevenshtein(a: string, b: string): number {
 
 /** The one-word commands a typo can be a slip of, and the command to suggest for each. */
 const SUGGESTABLE: Record<string, string> = {
+  sitrep: 'sitrep',
+  terrain: 'terrain',
+  intent: 'intent',
   runway: 'runway',
   money: 'runway',
   strategy: 'strategy',
@@ -1037,6 +1059,17 @@ export function parseMarquetaIntent(rawText: string): MarquetaIntent {
   const generation = detectGenerationRequest(text)
   if (generation) return { kind: 'generate', format: generation.format, topic: generation.topic }
 
+  // Asking what to make. Verb-led ("suggest …") and anchored, so it claims no
+  // word prep, logging or capture use; pinned in the trigger-collision test.
+  const suggestion = detectSuggestionRequest(text)
+  if (suggestion) return { kind: 'suggest', source: suggestion.source, details: suggestion.details }
+
+  // The strategist's commands. Anchored whole phrases, checked before prep (its
+  // `^draft` patterns must not read "draft our intent" as an email) and before
+  // the topic keywords (where "direction" and "priorities" mean the money check).
+  const strategist = detectStrategyCommand(plain)
+  if (strategist) return strategist
+
   const prep = detectPrep(plain, flat, typed)
   if (prep !== 'notPrep') return prep
 
@@ -1064,6 +1097,36 @@ export function parseMarquetaIntent(rawText: string): MarquetaIntent {
   const who = contactTarget(plain, flat)
   if (who) return who.named ? { kind: 'contact', target: who.target } : { kind: 'contact', target: who.target, otherwise: rest }
   return rest
+}
+
+/**
+ * The strategist's commands, as whole phrases (with an optional "our"/"the" and
+ * trailing punctuation), so a sentence that merely mentions goals or the
+ * terrain is never read as one.
+ *
+ *   sitrep · situation report · what do you see          → sitrep
+ *   terrain · complaints · what is the field complaining about → terrain
+ *   intent · our goals · our vision · where are we going  → intent
+ *   draft our intent · redraft the intent · new intent    → intentDraft
+ */
+const SITREP_PHRASE = /^(?:(?:the|a|your|our)\s+)?(?:sitrep|situation\s+report|situation)$|^what\s+do\s+you\s+see$/
+const TERRAIN_PHRASE = /^(?:(?:the|our)\s+)?(?:terrain|complaints|recon)$|^what\s+(?:is|are|'s)\s+(?:the\s+field|people|everyone)\s+complaining\s+about$/
+const INTENT_PHRASE = /^(?:(?:the|our)\s+)?(?:intent|goals|vision|objectives)$|^where\s+are\s+we\s+(?:going|headed)$|^what\s+are\s+our\s+goals$/
+const INTENT_DRAFT_PHRASE = /^(?:re-?)?draft\s+(?:(?:the|our|an?)\s+)?(?:intent|goals)$|^new\s+intent$/
+
+export function detectStrategyCommand(plain: string): Extract<MarquetaIntent, { kind: 'sitrep' | 'terrain' | 'intent' | 'intentDraft' }> | null {
+  const phrase = String(plain || '')
+    .toLowerCase()
+    .replace(/[‘’]/g, "'")
+    .replace(/[\s.!?]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!phrase) return null
+  if (INTENT_DRAFT_PHRASE.test(phrase)) return { kind: 'intentDraft' }
+  if (SITREP_PHRASE.test(phrase)) return { kind: 'sitrep' }
+  if (TERRAIN_PHRASE.test(phrase)) return { kind: 'terrain' }
+  if (INTENT_PHRASE.test(phrase)) return { kind: 'intent' }
+  return null
 }
 
 function unknownIntent(plain: string, lower: string): Extract<MarquetaIntent, { kind: 'unknown' }> {
@@ -1108,6 +1171,7 @@ export function marquetaHelpText(opts: { more?: boolean; guest?: boolean; dms?: 
       `*Who* ${askMarqueta('who’s Jane Doe')} — where things stand with someone on file.`,
       `*Signed work* ${askMarqueta('we signed Acme for 3 months')} — moves the runway.`,
       `*Capture* ${askMarqueta('capture a booth at Town Day')} — puts anything on the list, whatever it sounds like.`,
+      `*Content* ${askMarqueta('suggest from our work')} · ${askMarqueta('suggest from the field')}`,
       `*Ideas* ${askMarqueta('ideas')} — what I’ve caught that still needs a yes or no.`,
     ].join('\n')
   }
@@ -1116,7 +1180,8 @@ export function marquetaHelpText(opts: { more?: boolean; guest?: boolean; dms?: 
     `*Calls* ${askMarqueta('prep Jane Doe at MGB')} · ${askMarqueta('my calls')} · ${askMarqueta('called Jane, left a voicemail')}`,
     `*Tasks* ${askMarqueta('my tasks')} · ${askMarqueta('week')} · ${askMarqueta('away next week')}`,
     `*Money* ${askMarqueta('runway')} · ${askMarqueta('strategy')} · ${askMarqueta('pipeline')}`,
-    `${askMarqueta('help more')} for ideas, capture and what I listen for.`,
+    `*Strategy* ${askMarqueta('sitrep')} · ${askMarqueta('terrain')} · ${askMarqueta('intent')}`,
+    `${askMarqueta('help more')} for ideas, capture, suggestions and what I listen for.`,
   ].join('\n')
 }
 

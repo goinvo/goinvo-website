@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/marketing', () => ({
-  assertMarketingApiKey: mocks.authorize,
+  
   getMarketingWriteClient: mocks.getClient,
   getMarketingWriteClientFor: mocks.getClient,
 }))
@@ -122,4 +122,10 @@ describe('publish run request boundary', () => {
     expect(log).toHaveBeenCalled()
     log.mockRestore()
   })
+})
+
+// Authentication is server-only; keep the existing route-test boundary mocks.
+vi.mock('@/lib/marketing/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/marketing/auth')>()
+  return { ...actual, assertMarketingApiKey: mocks.authorize }
 })

@@ -22,7 +22,7 @@ const { mocks, TestMarketingAuthError, TestMarketingValidationError } = vi.hoist
 })
 
 vi.mock('@/lib/marketing', () => ({
-  assertMarketingApiKey: mocks.assertMarketingApiKey,
+  
   buildCreatePayload: (
     type: string,
     fields: Record<string, unknown>,
@@ -45,7 +45,7 @@ vi.mock('@/lib/marketing', () => ({
   }),
   isManagedMarketingType: (type: string) =>
     ['marketingCampaign', 'marketingContact', 'marketingCalendarItem'].includes(type),
-  MarketingAuthError: TestMarketingAuthError,
+  
   MarketingValidationError: TestMarketingValidationError,
 }))
 
@@ -298,4 +298,11 @@ describe('managed marketing document item boundary', () => {
       { returnFirst: false, returnDocuments: true },
     )
   })
+})
+
+// Authentication is server-only; keep the existing route-test boundary mocks.
+vi.mock('@/lib/marketing/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/marketing/auth')>()
+  return { ...actual, assertMarketingApiKey: mocks.assertMarketingApiKey,
+    MarketingAuthError: TestMarketingAuthError }
 })

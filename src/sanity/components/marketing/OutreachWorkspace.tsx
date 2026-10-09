@@ -3,6 +3,8 @@ import { SearchIcon, UsersIcon } from '@sanity/icons'
 import { useCurrentUser } from 'sanity'
 
 import { useConfirmDialog } from './ConfirmDialog'
+import { useTeamAccess } from './useTeamAccess'
+import type { TeamAccess } from '@/lib/marketing/teamAccess'
 import { BrandVoiceLearningReview } from './BrandVoiceLearningReview'
 import { CallOutlinePanel, studioSenderName } from './CallOutlinePanel'
 import {
@@ -649,10 +651,16 @@ function voiceLearningFailureMessage(error: unknown, action: 'propose' | 'apply'
     : `The wording is still saved, but the selected learning was not applied: ${message}`
 }
 
-function canManagePrivateOutreach(user: { roles?: Array<{ name?: string }> } | null): boolean {
-  return Boolean(
-    user?.roles?.some((role) => isOutreachWriterRole(role.name)),
-  )
+/**
+ * Whether this screen offers the private Outreach actions. A writer role always
+ * does; otherwise the Team permissions setting decides ('equal' = everyone on
+ * the team, the default). Null access (not read yet, or unreadable) is the
+ * stricter rule. The server checks the same rule on every call.
+ */
+function canManagePrivateOutreach(user: { roles?: Array<{ name?: string }> } | null, access: TeamAccess | null): boolean {
+  if (!user) return false
+  if (user.roles?.some((role) => isOutreachWriterRole(role.name))) return true
+  return access?.mode === 'equal'
 }
 
 const OUTREACH_RESPONSIVE_CSS = `
@@ -886,7 +894,8 @@ export function OutreachWorkspaceContent({
   request = outreachApi,
 }: OutreachWorkspaceContentProps) {
   const outreachClient = useMemo(() => client.withConfig({ dataset: OUTREACH_DATASET }), [client])
-  const canManageOutreach = canManagePrivateOutreach(currentUser)
+  const teamAccess = useTeamAccess(client)
+  const canManageOutreach = canManagePrivateOutreach(currentUser, teamAccess)
   const {
     clearUnsavedChanges,
     confirmDiscardUnsavedChange,
@@ -5294,7 +5303,8 @@ interface OutreachEvidenceWorkspaceProps {
 export function OutreachEvidenceWorkspace({ client }: OutreachEvidenceWorkspaceProps) {
   const outreachClient = useMemo(() => client.withConfig({ dataset: OUTREACH_DATASET }), [client])
   const currentUser = useCurrentUser()
-  const canManageOutreach = canManagePrivateOutreach(currentUser)
+  const teamAccess = useTeamAccess(client)
+  const canManageOutreach = canManagePrivateOutreach(currentUser, teamAccess)
   const { confirm, confirmDialog } = useConfirmDialog()
   const { clearUnsavedChanges, confirmDiscardUnsavedChange } = useMarketingUnsavedGuard()
 

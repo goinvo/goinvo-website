@@ -15,6 +15,14 @@
     {
       "path": "/api/marketing/checkin",
       "schedule": "0 14 * * 4"
+    },
+    {
+      "path": "/api/marketing/strategy/recon",
+      "schedule": "0 22 * * 0"
+    },
+    {
+      "path": "/api/marketing/rendomat/ingest",
+      "schedule": "30 12 * * *"
     }
   ]
 }

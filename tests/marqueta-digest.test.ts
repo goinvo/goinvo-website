@@ -78,6 +78,10 @@ vi.mock('@/lib/marketing/strategyCheck.server', () => ({ loadStrategySnapshot: m
 vi.mock('@/lib/marketing/runway.server', () => ({ readRunway: mocks.readRunway }))
 vi.mock('@/lib/marketing/ideaCapture.server', () => ({ ideasNeedingReview: mocks.ideasNeedingReview }))
 vi.mock('@/lib/marketing/domainWatch.server', () => ({ checkWatchedDomains: mocks.checkWatchedDomains }))
+// The sitrep's two reads. No scan = no sitrep lines, which is what these tests
+// expect; the sitrep's own lines are covered in sitrep.test.ts.
+vi.mock('@/lib/marketing/terrainScan.server', () => ({ readLatestScan: async () => null }))
+vi.mock('@/lib/marketing/strategyIntent.server', () => ({ readIntent: async () => null }))
 vi.mock('@sanity/client', () => ({ createClient: () => mocks.tickClient }))
 vi.mock('@/sanity/env', () => ({ apiVersion: '2025-01-01', dataset: 'production', projectId: 'test-project', writeToken: 'test-token' }))
 

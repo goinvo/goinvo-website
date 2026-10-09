@@ -7,8 +7,11 @@
  * marketingCalendarItems that auto-publish as Instagram Reels.
  *
  * Env (fail-closed — nothing is ingested unless both are set):
- *   RENDOMAT_API_BASE  — e.g. https://rendomat.yourdomain.com
- *   RENDOMAT_API_KEY   — an `rmk_…` key with `read` scope.
+ *   RENDOMAT_API_BASE  — the Rendomat app's URL (never hard-coded here)
+ *   RENDOMAT_API_KEY   — an `rmk_…` key: `read` to ingest, `read,write` to make
+ *                        videos from Marqueta's scripts.
+ *   RENDOMAT_CLIENT_ID — the GoInvo organization new videos are made in
+ *                        (making only; ingest does not need it).
  *
  * API reference: vsl-generator/docs/api-integration.md.
  */
@@ -16,6 +19,27 @@
 /** True when Rendomat ingest can run (base URL + key present). */
 export function isRendomatConfigured(): boolean {
   return Boolean((process.env.RENDOMAT_API_BASE || '').trim() && (process.env.RENDOMAT_API_KEY || '').trim())
+}
+
+/**
+ * The GoInvo organization in Rendomat that new videos are made in, or null.
+ * A positive whole number only: anything else is a typo, and a typo must not
+ * become a request that makes a video somewhere unexpected.
+ */
+export function rendomatClientId(): number | null {
+  const raw = (process.env.RENDOMAT_CLIENT_ID || '').trim()
+  if (!/^\d+$/.test(raw)) return null
+  const id = Number(raw)
+  return Number.isSafeInteger(id) && id > 0 ? id : null
+}
+
+/**
+ * True when Marqueta may ask Rendomat to MAKE a video: the ingest settings
+ * plus the organization to make it in. Without all three the button is not
+ * drawn and a press of an older button is refused.
+ */
+export function isRendomatCreateConfigured(): boolean {
+  return isRendomatConfigured() && rendomatClientId() !== null
 }
 
 function apiBase(): string {
@@ -38,6 +62,10 @@ export interface RendomatVideo {
   publish_at: string | null
   created_at: string
   updated_at: string
+  /** The calendar item this video was made for, when Marqueta made it. */
+  external_ref?: string | null
+  /** The Rendomat editor page for this video. */
+  editor_url?: string | null
 }
 
 /** The export manifest (GET /api/v1/videos/:id/export). */
@@ -120,12 +148,101 @@ export function resolveRendomatUrl(url: string): string {
   return `${apiBase()}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`
 }
 
-async function rendomatFetch(path: string): Promise<Response> {
+async function rendomatFetch(path: string, init: { method?: string; body?: unknown } = {}): Promise<Response> {
   return fetch(`${apiBase()}${path}`, {
-    headers: { Authorization: `Bearer ${apiKey()}` },
+    method: init.method || 'GET',
+    headers: {
+      Authorization: `Bearer ${apiKey()}`,
+      ...(init.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    },
+    ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
     cache: 'no-store',
     signal: AbortSignal.timeout(15000),
   })
+}
+
+/**
+ * Does this URL live on the Rendomat deployment itself? Only then does it get
+ * the API key: an absolute download URL can point at a storage CDN, and the
+ * key must never travel to a host that is not Rendomat.
+ */
+export function isRendomatOrigin(url: string): boolean {
+  try {
+    return new URL(url).origin === new URL(apiBase()).origin
+  } catch {
+    return false
+  }
+}
+
+/** One slide of a video made from a script (Rendomat `mode: "script"`). */
+export type RendomatSlide = {
+  role: 'cover' | 'point' | 'cta'
+  title: string
+  kicker?: string
+  narration?: string
+}
+
+/** The body of POST /api/v1/videos in script mode. */
+export type RendomatCreateBody = {
+  mode: 'script'
+  client_id: number
+  title: string
+  aspect_ratio: '9:16'
+  brand_kit_id: string
+  external_ref: string
+  slides: RendomatSlide[]
+}
+
+/** Why Rendomat refused a slide: `slide` is the 0-based index into `slides`, null for the request itself. */
+export type RendomatProblem = { slide: number | null; field?: string; reason: string }
+
+export type RendomatCreateResult =
+  | { ok: true; video: RendomatVideo; existing: boolean }
+  | { ok: false; status: number; problems: RendomatProblem[]; error: string }
+
+function readProblems(value: unknown): RendomatProblem[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((entry) => {
+    const problem = (entry || {}) as Record<string, unknown>
+    const reason = typeof problem.reason === 'string' ? problem.reason.trim() : ''
+    if (!reason) return []
+    const slide = typeof problem.slide === 'number' && Number.isInteger(problem.slide) ? problem.slide : null
+    return [{ slide, reason, ...(typeof problem.field === 'string' ? { field: problem.field } : {}) }]
+  })
+}
+
+/**
+ * Ask Rendomat to make a video from a script. Never throws: a refusal, a
+ * timeout and an unreachable host all come back as `ok: false`, so the caller
+ * can say the draft is still on the Calendar rather than crash a Slack press.
+ *
+ * Idempotent on `external_ref` on Rendomat's side: a second press for the same
+ * calendar item answers 200 with the video already made (`existing: true`).
+ */
+export async function createRendomatVideo(body: RendomatCreateBody): Promise<RendomatCreateResult> {
+  let res: Response
+  try {
+    res = await rendomatFetch('/api/v1/videos', { method: 'POST', body })
+  } catch (error) {
+    return { ok: false, status: 0, problems: [], error: error instanceof Error ? error.name : 'NetworkError' }
+  }
+  const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+  if (res.ok && json && typeof json.id === 'number') {
+    return { ok: true, video: json as unknown as RendomatVideo, existing: json.existing === true }
+  }
+  return {
+    ok: false,
+    status: res.status,
+    problems: readProblems(json?.problems),
+    error: typeof json?.error === 'string' ? json.error : `Rendomat answered ${res.status}.`,
+  }
+}
+
+/** One video (GET /api/v1/videos/:id). */
+export async function getRendomatVideo(id: number | string): Promise<RendomatVideo> {
+  const res = await rendomatFetch(`/api/v1/videos/${encodeURIComponent(String(id))}`)
+  if (!res.ok) throw new Error(`Rendomat video lookup failed (${res.status}).`)
+  return (await res.json()) as RendomatVideo
 }
 
 export interface ListVideosParams {
@@ -162,7 +279,8 @@ export async function downloadRendomatAsset(url: string): Promise<{ buffer: Arra
   const absolute = resolveRendomatUrl(url)
   if (!absolute) throw new Error('Rendomat asset URL is empty.')
   const res = await fetch(absolute, {
-    headers: { Authorization: `Bearer ${apiKey()}` },
+    // The key goes only to Rendomat itself, never to a storage host it links to.
+    headers: isRendomatOrigin(absolute) ? { Authorization: `Bearer ${apiKey()}` } : {},
     cache: 'no-store',
     // Bound the download so a large/slow render can't exhaust the function.
     signal: AbortSignal.timeout(25000),

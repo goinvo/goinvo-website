@@ -60,8 +60,8 @@ export type {
 export { getMarketingWriteClient,
   getMarketingWriteClientFor } from './client'
 
-// API authentication.
-export { MarketingAuthError, assertMarketingApiKey, assertStudioOrApiKey, assertStudioWriterOrApiKey } from './auth'
+// Authentication imports Node-only session verification. Server routes import
+// '@/lib/marketing/auth' directly so it never enters the Studio browser bundle.
 
 // Channel seeding (DEFAULT_CHANNELS + ensureMarketingChannel).
 export { DEFAULT_CHANNELS, ensureMarketingChannel } from './seed'

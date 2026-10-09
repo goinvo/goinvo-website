@@ -1,8 +1,7 @@
 import {
-  assertStudioWriterOrApiKey,
   getMarketingWriteClientFor,
-  MarketingAuthError,
 } from '@/lib/marketing'
+import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { connectionStatus, isQStashConfigured } from '@/lib/marketing/publishers'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 

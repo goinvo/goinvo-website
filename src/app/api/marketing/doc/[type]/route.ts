@@ -1,15 +1,14 @@
 import type { NextResponse as NextResponseType } from 'next/server'
 import {
-  assertMarketingApiKey,
   buildCreatePayload,
   getMarketingWriteClient,
   isManagedMarketingType,
-  MarketingAuthError,
   MarketingValidationError,
   type ManagedMarketingType,
   type MarketingCreatePayload,
   type MarketingFields,
 } from '@/lib/marketing'
+import { assertMarketingApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import {
   assertBoundedJson,

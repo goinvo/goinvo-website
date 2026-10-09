@@ -356,12 +356,12 @@ const categories: Category[] = [
           },
           {
             id: 'marketing.overview.order',
-            title: 'Tell Marqueta what changed',
+            title: 'Share a work update',
             body: (
               <>
                 Coworkers do not need to translate their work into campaigns,
                 funnels, audiences, or calendar fields. On <strong>Home</strong>,
-                use <strong>Tell Marqueta what changed</strong> like a quick
+                use <strong>Share a work update</strong> like a quick
                 Slack update. Marketing infers the smallest operational
                 handoff, finds strong matches in existing work, and shows the
                 normalized brief before anything is saved. The accepted work
@@ -369,7 +369,7 @@ const categories: Category[] = [
                 are optional when someone needs to tweak the source details.
               </>
             ),
-            tip: 'The rough note is not saved. Review the proposed shared brief, then hand it off once; Marqueta stores it privately and runs a free internal CMS check without publishing or using paid SEO credits.',
+            tip: 'Choose Draft a brief, check the short summary, and use Edit brief to change the wording directly. Open Full brief, sources and assumptions for the background. Save brief stores the reviewed item privately and checks existing GoInvo content; it does not publish.' ,
           },
           {
             id: 'marketing.overview.templates',
@@ -402,8 +402,7 @@ const categories: Category[] = [
                 event, result, collaborator, idea, or change of plan. Missing
                 nice-to-have fields stay assumptions or questions; you are not
                 sent through a form. Review the normalized private handoff and
-                any strong existing source match, then choose <strong>Hand this
-                to Marketing</strong>. Nothing is saved before that review, no
+                any strong existing source match, then choose <strong>Save brief</strong>. Nothing is saved before that review, no
                 public Research record is silently changed, and nothing is published.
               </>
             ),
@@ -449,7 +448,7 @@ const categories: Category[] = [
             title: 'Scan the runway before opening editors',
             body: (
               <>
-                Start on <strong>Home</strong> to see posture-aware priorities,
+                On <strong>Home</strong>, expand <strong>Planning overview and more tools</strong> to see posture-aware priorities,
                 publishing runway, unresolved strategy gaps, and records that
                 need attention. Runway counts execution-ready scheduled work in
                 the next 30 dates; an Idea far in the future does not make the
@@ -949,7 +948,7 @@ const categories: Category[] = [
                 This keeps designers from wasting prompts when they are still
                 working through the same planning question. Those sessions stay
                 local to this browser until you confirm a create step. By contrast,
-                a reviewed <strong>Tell Marqueta what changed</strong> handoff is
+                a reviewed <strong>Share a work update</strong> handoff is
                 saved privately on Marqueta’s shared desk, where coworkers
                 can see its owner, date, blocker, and recent outcome. Autopilot
                 remains optional browser-local coaching; it is not the team queue.

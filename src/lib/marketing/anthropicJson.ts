@@ -85,6 +85,12 @@ export interface GenerateClaudeOptions {
   maxTokens?: number
   /** Enable the built-in live web_search server tool. */
   webSearch?: boolean
+  /**
+   * PDFs to read alongside the message, sent as document blocks ahead of the
+   * text. Claude reads a PDF natively, so a deck or a brief somebody attached
+   * needs no parsing library of ours (and no second, worse reading of it).
+   */
+  pdfs?: { title: string; base64: string }[]
   timeoutMs?: number
   /**
    * Which part of the suite is spending. Recorded on the ledger so the bill can
@@ -112,6 +118,20 @@ export interface ClaudeTextResult {
   stopReason?: string | null
 }
 
+/** The user turn: plain text, or any attached PDFs first and the text after them. */
+function userContent(opts: GenerateClaudeOptions) {
+  const pdfs = (opts.pdfs || []).filter((pdf) => pdf.base64)
+  if (!pdfs.length) return opts.user
+  return [
+    ...pdfs.map((pdf) => ({
+      type: 'document' as const,
+      title: pdf.title.slice(0, 200),
+      source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: pdf.base64 },
+    })),
+    { type: 'text' as const, text: opts.user },
+  ]
+}
+
 export async function generateClaudeText(opts: GenerateClaudeOptions): Promise<ClaudeTextResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not configured.')
@@ -132,7 +152,7 @@ export async function generateClaudeText(opts: GenerateClaudeOptions): Promise<C
         model,
         max_tokens: opts.maxTokens ?? 2600,
         system: opts.system,
-        messages: [{ role: 'user', content: opts.user }],
+        messages: [{ role: 'user', content: userContent(opts) }],
         ...(opts.webSearch
           ? { tools: [{ type: 'web_search_20260209' as const, name: 'web_search' as const }] }
           : {}),

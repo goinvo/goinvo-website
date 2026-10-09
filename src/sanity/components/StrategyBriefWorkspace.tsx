@@ -145,7 +145,7 @@ export function StrategyBriefWorkspace() {
         <div>
           <h2 style={s.h2}>Strategy Brief</h2>
           <p style={s.sub}>
-            The positioning + plan, on one page: who we are, the money terms, AI visibility, and the Red Team play.
+            Review the proposed positioning, evidence and next steps.
           </p>
         </div>
         <span
@@ -162,15 +162,13 @@ export function StrategyBriefWorkspace() {
       </div>
 
       <div style={{ ...s.callout, marginBottom: 18 }}>
-        Captured {BRIEF_DATE} from a 6-agent research + synthesis workflow. This is a <strong>recommendation, not yet
-        adopted</strong> — read it as the argued-for direction, not settled house style. The static claims below do
-        not retain per-claim source links or verification status in this brief; treat the figures as historical
-        research notes and verify them in Research, Evidence, or SEO before external use.
+        Historical recommendation from {BRIEF_DATE}; it has not been adopted. Verify the figures and claims in Research, Evidence or SEO before external use.
       </div>
 
+      <details style={{ marginBottom: 16 }}><summary style={{ cursor: 'pointer', minHeight: 36, ...s.sub }}>About these research notes</summary><p style={s.sub}>The figures and claims do not retain per-claim source links or verification status; verify them in Research, Evidence, or SEO before external use.</p></details>
       {/* --- A. Positioning --- */}
-      <div style={s.card}>
-        <div style={s.sectionLabel}>A · Positioning</div>
+      <details style={s.card}>
+        <summary style={{ ...s.sectionLabel, cursor: 'pointer', minHeight: 36 }}>A · Positioning</summary>
         <p style={s.lead}>
           GoInvo is the healthcare-only design and engineering studio whose work you can verify before you sign — and
           that&apos;s why it&apos;s the safer bet.
@@ -190,11 +188,11 @@ export function StrategyBriefWorkspace() {
             the one you can verify before you sign.&rdquo; Never grievance, rebel, or fear.
           </li>
         </ul>
-      </div>
+      </details>
 
       {/* --- B. Messaging pillars (show-don't-claim) --- */}
-      <div style={s.card}>
-        <div style={s.sectionLabel}>B · Messaging pillars — show, don&apos;t claim</div>
+      <details style={s.card}>
+        <summary style={{ ...s.sectionLabel, cursor: 'pointer', minHeight: 36 }}>B · Messaging pillars — show, don&apos;t claim</summary>
         <div style={s.pillarGrid}>
           {PILLARS.map((p, i) => (
             <div
@@ -216,11 +214,11 @@ export function StrategyBriefWorkspace() {
             </div>
           ))}
         </div>
-      </div>
+      </details>
 
       {/* --- C. Open source = evidence locker --- */}
-      <div style={s.card}>
-        <div style={s.sectionLabel}>C · Open source = evidence locker</div>
+      <details style={s.card}>
+        <summary style={{ ...s.sectionLabel, cursor: 'pointer', minHeight: 36 }}>C · Open source = evidence locker</summary>
         <p style={s.prose}>
           Reframe open source from &ldquo;we give it away&rdquo; to &ldquo;<strong>we publish so you can audit our thinking
           before you sign</strong> — your engagement stays confidential, commercial, and ROI-driven.&rdquo;
@@ -229,11 +227,11 @@ export function StrategyBriefWorkspace() {
           This walls the free IP off from the paid work (killing the IP-leak procurement objection) and converts what
           looked like a non-paying liability into our most defensible commercial asset.
         </p>
-      </div>
+      </details>
 
       {/* --- D. Commercial money-terms (the capture opportunity) --- */}
-      <div style={s.card}>
-        <div style={s.sectionLabel}>D · Commercial money-terms — the capture opportunity</div>
+      <details style={s.card}>
+        <summary style={{ ...s.sectionLabel, cursor: 'pointer', minHeight: 36 }}>D · Commercial money-terms — the capture opportunity</summary>
         <div style={s.callout}>
           <strong>Key insight:</strong> GoInvo ALREADY ranks page-1/2 for these commercial terms and earns ~0 clicks —
           latent, uncaptured demand. This is a <strong>capture problem, not a demand problem.</strong>
@@ -264,7 +262,7 @@ export function StrategyBriefWorkspace() {
           <strong>Page discipline:</strong> H1 = the literal search term (so it ranks). Subhead + first scroll = the
           verify-before-you-sign proof (so it converts).
         </div>
-      </div>
+      </details>
 
       {/* --- E. AI-citation share-of-voice (LIVE) --- */}
       <div style={s.card}>
@@ -286,8 +284,8 @@ export function StrategyBriefWorkspace() {
       </div>
 
       {/* --- F. The Red Team play (failure-teardown strategy) --- */}
-      <div style={s.card}>
-        <div style={s.sectionLabel}>F · The Red Team play — failure-teardown strategy</div>
+      <details style={s.card}>
+        <summary style={{ ...s.sectionLabel, cursor: 'pointer', minHeight: 36 }}>F · The Red Team play — failure-teardown strategy</summary>
         <div style={s.callout}>
           <strong>Verdict:</strong> go bolder — but on <strong>rigor, not aggression.</strong> Vagueness reads as fear;
           specificity turns fear into authority.
@@ -337,11 +335,11 @@ export function StrategyBriefWorkspace() {
             instrumented from day one).
           </li>
         </ul>
-      </div>
+      </details>
 
       {/* --- G. What to avoid --- */}
-      <div style={s.card}>
-        <div style={s.sectionLabel}>G · What to avoid</div>
+      <details style={s.card}>
+        <summary style={{ ...s.sectionLabel, cursor: 'pointer', minHeight: 36 }}>G · What to avoid</summary>
         <ul style={{ ...s.ul, marginBottom: 0 }}>
           <li style={s.li}>Don&apos;t name McKinsey in copy.</li>
           <li style={s.li}>Don&apos;t lead with &ldquo;human-centered&rdquo; — it puts you in IDEO&apos;s and McKinsey&apos;s sentence.</li>
@@ -350,7 +348,7 @@ export function StrategyBriefWorkspace() {
           <li style={s.li}>No rebel / grievance pose.</li>
           <li style={s.li}>Don&apos;t imply scale you lack.</li>
         </ul>
-      </div>
+      </details>
     </div>
   )
 }

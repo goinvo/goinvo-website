@@ -3,7 +3,6 @@ import { getChatSanityClient } from '@/lib/chat/sanity'
 import {
   getSlackBotUserId,
   getSlackConfig,
-  getSlackPermalink,
   getSlackUserDisplayName,
   postSlackEphemeral,
   postSlackMessage,
@@ -11,24 +10,34 @@ import {
 } from '@/lib/chat/slack'
 import { createChatMessage, normalizeChatText, previewText, type SanityChatMessage } from '@/lib/chat/validation'
 import { appendDisputeNoteFromSlack } from '@/lib/shop/disputeChat'
-import { classifyMessage, draftDocIdForMessage } from '@/lib/marketing/ideaCapture'
+import { classifyMessage } from '@/lib/marketing/ideaCapture'
 import { addressesMarqueta, parseMarquetaIntent, removeMention } from '@/lib/marketing/marquetaChat'
-import { answerMarqueta, type MarquetaReply } from '@/lib/marketing/marquetaChat.server'
+import { answerMarqueta, marquetaWorkRefusal, type MarquetaReply } from '@/lib/marketing/marquetaChat.server'
 import { captureFromMessage } from '@/lib/marketing/ideaCapture.server'
-import { getMarketingWriteClientFor } from '@/lib/marketing/client'
-import { formatCitationsForSlack } from '@/lib/marketing/marquetaCitations'
 import {
-  chunkForSlack,
-  FORMAT_LABEL,
-  generatedToCalendarDraft,
-  type GenerationFormat,
-} from '@/lib/marketing/marquetaGenerate'
-import { runMarquetaGeneration } from '@/lib/marketing/marquetaGenerate.server'
-import { MARQUETA_IDENTITY } from '@/lib/marketing/marquetaStyle'
+  draftAlreadyFiled,
+  draftAndPost,
+  postInThread,
+  withArticle,
+} from '@/lib/marketing/marquetaDraftDelivery.server'
+import { FORMAT_LABEL, type GenerationFormat } from '@/lib/marketing/marquetaGenerate'
+import {
+  linksInSlackText,
+  SOURCE_LABEL,
+  suggestMenuText,
+  type SuggestionSource,
+} from '@/lib/marketing/marquetaSuggest'
+import { runMarquetaSuggestions, type DocumentRequest } from '@/lib/marketing/marquetaSuggest.server'
+import { MARQUETA_ACTION } from '@/lib/marketing/marquetaActions'
+import { askMarqueta, MARQUETA_IDENTITY } from '@/lib/marketing/marquetaStyle'
+import { buildIntentBlocks } from '@/lib/marketing/strategyIntent'
+import { draftIntent } from '@/lib/marketing/strategyIntent.server'
+import { canApproveIntent, STRICT_TEAM_ACCESS } from '@/lib/marketing/teamAccess'
+import { readTeamAccess } from '@/lib/marketing/teamAccess.server'
 import {
   buildDraftCaptureBlocks,
-  buildGenerationResultBlocks,
   buildIdeaCaptureBlocks,
+  buildSuggestionBlocks,
 } from '@/lib/marketing/slackDelegation'
 import { clipSlackText, decodeSlackText, escapeSlackText } from '@/lib/marketing/slackText'
 import { studioViewUrl } from '@/lib/marketing/taskLinks'
@@ -36,11 +45,12 @@ import { studioViewUrl } from '@/lib/marketing/taskLinks'
 export const dynamic = 'force-dynamic'
 
 /**
- * Drafting is a model call plus a grounding fetch, so it needs more than the
- * default. It runs behind after(), but the function still has to stay alive
- * long enough for that work to finish.
+ * Drafting is a model call plus a grounding fetch, and suggestions from the
+ * field add a live web search (several round trips), so this needs far more
+ * than the default. The work runs behind after(), but the function still has
+ * to stay alive long enough for it to finish.
  */
-export const maxDuration = 120
+export const maxDuration = 300
 
 /** Well under Stripe's 20k evidence cap, but far above the visitor-chat limit. */
 const MAX_DISPUTE_NOTE_LENGTH = 8000
@@ -60,6 +70,17 @@ interface SlackMessageEvent {
   text?: string
   ts?: string
   thread_ts?: string
+  /** Present on `file_share` messages — attachments somebody sent with the request. */
+  files?: SlackSharedFile[]
+}
+
+interface SlackSharedFile {
+  name?: string
+  title?: string
+  mimetype?: string
+  size?: number
+  url_private_download?: string
+  url_private?: string
 }
 
 interface SlackBackedThread {
@@ -136,8 +157,21 @@ async function handleMarquetaConversation(event: SlackMessageEvent, botUserId: s
   // below. Canonicalised exactly the way `answerMarqueta` does it, so the route
   // and the server can never disagree about what was asked.
   const intent = parseMarquetaIntent(decodeSlackText(removeMention(event.text || '', botUserId)))
-  if (intent.kind === 'generate') {
-    await handleMarquetaGeneration({ event, format: intent.format, topic: intent.topic, personName })
+  if (intent.kind === 'generate' || intent.kind === 'suggest' || intent.kind === 'intentDraft') {
+    // Both cite the private research and spend model credits, and neither goes
+    // through answerMarqueta's gate — so they get the same one here.
+    const refusal = await marquetaWorkRefusal({ slackUserId: event.user, channel: event.channel || '' })
+    if (refusal) {
+      await deliverMarquetaReply(event, refusal.privately ? { text: '', ephemeral: refusal.text } : { text: refusal.text })
+      return
+    }
+    if (intent.kind === 'generate') {
+      await handleMarquetaGeneration({ event, format: intent.format, topic: intent.topic, personName })
+    } else if (intent.kind === 'intentDraft') {
+      await handleIntentDraft({ event, personName })
+    } else {
+      await handleMarquetaSuggestions({ event, source: intent.source, details: intent.details })
+    }
     return
   }
 
@@ -154,11 +188,6 @@ async function handleMarquetaConversation(event: SlackMessageEvent, botUserId: s
   await deliverMarquetaReply(event, reply)
 }
 
-/** "a script" / "an outline" — a small article, so the confirmation reads right. */
-function withArticle(word: string): string {
-  return `${/^[aeiou]/i.test(word) ? 'an' : 'a'} ${word}`
-}
-
 /**
  * She was asked to draft something.
  *
@@ -167,7 +196,8 @@ function withArticle(word: string): string {
  * gets its 200 in time and never retries the message into a second draft.
  * Idempotent regardless: the draft lands at a deterministic id keyed by this
  * message, so a redelivery that slips past the ack finds it already there and
- * stops.
+ * stops. The slow part is `draftAndPost`, shared with the Draft it button on a
+ * suggestion, so both produce the same card and the same calendar record.
  *
  * Threaded the same way `deliverMarquetaReply` threads an answer — in a channel
  * under the message she was asked in, in a DM wherever the person wrote.
@@ -181,19 +211,9 @@ async function handleMarquetaGeneration(input: {
   const { event, format, topic, personName } = input
   const channel = event.channel || ''
   const ts = event.ts || ''
-  const direct = isDirectMessage(channel)
-  const threadTs = direct && !event.thread_ts ? undefined : event.thread_ts || ts
+  const threadTs = replyThreadFor(event)
   const label = FORMAT_LABEL[format]
-
-  const post = (text: string, blocks?: Record<string, unknown>[]) =>
-    postSlackMessage({
-      channel,
-      threadTs,
-      ...MARQUETA,
-      unfurl: false,
-      text,
-      ...(blocks ? { blocks } : {}),
-    })
+  const post = postInThread({ channel, threadTs })
 
   // Clear format, unclear subject: ask, rather than draft something about nothing.
   if (!topic.trim()) {
@@ -202,58 +222,140 @@ async function handleMarquetaGeneration(input: {
   }
 
   // A Slack redelivery of the same message must not produce a second draft.
-  const draftId = draftDocIdForMessage({ channel, ts })
-  try {
-    const existing = await getMarketingWriteClientFor('marketingCalendarItem').fetch<{ _id: string } | null>(
-      `*[_id == $id][0]{ _id }`,
-      { id: draftId },
-    )
-    if (existing) return
-  } catch {
-    // A failed existence check is not a reason to withhold a first draft.
-  }
+  if (await draftAlreadyFiled(channel, ts)) return
 
   await post(`On it — drafting ${withArticle(label)} on “${topic}”. Back in a moment.`)
+  after(() => draftAndPost({ format, topic, channel, threadTs, keyTs: ts, permalinkTs: ts, personName }))
+}
 
+/**
+ * She was asked to (re)draft our intent. A model call over the studio's
+ * records, so: acknowledge, then draft behind `after()` and post the card in
+ * the thread. The new version is always a DRAFT — approving it is a separate,
+ * permission-checked press.
+ */
+async function handleIntentDraft(input: { event: SlackMessageEvent; personName: string }) {
+  const channel = input.event.channel || ''
+  const post = postInThread({ channel, threadTs: replyThreadFor(input.event) })
+  await post('On it — drafting our intent from what we’ve already decided. Back in a minute.')
   after(async () => {
     try {
-      const result = await runMarquetaGeneration({ format, topic })
+      const result = await draftIntent({ by: input.personName })
       if (!result.ok) {
         await post(result.message)
         return
       }
-
-      const permalink = await getSlackPermalink(channel, ts)
-      await getMarketingWriteClientFor('marketingCalendarItem').createIfNotExists(
-        generatedToCalendarDraft({
-          generated: result.generated,
-          channel,
-          ts,
-          personName,
-          topic,
-          permalink,
-          sources: result.citations,
-        }),
-      )
-
-      const base = process.env.MARKETING_PUBLIC_BASE_URL
+      const authority = ((await readTeamAccess()) || STRICT_TEAM_ACCESS)
       await post(
-        `Drafted ${withArticle(label)}: ${result.generated.title}`,
-        buildGenerationResultBlocks({
-          formatLabel: label,
-          title: result.generated.title,
-          bodyChunks: chunkForSlack(result.generated.body),
-          citationChunks: chunkForSlack(formatCitationsForSlack(result.citations)),
-          sourceCount: result.citations.length,
-          brandVoiceName: result.brandVoiceName,
-          channel,
-          ts,
-          studioUrl: base ? studioViewUrl(base, 'calendar') : undefined,
+        `Draft intent, version ${result.intent.version}`,
+        buildIntentBlocks({
+          intent: result.intent,
+          now: new Date(),
+          access: authority,
+          viewerCanApprove: canApproveIntent(authority, input.personName),
+          actionIds: { approve: MARQUETA_ACTION.intentApprove, change: MARQUETA_ACTION.intentChange },
         }),
       )
     } catch (error) {
-      console.error('[marqueta] generation failed', error)
-      await post('That draft did not come together. Try again in a moment, or the Studio assistant can.')
+      console.error('[marqueta] intent draft failed', error instanceof Error ? error.name : 'UnknownError')
+      await post('That draft didn’t come together. Try again in a moment.')
+    }
+  })
+}
+
+/** In a channel, the thread of the message; in a DM, wherever the person wrote. */
+function replyThreadFor(event: SlackMessageEvent): string | undefined {
+  const direct = isDirectMessage(event.channel || '')
+  return direct && !event.thread_ts ? undefined : event.thread_ts || event.ts
+}
+
+/**
+ * The attachments and links on a request, as documents to read. A link to
+ * Slack itself (a message permalink) is not a document she can open.
+ */
+function documentRequestsFor(event: SlackMessageEvent): DocumentRequest[] {
+  const files: DocumentRequest[] = (event.files || [])
+    .filter((file) => file.url_private_download || file.url_private)
+    .map((file) => ({
+      kind: 'slackFile' as const,
+      name: String(file.title || file.name || 'attachment').slice(0, 80),
+      mimetype: String(file.mimetype || ''),
+      url: String(file.url_private_download || file.url_private),
+      size: file.size,
+    }))
+  const links: DocumentRequest[] = linksInSlackText(event.text || '')
+    .filter((url) => !/^https:\/\/[^/]*slack\.com\//i.test(url))
+    .map((url) => ({ kind: 'url' as const, url }))
+  return [...files, ...links]
+}
+
+/**
+ * She was asked what to make.
+ *
+ * A bare "suggest" with nothing attached is answered with the three ways to
+ * ask — no model call, because the three cost very different amounts. With
+ * documents attached, those are the brief.
+ *
+ * Acknowledged at once, saying what she is about to read, then the work runs
+ * behind `after()`. Every outcome is said in the thread: the card, an honest
+ * "nothing survived", or the failure.
+ */
+async function handleMarquetaSuggestions(input: {
+  event: SlackMessageEvent
+  source: SuggestionSource | null
+  details: string
+}) {
+  const { event } = input
+  const channel = event.channel || ''
+  const post = postInThread({ channel, threadTs: replyThreadFor(event) })
+  const documents = documentRequestsFor(event)
+
+  const source: SuggestionSource | null = input.source || (documents.length ? 'custom' : null)
+  if (!source) {
+    await post(suggestMenuText(askMarqueta))
+    return
+  }
+
+  const reading = documents.length
+    ? ` and ${documents.length === 1 ? 'the document you shared' : `the ${documents.length} documents you shared`}`
+    : ''
+  const doing =
+    source === 'field'
+      ? `searching what the field is discussing now${reading}, and matching it to our work. This one takes a couple of minutes.`
+      : source === 'work'
+        ? `looking through our case studies and essays${reading}.`
+        : `reading your brief${reading} against our work.`
+  await post(`On it — ${doing}`)
+
+  after(async () => {
+    try {
+      const result = await runMarquetaSuggestions({ source, details: input.details, documents })
+      if (!result.ok) {
+        await post(result.message)
+        return
+      }
+      if (!result.suggestions.length) {
+        const reasons = [...new Set(result.dropped.map((entry) => entry.reason))].join('; ')
+        const why = result.dropped.length ? ` I threw out ${result.dropped.length} that leaned on nothing real (${reasons}).` : ''
+        await post(`I couldn’t find anything I’d stand behind ${SOURCE_LABEL[source]}.${why} Try a narrower brief?`)
+        return
+      }
+      await post(
+        `Suggestions ${SOURCE_LABEL[source]}: ${result.suggestions.map((suggestion) => suggestion.title).join(' · ')}`.slice(0, 3000),
+        buildSuggestionBlocks({
+          sourceLabel: SOURCE_LABEL[source],
+          details: input.details,
+          suggestions: result.suggestions,
+          dropped: result.dropped,
+          documentsRead: result.documentsRead,
+          documentProblems: result.documentProblems,
+          brandVoiceName: result.brandVoiceName,
+          channel,
+        }),
+      )
+    } catch (error) {
+      console.error('[marqueta] suggestions failed', error instanceof Error ? error.name : 'UnknownError')
+      await post('Those suggestions did not come together. Try again in a moment.')
     }
   })
 }
@@ -449,7 +551,11 @@ async function handleMarketingChannelMessage(event: SlackMessageEvent) {
 
 async function handleSlackEvent(event: SlackMessageEvent, opts: { retryReason?: string } = {}) {
   if (event.type !== 'message') return
-  if (event.subtype || event.bot_id) return
+  if (event.bot_id) return
+  // A message with an attachment arrives as `file_share`. Only Marqueta reads
+  // those (somebody attaching a brief to a request); every other path below
+  // ignores subtyped messages exactly as before.
+  if (event.subtype && event.subtype !== 'file_share') return
   if (!event.text || !event.ts || !event.channel) return
 
   // The marketing channel is Marqueta's, not the visitor chat's. Handled first
@@ -486,6 +592,8 @@ async function handleSlackEvent(event: SlackMessageEvent, opts: { retryReason?: 
     })
     return
   }
+
+  if (event.subtype) return
 
   if (watchedMarketingChannels().includes(event.channel)) {
     await handleMarketingChannelMessage(event)

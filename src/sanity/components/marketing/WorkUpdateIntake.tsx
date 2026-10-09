@@ -15,9 +15,6 @@ import {
   type MarketerBriefReuseMatch,
 } from './marketerBrief'
 
-const exampleUpdate =
-  'Example: We’re speaking at HIMSS in March. Priya owns the talk, the abstract is due October 2, and we want to reuse it as an article and two LinkedIn posts. The event page isn’t live yet.'
-
 const styles = {
   form: {
     display: 'grid',
@@ -106,6 +103,7 @@ export function WorkUpdateIntake({
   const [update, setUpdate] = useState('')
   const [proposal, setProposal] = useState<MarketerBriefProposal | null>(null)
   const [usedAi, setUsedAi] = useState<boolean | null>(null)
+  const [editingBrief, setEditingBrief] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [adopting, setAdopting] = useState(false)
   const [error, setError] = useState('')
@@ -164,6 +162,7 @@ export function WorkUpdateIntake({
 
   const analyzeUpdate = async (event: FormEvent) => {
     event.preventDefault()
+    if (proposal || handoffResult) return
     const trimmed = update.trim()
     if (trimmed.length < 12 || analysisGateRef.current.pending || adoptionPendingRef.current) return
     const privacyIssue = findWorkUpdatePrivacyIssue(trimmed)
@@ -187,6 +186,7 @@ export function WorkUpdateIntake({
       if (!payload.suggestion?.researchProject) {
         throw new Error('Marqueta could not turn that update into a safe working brief. Add a little more context and try again.')
       }
+      setEditingBrief(false)
       setProposal(payload.suggestion)
       setUsedAi(Boolean(payload.usedAi))
       window.setTimeout(() => reviewHeadingRef.current?.focus(), 0)
@@ -219,113 +219,98 @@ export function WorkUpdateIntake({
     }
   }
 
+  const briefPreview = normalized?.brief
+    ? normalized.brief.length > 260
+      ? normalized.brief.slice(0, 260).replace(/\s+\S*$/, '') + '…'
+      : normalized.brief
+    : ''
+
   return (
     <form data-work-update-intake="true" style={styles.form} onSubmit={analyzeUpdate} aria-busy={analyzing || adopting}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
-        <label htmlFor="marketing-work-update" style={styles.label}>Work update</label>
-        <span id="marketing-work-update-count" style={styles.small}>
-          {update.length}/{MARKETER_BRIEF_MAX_LENGTH}
-        </span>
-      </div>
-      <textarea
-        ref={textareaRef}
-        id="marketing-work-update"
-        value={update}
-        maxLength={MARKETER_BRIEF_MAX_LENGTH}
-        rows={3}
-        aria-describedby={`marketing-work-update-help marketing-work-update-safety marketing-work-update-count${error ? ' marketing-work-update-error' : ''}`}
-        aria-invalid={Boolean(error)}
-        disabled={adopting}
-        placeholder={exampleUpdate}
-        style={styles.textarea}
-        onChange={(event) => {
-          const nextUpdate = event.currentTarget.value
-          updateRef.current = nextUpdate
-          setUpdate(nextUpdate)
-          if (analysisGateRef.current.pending) cancelPendingAnalysis()
-          if (proposal || handoffResult) {
-            setProposal(null)
-            setHandoffResult(null)
-            setUsedAi(null)
-          }
-          setError('')
-        }}
-      />
-      <div id="marketing-work-update-help" style={styles.small}>
-        Messy notes are fine—no campaign, funnel, audience, owner, or content type required.
-      </div>
-      <div id="marketing-work-update-safety" style={{ ...styles.small, color: '#e89b67' }}>
-        Keep confidential client, contact, health, login, and private-lead data out. The approved Marqueta sees this note; Sanity stores only the brief you review.
-      </div>
-
-      {!handoffResult && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <button
-            type="submit"
-            style={styles.primaryButton}
-            disabled={update.trim().length < 12 || analyzing || adopting}
-          >
-            {analyzing ? 'Planning marketing updates…' : 'Plan the marketing updates'}
-          </button>
-          <span data-work-update-review-note="true" style={styles.small}>Marqueta will show one review before saving anything.</span>
-        </div>
+      {!proposal && !handoffResult && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
+            <label htmlFor="marketing-work-update" style={styles.label}>What’s new?</label>
+            <span id="marketing-work-update-count" style={styles.small}>{update.length}/{MARKETER_BRIEF_MAX_LENGTH}</span>
+          </div>
+          <textarea
+            ref={textareaRef}
+            id="marketing-work-update"
+            value={update}
+            maxLength={MARKETER_BRIEF_MAX_LENGTH}
+            rows={3}
+            aria-describedby={`marketing-work-update-help marketing-work-update-safety marketing-work-update-count${error ? ' marketing-work-update-error' : ''}`}
+            aria-invalid={Boolean(error)}
+            disabled={adopting}
+            placeholder="Example: We have a new guide to clearer health information. Help us turn it into two short posts."
+            style={styles.textarea}
+            onChange={(event) => {
+              const nextUpdate = event.currentTarget.value
+              updateRef.current = nextUpdate
+              setUpdate(nextUpdate)
+              if (analysisGateRef.current.pending) cancelPendingAnalysis()
+              setUsedAi(null)
+              setError('')
+            }}
+          />
+          <div id="marketing-work-update-help" style={styles.small}>Messy notes are fine. You’ll review the brief before saving.</div>
+          <div id="marketing-work-update-safety" style={styles.small}>AI reads this update. Leave out confidential client, personal and login information.</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <button type="submit" style={styles.primaryButton} disabled={update.trim().length < 12 || analyzing || adopting}>
+              {analyzing ? 'Preparing your brief…' : 'Draft a brief'}
+            </button>
+            <span data-work-update-review-note="true" style={styles.small}>Nothing is saved yet.</span>
+          </div>
+          <details><summary style={{ minHeight: 36, cursor: 'pointer', ...styles.small }}>About AI and privacy</summary>
+            <p style={styles.small}>Your update is sent to the approved AI model to prepare a brief. Only the brief you choose to save is stored in Marketing’s private workspace; the raw update is not saved there. Keep confidential client, contact, health, credential and private-lead data out.</p>
+          </details>
+        </>
       )}
 
       <div role="status" aria-live="polite" aria-atomic="true" style={styles.small}>
-        {analyzing ? 'Marqueta is checking current work, finding strong matches, and drafting the smallest useful plan…' : ''}
+        {analyzing ? 'Preparing a brief for you to review…' : ''}
       </div>
-
-      {error && (
-        <div id="marketing-work-update-error" role="alert" style={styles.warning}>
-          <strong>Marqueta needs another try.</strong>
-          <div style={{ marginTop: 3 }}>{error}</div>
-        </div>
-      )}
+      {error && <div id="marketing-work-update-error" role="alert" style={styles.warning}><strong>Couldn’t complete that step.</strong><div style={{ marginTop: 3 }}>{error}</div></div>}
 
       {proposal && normalized && !handoffResult && (
-        <section aria-labelledby="marketing-work-update-review-title" style={styles.review}>
+        <section aria-labelledby="marketing-work-update-review-title" style={{ ...styles.review, marginTop: 0, paddingTop: 0, borderTop: 0 }}>
           <div>
-            <div style={{ ...styles.small, textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>
-              Review before handoff
-            </div>
-            <h3
-              ref={reviewHeadingRef}
-              id="marketing-work-update-review-title"
-              tabIndex={-1}
-              style={{ margin: '4px 0 0', fontSize: 20 }}
-            >
-              What Marqueta understood
-            </h3>
+            <h3 ref={reviewHeadingRef} id="marketing-work-update-review-title" tabIndex={-1} style={{ margin: 0, fontSize: 20 }}>Review your brief</h3>
+            <div style={{ ...styles.small, marginTop: 4 }}>{usedAi ? 'AI draft. Check the wording and sources.' : 'AI is unavailable. This draft uses basic rules; check it carefully.'}</div>
           </div>
-
-          {!usedAi && (
-            <div style={styles.warning}>
-              <strong>AI is unavailable.</strong> This is a rule-based research scaffold, not a model’s interpretation. Read it carefully before handing it off.
+          {editingBrief ? (
+            <div style={{ display: 'grid', gap: 10 }}>
+              <label style={styles.label}>Title
+                <input autoFocus maxLength={180} value={proposal.researchProject?.title || ''} disabled={adopting} style={{ ...styles.textarea, minHeight: 42, marginTop: 5 }} onChange={(event) => setProposal({ ...proposal, researchProject: { ...proposal.researchProject, title: event.currentTarget.value } })} />
+              </label>
+              <label style={styles.label}>Brief
+                <textarea rows={5} maxLength={1400} value={proposal.researchProject?.brief || ''} disabled={adopting} style={{ ...styles.textarea, marginTop: 5 }} onChange={(event) => setProposal({ ...proposal, researchProject: { ...proposal.researchProject, brief: event.currentTarget.value } })} />
+              </label>
+              <label style={styles.label}>Audience
+                <input maxLength={700} value={proposal.researchProject?.audience || ''} disabled={adopting} style={{ ...styles.textarea, minHeight: 42, marginTop: 5 }} onChange={(event) => setProposal({ ...proposal, researchProject: { ...proposal.researchProject, audience: event.currentTarget.value } })} />
+              </label>
+            </div>
+          ) : (
+            <div data-work-update-summary="true">
+              <strong style={{ display: 'block', fontSize: 16 }}>{normalized.title}</strong>
+              {briefPreview && <p style={{ margin: '7px 0 0', lineHeight: 1.55 }}>{briefPreview}</p>}
+              {normalized.audience && <div style={{ ...styles.small, marginTop: 8 }}><strong>Audience: </strong>{normalized.audience}</div>}
             </div>
           )}
-
-          <div style={styles.callout}>
-            <strong style={{ display: 'block' }}>{normalized.title}</strong>
-            <div style={{ marginTop: 5, lineHeight: 1.55 }}>{normalized.brief}</div>
-            {normalized.audience && (
-              <div style={{ ...styles.small, marginTop: 8 }}>
-                <strong style={{ color: 'var(--card-fg-color)' }}>Working audience: </strong>{normalized.audience}
-              </div>
-            )}
+          <div style={styles.small}>Saving adds a private work item and checks existing GoInvo content. Nothing is published.</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button type="button" style={styles.primaryButton} disabled={adopting || !normalized.title.trim() || !normalized.brief.trim()} onClick={() => void adoptProposal()}>{adopting ? 'Saving brief…' : 'Save brief'}</button>
+            <button type="button" style={styles.button} disabled={adopting} aria-pressed={editingBrief} onClick={() => setEditingBrief((editing) => !editing)}>{editingBrief ? 'Done editing' : 'Edit brief'}</button>
           </div>
-
-          {normalized.goals.length > 0 && (
-            <div>
-              <strong style={{ fontSize: 14 }}>What I’ll figure out</strong>
-              <ul style={styles.list}>
-                {normalized.goals.slice(0, 4).map((goal) => <li key={goal}>{goal}</li>)}
-              </ul>
-            </div>
-          )}
-
-          <details>
-            <summary style={{ cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>Assumptions and source matches</summary>
+          <details data-work-update-full-brief="true">
+            <summary style={{ cursor: 'pointer', fontWeight: 800, fontSize: 13 }}>Full brief, sources and assumptions</summary>
             <div style={{ display: 'grid', gap: 10, marginTop: 9 }}>
+              <div><strong>Full brief</strong><p style={{ margin: '5px 0 0', lineHeight: 1.55 }}>{normalized.brief}</p></div>
+              {normalized.goals.length > 0 && (
+                <div><strong>Goals</strong><ul style={styles.list}>{normalized.goals.map((goal) => <li key={goal}>{goal}</li>)}</ul></div>
+              )}
+              {reuseMatch && <div style={styles.small}>Existing source: <strong>{reuseMatch.project.title || normalized.title}</strong> ({reuseMatch.reason}). This source will not be changed.</div>}
+              <div><strong>Your original update</strong><p style={{ ...styles.small, whiteSpace: 'pre-wrap' }}>{update}</p><button type="button" style={styles.button} disabled={adopting} onClick={reviseUpdate}>Change the original update</button></div>
               {(proposal.rationale || []).length > 0 && (
                 <ul style={styles.list}>
                   {(proposal.rationale || []).slice(0, 4).map((reason) => <li key={reason}>{reason}</li>)}
@@ -333,7 +318,7 @@ export function WorkUpdateIntake({
               )}
               {normalized.researchQuestions.length > 0 && (
                 <div>
-                  <strong style={{ fontSize: 13 }}>Questions Marqueta will verify</strong>
+                  <strong style={{ fontSize: 13 }}>Questions to check</strong>
                   <ul style={styles.list}>
                     {normalized.researchQuestions.slice(0, 4).map((question) => (
                       <li key={question._key}>{question.question}</li>
@@ -343,7 +328,7 @@ export function WorkUpdateIntake({
               )}
               {normalized.collaborators.length > 0 && (
                 <div>
-                  <strong style={{ fontSize: 13 }}>People and timing captured in the shared brief</strong>
+                  <strong style={{ fontSize: 13 }}>People and timing</strong>
                   <ul style={styles.list}>
                     {normalized.collaborators.slice(0, 6).map((collaborator) => {
                       const identity = [collaborator.name, collaborator.organization].filter(Boolean).join(' / ')
@@ -379,76 +364,33 @@ export function WorkUpdateIntake({
                   </ul>
                 </div>
               ) : (
-                <div style={styles.small}>No confident existing source match was found; Marqueta will start with the internal CMS scan.</div>
+                <div style={styles.small}>No source match yet. Saving the brief checks existing GoInvo content.</div>
               )}
             </div>
           </details>
-
-          <div style={{ border: '1px solid var(--card-border-color)', borderRadius: 9, padding: 12 }}>
-            <strong style={{ display: 'block' }}>What the handoff will do</strong>
-            <ul style={styles.list}>
-              <li>Add one normalized item to Marqueta’s private shared desk.</li>
-              <li>Run a free, internal-only GoInvo CMS check and log the result.</li>
-              {reuseMatch ? (
-                <li>Link the existing <strong>{reuseMatch.project.title || normalized.title}</strong> as a read-only source match ({reuseMatch.reason}); it will not be changed.</li>
-              ) : (
-                <li>Keep the update in the private queue until a person decides whether a public marketing record is needed.</li>
-              )}
-            </ul>
-          </div>
-
-          <div style={styles.warning}>
-            Nothing changes until you hand this off. The reviewed brief is stored privately. Marqueta may organize it and inspect the internal CMS; it never publishes, contacts anyone, approves claims, changes brand voice, deletes records, or spends paid research credits.
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              style={styles.primaryButton}
-              disabled={adopting}
-              onClick={() => void adoptProposal()}
-            >
-              {adopting ? 'Handing off…' : 'Hand this to Marketing'}
-            </button>
-            <button type="button" style={styles.button} disabled={adopting} onClick={reviseUpdate}>
-              Revise the update
-            </button>
-          </div>
+          <details data-work-update-save-details="true">
+            <summary style={{ minHeight: 36, cursor: 'pointer', fontWeight: 750, fontSize: 13 }}>What gets saved</summary>
+            <div style={{ ...styles.small, marginTop: 8 }}>
+              <strong>What the handoff will do</strong>
+              <p>Add one reviewed item to Marqueta’s private shared desk and run a free check of existing GoInvo content. Any matching source stays unchanged.</p>
+              <p>Nothing changes until you hand this off. Marqueta never publishes, contacts anyone, approves claims, changes brand voice, deletes records, or spends paid research credits.</p>
+            </div>
+          </details>
         </section>
       )}
 
       {handoffResult && (
-        <section aria-labelledby="marketing-work-update-success-title" style={styles.review}>
-          <div style={{ ...styles.callout, borderColor: 'rgba(54, 139, 87, 0.5)', background: 'rgba(54, 139, 87, 0.1)' }}>
-            <h3
-              ref={successHeadingRef}
-              id="marketing-work-update-success-title"
-              tabIndex={-1}
-              style={{ margin: 0, fontSize: 20 }}
-            >
-              Marqueta picked it up
-            </h3>
-            <div style={{ marginTop: 6, lineHeight: 1.55 }}>
-              Added <strong>{handoffResult.title}</strong> to Marketing’s private shared desk. Marqueta found {handoffResult.createdResults} internal CMS match{handoffResult.createdResults === 1 ? '' : 'es'} to review. Nothing was published and no public marketing record was changed.
-            </div>
-            {handoffResult.scanWarning && (
-              <div style={{ ...styles.small, marginTop: 7 }}>
-                The brief is safe, but the automatic CMS scan needs attention: {handoffResult.scanWarning}
-              </div>
-            )}
+        <section aria-labelledby="marketing-work-update-success-title" style={{ ...styles.review, marginTop: 0, paddingTop: 0, borderTop: 0 }}>
+          <div style={styles.callout}>
+            <h3 ref={successHeadingRef} id="marketing-work-update-success-title" tabIndex={-1} style={{ margin: 0, fontSize: 20 }}>Brief saved</h3>
+            <div style={{ marginTop: 6, lineHeight: 1.55 }}><strong>{handoffResult.title}</strong> is on Marketing’s desk. Nothing was published.</div>
+            {handoffResult.createdResults > 0 && <div style={{ ...styles.small, marginTop: 7 }}>{handoffResult.createdResults} existing content match{handoffResult.createdResults === 1 ? '' : 'es'} to review.</div>}
+            {handoffResult.scanWarning && <div role="alert" style={{ ...styles.small, marginTop: 7 }}>Your brief was saved, but the content check needs attention: {handoffResult.scanWarning}</div>}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" style={styles.primaryButton} onClick={() => onOpenOperations(handoffResult)}>
-              See Marketing’s desk
-            </button>
-            {handoffResult.projectId && onOpenResearch && (
-              <button type="button" style={styles.button} onClick={() => onOpenResearch(handoffResult)}>
-                Open linked research
-              </button>
-            )}
-            <button type="button" style={styles.button} onClick={resetForAnotherUpdate}>
-              Tell Marqueta something else
-            </button>
+            <button type="button" style={styles.primaryButton} onClick={() => onOpenOperations(handoffResult)}>Open Marketing’s desk</button>
+            {handoffResult.projectId && onOpenResearch && <button type="button" style={styles.button} onClick={() => onOpenResearch(handoffResult)}>Open linked research</button>}
+            <button type="button" style={styles.button} onClick={resetForAnotherUpdate}>Add another update</button>
           </div>
         </section>
       )}

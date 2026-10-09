@@ -58,10 +58,13 @@ const STALE_DAYS = 10
 const MS_PER_DAY = 86_400_000
 /** Kept in step with CHECKIN_HEARTBEAT_DOC_ID in src/lib/marketing/heartbeat.ts. */
 const CHECKIN_DOC_ID = 'marketingHeartbeat.checkin'
+/** Kept in step with RECON_HEARTBEAT_DOC_ID in src/lib/marketing/heartbeat.ts. */
+const RECON_DOC_ID = 'marketingHeartbeat.recon'
 
-const [record, checkin] = await Promise.all([
+const [record, checkin, recon] = await Promise.all([
   client.fetch(`*[_id == "marketingHeartbeat"][0]{ week, ranAt, lastHealthyAt, error, steps }`),
   client.fetch(`*[_id == $id][0]{ week, ranAt, lastHealthyAt, error, steps, postedWeek }`, { id: CHECKIN_DOC_ID }),
+  client.fetch(`*[_id == $id][0]{ week, ranAt, lastHealthyAt, error, steps }`, { id: RECON_DOC_ID }),
 ])
 
 /** Whether any job was unhealthy. Every job is checked before the script exits. */
@@ -142,7 +145,43 @@ function checkCheckIn() {
   return true
 }
 
+/**
+ * The Sunday terrain scan: never-ran, failed and stale, like the others. One
+ * source failing (the FDA API down for a day) is a partial picture, not a dead
+ * job, so the `sources` step only warns; grouping, the sitrep and storing are
+ * what make Monday's sitrep real, and those fail the check.
+ */
+function checkRecon() {
+  const label = 'Sunday terrain scan'
+  if (!recon || !recon.ranAt) {
+    console.error(`UNHEALTHY: the ${label} has never run.`)
+    console.error('  Deploy the vercel.json cron for /api/marketing/strategy/recon and set CRON_SECRET and')
+    console.error('  ANTHROPIC_API_KEY; without it Monday has no sitrep.')
+    return false
+  }
+  const days = Math.floor((Date.now() - Date.parse(recon.ranAt)) / MS_PER_DAY)
+  const steps = recon.steps || []
+  const failedStep = steps.find((step) => !step.ok && step.name !== 'sources')
+  const problem = recon.error || (failedStep ? `${failedStep.name} — ${failedStep.detail}` : null)
+  if (problem) {
+    console.error(`UNHEALTHY: the ${label} last ran ${days} day(s) ago for ${recon.week} and failed.`)
+    console.error(`  ${problem}`)
+    return false
+  }
+  if (days >= STALE_DAYS) {
+    console.error(`UNHEALTHY: the ${label} has not run for ${days} days (it is weekly).`)
+    console.error(`  Last successful run: ${recon.lastHealthyAt || 'unknown'} for ${recon.week}.`)
+    return false
+  }
+  const sources = steps.find((step) => step.name === 'sources')
+  if (sources && !sources.ok) console.warn(`WARNING: the ${label} read only some sources: ${sources.detail}`)
+  const did = steps.map((step) => `${step.name}=${step.count ?? '?'}`).join(' ')
+  console.log(`OK: ${label} ran ${days} day(s) ago for ${recon.week}. ${did}`)
+  return true
+}
+
 if (!checkTick()) unhealthy = true
 if (!checkCheckIn()) unhealthy = true
+if (!checkRecon()) unhealthy = true
 
 if (unhealthy) process.exit(1)

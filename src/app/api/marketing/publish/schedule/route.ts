@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import {
-  assertMarketingApiKey,
   getMarketingWriteClientFor,
-  MarketingAuthError,
 } from '@/lib/marketing'
+import { assertMarketingApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import {
   isQStashConfigured,
   resolveSocialPlatform,

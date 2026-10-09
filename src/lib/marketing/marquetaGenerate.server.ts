@@ -83,7 +83,7 @@ async function fetchSiteReferences(): Promise<{ title: string; url: string; summ
 }
 
 /** Verified organisation research, newest strong signals first. */
-async function fetchVerifiedResearch(): Promise<ResearchRecordInput[]> {
+export async function fetchVerifiedResearch(): Promise<ResearchRecordInput[]> {
   try {
     const researchClient = getMarketingWriteClientFor(ORG_RESEARCH_TYPE)
     return await researchClient.fetch<ResearchRecordInput[]>(

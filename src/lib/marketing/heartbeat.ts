@@ -45,9 +45,18 @@ export const CHECKIN_HEARTBEAT_DOC_ID = 'marketingHeartbeat.checkin'
  */
 export const DIGEST_HEARTBEAT_DOC_ID = 'marketingHeartbeat.digest'
 
+/**
+ * The Sunday terrain scan's record. Its own document for the same reason as the
+ * check-in's: a third schedule, a third way to fail quietly. A scan that ran
+ * and found nothing is healthy; a scan that never ran leaves Monday's sitrep
+ * judging last week's terrain without saying so.
+ */
+export const RECON_HEARTBEAT_DOC_ID = 'marketingHeartbeat.recon'
+
 /** What one scheduled run did, in the order it tried to do it. */
 export type HeartbeatStep = {
-  name: 'plan' | 'digest' | 'domains' | 'checkin'
+  /** The tick's and check-in's steps, and the Sunday terrain scan's (sources, pains, sitrep, store). */
+  name: 'plan' | 'digest' | 'domains' | 'checkin' | 'sources' | 'pains' | 'sitrep' | 'store'
   ok: boolean
   /** One line a person can read. "Planned 8h across 11 items." */
   detail: string

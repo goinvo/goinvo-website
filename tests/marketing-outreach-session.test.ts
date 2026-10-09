@@ -20,6 +20,10 @@ const mocks = vi.hoisted(() => {
   }
 })
 
+// Team permissions, pinned: 'byRole' unless a test says otherwise.
+const teamAccessMock = vi.hoisted(() => ({ value: { mode: 'byRole', approvers: [] } as { mode: string; approvers: string[] } | null }))
+vi.mock('@/lib/marketing/teamAccess.server', () => ({ readTeamAccess: async () => teamAccessMock.value }))
+
 vi.mock('@sanity/client', () => ({
   createClient: () => ({
     fetch: mocks.fetch,
@@ -106,14 +110,15 @@ function rawExchangeRequest(body: BodyInit, headers: Record<string, string> = {}
   })
 }
 
-function network(options: { history?: string; role?: string; historyStatus?: number; aclStatus?: number } = {}) {
+function network(options: { history?: string; role?: string; historyStatus?: number; aclStatus?: number; isRobot?: boolean } = {}) {
   return vi.fn(async (input: string | URL | Request) => {
     const url = String(input)
     if (url.includes('/data/history/')) {
       return new Response(options.history ?? history(), { status: options.historyStatus ?? 200 })
     }
     if (url.includes('/projects/session-test-project/acl/')) {
-      return new Response(JSON.stringify({ role: options.role ?? 'editor' }), {
+      // A person unless a test says otherwise: the ACL marks API tokens isRobot.
+      return new Response(JSON.stringify({ role: options.role ?? 'editor', isRobot: options.isRobot ?? false }), {
         status: options.aclStatus ?? 200,
         headers: { 'Content-Type': 'application/json' },
       })
@@ -233,7 +238,23 @@ describe('Outreach cookie-mode session contract', () => {
           },
         }),
       ),
-    ).rejects.toMatchObject({ name: 'MarketingAuthError', status: 401 })
+    ).rejects.toMatchObject({ name: 'MarketingPermissionError', status: 403 })
+  })
+
+  it('lets that same Viewer cookie through when Team permissions is "equal"', async () => {
+    teamAccessMock.value = { mode: 'equal', approvers: [] }
+    try {
+      const token = issueOutreachSessionToken({ subject: 'project-user-viewer', role: 'viewer' }, NOW)
+      await expect(
+        assertStudioWriterOrApiKey(
+          new Request('https://www.goinvo.com/api/marketing/outreach/plan', {
+            headers: { Cookie: `${OUTREACH_SESSION_COOKIE_NAME}=${token}`, 'Sec-Fetch-Site': 'same-origin' },
+          }),
+        ),
+      ).resolves.toBeUndefined()
+    } finally {
+      teamAccessMock.value = { mode: 'byRole', approvers: [] }
+    }
   })
 })
 
@@ -342,6 +363,30 @@ describe('Outreach one-time proof exchange', () => {
     const viewer = await POST(exchangeRequest())
     expect(viewer.status).toBe(403)
     expect(mocks.patch).not.toHaveBeenCalled()
+  })
+
+  it('mints a cookie for a Viewer PERSON under "equal", carrying their real role', async () => {
+    teamAccessMock.value = { mode: 'equal', approvers: [] }
+    try {
+      vi.stubGlobal('fetch', network({ role: 'viewer' }))
+      const response = await POST(exchangeRequest())
+      expect(response.status).toBe(200)
+      expect(response.headers.get('set-cookie') || '').toContain(`${OUTREACH_SESSION_COOKIE_NAME}=`)
+    } finally {
+      teamAccessMock.value = { mode: 'byRole', approvers: [] }
+    }
+  })
+
+  it('never mints a cookie for an API token, even an Editor one under "equal"', async () => {
+    teamAccessMock.value = { mode: 'equal', approvers: [] }
+    try {
+      vi.stubGlobal('fetch', network({ role: 'editor', isRobot: true }))
+      const response = await POST(exchangeRequest())
+      expect(response.status).toBe(403)
+      expect(mocks.patch).not.toHaveBeenCalled()
+    } finally {
+      teamAccessMock.value = { mode: 'byRole', approvers: [] }
+    }
   })
 
   it('loses a consume race without issuing a cookie', async () => {

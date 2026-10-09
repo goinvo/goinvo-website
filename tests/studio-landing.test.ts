@@ -310,7 +310,8 @@ describe('the desk shows the owner Slack uses', () => {
     expect(desk.map((item) => item._id)).toEqual(['op-1'])
     expect(getMarketingOperationCounts(desk, NOW)).toMatchObject({ marketingHandling: 1, overdue: 0 })
     expect(DESK).toContain('rankMarketingOperations(deskOperations(response.items || []))')
-    expect(DESK).toContain('This week’s plan lives on This week →')
+    expect(DESK).toContain('Open this week’s plan →')
+    expect(DESK).toContain("onClick={() => onOpenView('thisWeek')}")
   })
 
   it('uses the Slack card’s words and actions', () => {

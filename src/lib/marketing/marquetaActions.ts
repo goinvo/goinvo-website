@@ -50,6 +50,16 @@ export const MARQUETA_ACTION = {
   strategyRethink: 'goinvo_marqueta_strategy_rethink',
   /** Put somebody's availability back the way it was before "I'm away" (theirs only). */
   availabilityUndo: 'goinvo_marqueta_availability_undo',
+  /** A suggestion: write a first draft of it in the thread. */
+  suggestDraft: 'goinvo_marqueta_suggest_draft',
+  /** A suggestion: put it on the idea list. */
+  suggestSave: 'goinvo_marqueta_suggest_save',
+  /** Our intent: approve the draft (checked against the Team permissions setting). */
+  intentApprove: 'goinvo_marqueta_intent_approve',
+  /** Our intent: push back in words — opens a form, and Marqueta redrafts. */
+  intentChange: 'goinvo_marqueta_intent_change',
+  /** A drafted video script: create its Rendomat project (value = the draft's `{c, ts}`, as its discard). */
+  makeInRendomat: 'goinvo_marqueta_make_in_rendomat',
 } as const
 
 export type MarquetaActionId = (typeof MARQUETA_ACTION)[keyof typeof MARQUETA_ACTION]

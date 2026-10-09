@@ -196,7 +196,7 @@ describe('workspace accessible names', () => {
     expect(markup).toContain('<label for="marketing-work-update"')
     expect(markup).toContain('<textarea id="marketing-work-update"')
     expect(markup).toContain('Messy notes are fine')
-    expect(markup).toContain('Plan the marketing updates')
+    expect(markup).toContain('Draft a brief')
     expect(markup).not.toContain('Hand this to Marketing (1 change)')
     expect(markup).not.toContain('type="checkbox"')
   })

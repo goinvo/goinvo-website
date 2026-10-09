@@ -28,7 +28,10 @@ import { DIGEST_HEARTBEAT_DOC_ID } from '@/lib/marketing/heartbeat'
 import { absencesOn, claimWeek, recordWeekRun, utcIsoWeekKey } from '@/lib/marketing/weeklyCheckIn.server'
 import { followUpLine, listFollowUps, type FollowUpContact } from '@/lib/marketing/followUps'
 import { encodeContactRef } from '@/lib/marketing/marquetaActions'
-import { countLabel, MARQUETA_IDENTITY, weekOfLabel } from '@/lib/marketing/marquetaStyle'
+import { countLabel, formatSlackDay, MARQUETA_IDENTITY, STATE_EMOJI, weekOfLabel } from '@/lib/marketing/marquetaStyle'
+import { digestSitrepBlocks } from '@/lib/marketing/sitrep'
+import { readIntent } from '@/lib/marketing/strategyIntent.server'
+import { readLatestScan } from '@/lib/marketing/terrainScan.server'
 import { describePulse, summarizeOutreach } from '@/lib/marketing/outreachPulse'
 import { MARKETING_OPERATION_TYPE, WEEKLY_PLAN_SOURCE_PREFIX } from '@/lib/marketing/operations'
 import { escapeSlackText } from '@/lib/marketing/slackText'
@@ -475,7 +478,7 @@ async function handle(request: NextRequest) {
   // Links people click. Never where this route calls anything (see the tick).
   const studioBaseUrl = String(process.env.MARKETING_PUBLIC_BASE_URL || '').trim() || undefined
 
-  const [data, strategy, pendingIdeas, undraftedPosts] = await Promise.all([
+  const [data, strategy, pendingIdeas, undraftedPosts, latestScan, intent] = await Promise.all([
     client.fetch<DigestData | null>(DATA_QUERY, {
       planPrefix: WEEKLY_PLAN_SOURCE_PREFIX,
       plannedIds: plan ? [...plan.itemIds, ...plan.decisionIds] : [],
@@ -494,6 +497,9 @@ async function handle(request: NextRequest) {
         to: new Date(now.getTime() + 7 * DAY_MS).toISOString(),
       }),
     ),
+    // The sitrep Sunday's terrain scan wrote, and the intent it was judged against.
+    settle('terrain read', () => readLatestScan()),
+    settle('intent read', () => readIntent()),
   ])
 
   const availability = tidyAvailability(data?.availability)
@@ -696,6 +702,7 @@ async function handle(request: NextRequest) {
 
   const budgetMinutes = plan?.budgetMinutes || resolveWeeklyMinutes(data?.weeklyHours)
   const blocks = buildWeeklyDigestBlocks({
+    sitrep: digestSitrep(latestScan, intent || null, now),
     now,
     weekStart,
     budgetMinutes,
@@ -898,6 +905,32 @@ async function recordAsks(asks: OwnerAsk[], now: Date, week: string): Promise<nu
     if (outcome.status === 'rejected') console.error(`[digest] could not record the ask on ${asks[index].taskId}`, outcome.reason)
   })
   return results.filter((outcome) => outcome.status === 'fulfilled').length
+}
+
+/**
+ * The sitrep lines for Monday. Fresh = the scan ran within the last 8 days.
+ * A scan that exists but is older than that means the Sunday job stopped, and
+ * that is said in one line — a sitrep quietly a fortnight old reads as current.
+ * No scan at all says nothing: the heartbeat watchdog owns "never ran".
+ */
+function digestSitrep(
+  scan: Awaited<ReturnType<typeof readLatestScan>> | null | undefined,
+  intent: Awaited<ReturnType<typeof readIntent>>,
+  now: Date,
+) {
+  if (!scan) return []
+  const age = now.getTime() - Date.parse(scan.ranAt || '')
+  if (!Number.isFinite(age) || age > 8 * DAY_MS) {
+    return [
+      {
+        type: 'context',
+        elements: [
+          { type: 'mrkdwn', text: `${STATE_EMOJI.risk} No fresh terrain scan — the last one ran ${formatSlackDay(scan.ranAt, now) || 'a while ago'}, so there’s no sitrep this week.` },
+        ],
+      },
+    ]
+  }
+  return digestSitrepBlocks(scan.sitrep || null, intent)
 }
 
 export async function GET(request: NextRequest) {
