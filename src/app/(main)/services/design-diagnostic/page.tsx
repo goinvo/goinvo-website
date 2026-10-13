@@ -105,7 +105,7 @@ export default function DesignDiagnosticPage() {
             Diagnostic
           </h1>
           <p className="text-gray text-md mt-4 mb-0 max-w-xl">
-            Helping healthcare teams build the right product before they scale the
+            Helping software teams build the right product before they scale the
             wrong one.
           </p>
         </section>
@@ -139,7 +139,7 @@ export default function DesignDiagnosticPage() {
           <Reveal style="slide-up">
             <h2 className="display-md mt-0 mb-5">Clearly Designed</h2>
             <SerifBody className="mb-8">
-              We&rsquo;ve spent two decades designing healthcare software.
+              We&rsquo;ve spent two decades designing software.
               <br />
               We see how products succeed. And why they fail.
               <br />
