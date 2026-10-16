@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     absolute: 'Boston UX Design Agency | GoInvo Boston',
   },
   description:
-    'GoInvo is a Boston-based UX design agency specializing in healthcare software design. We deliver beautiful, useful experiences for patients, clinicians, and organizations.',
+    'Better business by Design. GoInvo is a business and systems reinvention studio. We design businesses, systems, products, and software.',
 }
 
 export default async function HomePage() {

@@ -376,7 +376,7 @@ export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
       {heroVariant === 'runway' ? (
-      <section data-experiment-section="hero" className="eid-hero relative isolate overflow-hidden bg-black text-white">
+      <section data-experiment-section="hero" data-hero-variant={heroVariant} className="eid-hero relative isolate overflow-hidden bg-black text-white">
         <style>{heroCss}</style>
         <HomeHeroRunway />
 
@@ -388,12 +388,12 @@ export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }
           <h1 style={{ viewTransitionName: 'page-title' }}>
             {/* Real text in the heading rather than only the image's alt — it is
                 what crawlers read, and it survives the image failing to load. */}
-            <span className="sr-only">Everything is designed</span>
+            <span className="sr-only">Better business by Design.</span>
             <Image
-              src={`${imageBase}/everything-is-designed.png`}
+              src={`${imageBase}/better-business-by-design.webp`}
               alt=""
-              width={852}
-              height={459}
+              width={1200}
+              height={688}
               priority
               sizes="(max-width: 940px) 100vw, 880px"
               className="eid-reveal mx-auto block h-auto w-full max-w-[880px]"
@@ -403,13 +403,11 @@ export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }
             />
           </h1>
 
-          {/* The design pulls this up 28px into the lettering's baked-in padding.
-              This PNG is cropped tight to the ink, so it gets a real gap instead. */}
           <p
             className="eid-reveal mx-auto mt-7 max-w-[54ch] text-[19px] leading-[1.55] text-white/[.78] sm:text-[21px]"
             style={{ '--d': 1 } as CSSProperties}
           >
-            We&rsquo;re a design studio that turns nascent ideas into shipped software for enterprise and healthcare leaders.
+            GoInvo is a business and systems reinvention studio.
           </p>
 
           <div
@@ -439,7 +437,7 @@ export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }
         </div>
       </section>
       ) : (
-      <section data-experiment-section="hero" className="relative overflow-hidden bg-[#1d1b1a] text-white">
+      <section data-experiment-section="hero" data-hero-variant={heroVariant} className="relative overflow-hidden bg-[#1d1b1a] text-white">
         <Image
           src={`${imageBase}/ipsosherodark.jpg`}
           alt=""
@@ -451,16 +449,22 @@ export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }
         <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(20,18,17,.95)_0%,rgba(20,18,17,.68)_52%,rgba(20,18,17,.18)_100%)]" />
         <div className="relative max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 pt-[clamp(72px,10vw,120px)] pb-[clamp(72px,10vw,96px)] min-h-[clamp(480px,60vw,720px)] flex flex-col justify-center">
           <h1
-            className="text-[2.25rem] leading-[1.02] sm:text-[4.5rem] font-medium tracking-[-0.025em] max-w-[16ch] mb-6"
-            style={{
-              viewTransitionName: 'page-title',
-              fontFamily: 'adobe-jenson-pro-display, Georgia, serif',
-            }}
+            className="max-w-[640px] mb-6"
+            style={{ viewTransitionName: 'page-title' }}
           >
-            Complex software that ships, and moves the numbers.
+            <span className="sr-only">Better business by Design.</span>
+            <Image
+              src={`${imageBase}/better-business-by-design.webp`}
+              alt=""
+              width={1200}
+              height={688}
+              priority
+              sizes="(max-width: 704px) 100vw, 640px"
+              className="block h-auto w-full"
+            />
           </h1>
           <p className="text-lg lg:text-xl leading-8 text-white/80 max-w-[720px]">
-            A design studio that turns nascent ideas into shipped software, for enterprise and healthcare leaders who need results this fiscal year.
+            GoInvo is a business and systems reinvention studio.
           </p>
           <div className="mt-10 flex flex-wrap items-center gap-5">
             <HomeConceptCtaLink
@@ -499,61 +503,6 @@ export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }
         </div>
       </section>
       )}
-
-      <section data-experiment-section="client-proof" className="py-14 lg:py-20">
-        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14">
-          <p className="text-center text-sm text-[#6a6560] mb-8">
-            Twenty years designing enterprise and healthcare software for Fortune 500s, federal agencies, and funded startups.
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 border-y border-[#d9d3c6]">
-            {logos.map((logo, index) => (
-              <div
-                key={logo}
-                className="min-h-[72px] flex items-center justify-center border-r border-b border-[#e8e3d6] px-3 py-5 text-center text-[11px] font-bold uppercase tracking-[0.08em] text-[#6a6560] last:border-r-0"
-                data-home-concept-reveal
-                style={revealStyle(index % 6)}
-              >
-                {logo}
-              </div>
-            ))}
-          </div>
-          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat, index) => (
-              <div key={stat.label} className="border-t border-[#1d1b1a] pt-5" data-home-concept-reveal style={revealStyle(index)}>
-                <div className="font-serif text-primary font-semibold leading-none">
-                  <span className="text-[4rem]">{stat.value}</span>
-                  <span className="text-xl align-top">{stat.suffix}</span>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-[#3a3633]">{stat.description}</p>
-                <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6a6560]">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="services" data-experiment-section="services" className="py-16 lg:py-24">
-        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 grid gap-10 lg:grid-cols-[1fr_2.2fr]">
-          <div>
-            <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">What we do</p>
-            <h2 className="font-serif text-3xl lg:text-5xl leading-tight mt-4">We design and ship enterprise software.</h2>
-          </div>
-          <div>
-            {services.map((service, index) => (
-              <div key={service.number} className="grid gap-4 border-t border-[#d9d3c6] py-7 last:border-b md:grid-cols-[110px_1fr_auto] md:items-start" data-home-concept-reveal style={revealStyle(index)}>
-                <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-[#6a6560]">{service.number}</p>
-                <div>
-                  <h3 className="font-serif text-2xl leading-tight mb-2">{service.title}</h3>
-                  <p className="text-base leading-7 text-[#3a3633] max-w-[55ch]">{service.description}</p>
-                </div>
-                <ArrowLink href={service.href} className="whitespace-nowrap text-[13px]">
-                  {service.link}
-                </ArrowLink>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       <section id="work" data-experiment-section="selected-work" className="py-16 lg:py-24 bg-[#f4f1ea]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14">
@@ -613,16 +562,84 @@ export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }
         </div>
       </section>
 
+      <section data-experiment-section="client-proof" className="py-14 lg:py-20">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14">
+          <p className="text-center text-sm text-[#6a6560] mb-8">
+            Twenty years designing enterprise and healthcare software for Fortune 500s, federal agencies, and funded startups.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 border-y border-[#d9d3c6]">
+            {logos.map((logo, index) => (
+              <div
+                key={logo}
+                className="min-h-[72px] flex items-center justify-center border-r border-b border-[#e8e3d6] px-3 py-5 text-center text-[11px] font-bold uppercase tracking-[0.08em] text-[#6a6560] last:border-r-0"
+                data-home-concept-reveal
+                style={revealStyle(index % 6)}
+              >
+                {logo}
+              </div>
+            ))}
+          </div>
+          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {stats.map((stat, index) => (
+              <div key={stat.label} className="border-t border-[#1d1b1a] pt-5" data-home-concept-reveal style={revealStyle(index)}>
+                <div className="font-serif text-primary font-semibold leading-none">
+                  <span className="text-[4rem]">{stat.value}</span>
+                  <span className="text-xl align-top">{stat.suffix}</span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-[#3a3633]">{stat.description}</p>
+                <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6a6560]">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="services" data-experiment-section="services" className="py-16 lg:py-24">
+        <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 grid gap-10 lg:grid-cols-[1fr_2.2fr]">
+          <div>
+            <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">What we do</p>
+            <h2 className="font-serif text-3xl lg:text-5xl leading-tight mt-4">We design and ship enterprise software.</h2>
+          </div>
+          <div>
+            {services.map((service, index) => (
+              <div key={service.number} className="grid gap-4 border-t border-[#d9d3c6] py-7 last:border-b md:grid-cols-[110px_1fr_auto] md:items-start" data-home-concept-reveal style={revealStyle(index)}>
+                <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-[#6a6560]">{service.number}</p>
+                <div>
+                  <h3 className="font-serif text-2xl leading-tight mb-2">{service.title}</h3>
+                  <p className="text-base leading-7 text-[#3a3633] max-w-[55ch]">{service.description}</p>
+                </div>
+                <ArrowLink href={service.href} className="whitespace-nowrap text-[13px]">
+                  {service.link}
+                </ArrowLink>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section id="about" data-experiment-section="why-goinvo" className="py-16 lg:py-24">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 grid gap-10 lg:grid-cols-[5fr_4fr]">
           <div>
             <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">Why GoInvo</p>
-            <h2 className="font-serif text-3xl lg:text-5xl leading-tight mt-4 mb-6">Focus and Range.</h2>
+            <h2 className="font-serif text-3xl lg:text-5xl leading-tight mt-4 mb-6">We design businesses, systems, products, and software.</h2>
             <p className="text-lg leading-8 text-[#3a3633] max-w-[640px]">
-              The generalist agencies (McKinsey Digital, Accenture Song, IDEO) staff your project from whatever practice has capacity. We staff it from a studio that has only ever designed software, with a particular depth in regulated and healthcare work.
+              Sometimes the problem is the business model.
+              <br />
+              Sometimes it&rsquo;s the organization, the technology, or the 17 systems that refuse to talk to each other.
+              <br />
+              We work across all of it.
             </p>
             <p className="mt-5 text-base leading-7 text-[#3a3633] max-w-[640px]">
-              That depth is the moat: a Fortune-500-and-federal roster, a regulated-shipping track record, and a citable public body of work no boutique can match.
+              From Fortune 500s to federal agencies.
+              <br />
+              From healthcare to enterprise systems.
+              <br />
+              From strategy to working software used by millions.
+            </p>
+            <p className="mt-5 text-base leading-7 text-[#3a3633] max-w-[640px]">
+              We find the problems, create multiple right answers, and build the best ones.
+              <br />
+              Small teams. Senior humans. Shipped.
             </p>
           </div>
           <div>
