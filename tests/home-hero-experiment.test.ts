@@ -1,11 +1,12 @@
 import React from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { assignHomeHeroVariant, getMarketingFlagsSecret, marketingExperimentFlags } from '@/flags'
 import { serialize } from 'flags/next'
 import { getExperimentExposure, getPrecomputedExperimentVariant, homeHeroExperiment } from '@/lib/experiments/registry'
 import { validateExperimentBeacon } from '@/lib/marketing/beaconValidation'
 import { HomeConceptContent } from '@/components/home/HomeConceptContent'
+import HomePage from '@/app/(main)/page'
 
 /**
  * The component's props parameter is optional (`= {}`), which makes
@@ -21,6 +22,10 @@ const renderHome = (heroVariant: 'control' | 'runway') =>
 
 vi.mock('@/components/home/HomeConceptInteractions', () => ({ HomeConceptInteractions: () => null }))
 vi.mock('@/components/home/HomeConceptCalendlyCta', () => ({ HomeConceptCalendlyCta: () => null }))
+vi.mock('@/components/home/HomePageRenderer', () => ({
+  HomePageRenderer: ({ heroVariant = 'control' }: { heroVariant?: 'control' | 'runway' }) =>
+    React.createElement('div', { 'data-preview-renderer-variant': heroVariant }),
+}))
 
 describe('homepage hero experiment', () => {
   it('assigns stable, balanced cohorts with a safe missing-visitor fallback', () => {
@@ -113,5 +118,43 @@ describe('homepage hero experiment', () => {
       expect(about).toContain(reason)
     }
     console.log('Checked both hero variants, shared section order, 9 requested copy sentences, and 4 retained reasons')
+  })
+})
+
+describe('homepage forced review links', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it.each(['control', 'runway'] as const)('renders the validated %s variant on Vercel previews', async (variant) => {
+    vi.stubEnv('VERCEL_ENV', 'preview')
+    const page = await HomePage({
+      searchParams: Promise.resolve({ 'home-hero-runway-variant': variant }),
+    })
+    expect(renderToStaticMarkup(page)).toContain(`data-preview-renderer-variant="${variant}"`)
+  })
+
+  it.each([
+    { 'home-hero-runway-variant': 'invalid' },
+    { 'home-hero-runway-variant': ['runway', 'control'] },
+    {},
+  ])('defaults to control for invalid or missing preview assignments: %j', async (query) => {
+    vi.stubEnv('VERCEL_ENV', 'preview')
+    const page = await HomePage({ searchParams: Promise.resolve(query) })
+    expect(renderToStaticMarkup(page)).toContain('data-preview-renderer-variant="control"')
+  })
+
+  it('renders the preview fallback without searchParams', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview')
+    expect(renderToStaticMarkup(await HomePage())).toContain('data-preview-renderer-variant="control"')
+  })
+
+  it.each(['production', 'development', undefined])('ignores review queries outside preview (%s) without reading them', async (environment) => {
+    vi.stubEnv('VERCEL_ENV', environment)
+    const readQuery = vi.fn((resolve: (query: Record<string, string>) => void) => {
+      resolve({ 'home-hero-runway-variant': 'runway' })
+    })
+    const searchParams = { then: readQuery } as unknown as Promise<Record<string, string>>
+    const page = await HomePage({ searchParams })
+    expect(renderToStaticMarkup(page)).toContain('data-preview-renderer-variant="control"')
+    expect(readQuery).not.toHaveBeenCalled()
   })
 })

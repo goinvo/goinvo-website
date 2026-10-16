@@ -4,7 +4,7 @@ The `home-hero-runway` experiment compares the Ipsos background (`control`) with
 
 The October 2026 copy refresh moves the existing Ipsos, 3M, and Massachusetts SNAP case studies immediately after the hero and replaces “Focus and Range” with the requested business and systems description. Content after the hero is shared between variants; the existing numbered reasons and prints section remain.
 
-The Flags SDK selects a deterministic 50/50 cohort using the existing year-long marketing visitor cookie and a fresh experiment seed. The internal experiment route decodes that assignment before rendering. Both variants are present in server HTML and retain the homepage metadata and canonical URL. A new measurement key keeps historical test results separate.
+The Flags SDK selects a deterministic 50/50 cohort using the existing year-long marketing visitor cookie and the experiment seed established in September. The internal experiment route decodes that assignment before rendering. Both variants are present in server HTML and retain the homepage metadata and canonical URL. The October copy refresh retains the existing seed and measurement key.
 
 Preview locally:
 
@@ -12,6 +12,8 @@ Preview locally:
 - [New runway hero](http://localhost:3000/?home-hero-runway-variant=runway)
 
 Forced previews are excluded from exposure, engagement, and experiment conversion measurement. Normal visits track through the existing first-party collector and KV rollup. Primary metric: qualified discovery-call clicks. Supporting metrics: booked calls, work exploration, and discovery-form starts.
+
+On Vercel preview deployments, the homepage also validates these query parameters directly. This keeps both coworker review links usable when the preview environment lacks `FLAGS_SECRET`; production continues to use the experiment proxy and its existing fallback.
 
 ## Deployment
 
@@ -38,7 +40,7 @@ npx tsx scripts/manage.ts compare:all --section main Homepage --verbose
 
 The Puppeteer script captures both live variants at 1920, 1440, and 390px. It compares unchanged copy typography and CTA dimensions with the live site, checks the new artwork against its responsive dimensions and aspect ratio (3px tolerance), and verifies spacing, requested copy, section order, broken images, overflow, SSR, sticky assignment, exposure deduplication, CTA attribution, preview exclusion, and reduced motion. QA beacons are captured in the browser without sending counts to shared KV. Results and screenshots are written to `.audit/home-hero-*` and `.audit/home-why-goinvo-*`.
 
-Verified 2026-10-16: clean production build, 75 targeted tests, changed-file lint, and all 342 browser content/layout checks pass. The structural comparison reports the two intentional heading replacements and changed hero geometry. Accessibility findings match the live baseline: the runway CTA has 4.15:1 contrast, and the newsletter button is 82 × 20px.
+Verified 2026-10-16: clean production build, 84 targeted tests, changed-file lint, and all 342 browser content/layout checks pass. The structural comparison reports the two intentional heading replacements and changed hero geometry. Accessibility findings match the live baseline: the runway CTA has 4.15:1 contrast, and the newsletter button is 82 × 20px.
 
 Historical verification, before the copy refresh (2026-09-08): clean production build, 70 targeted tests, changed-file lint, and homepage structural comparison passed. All 96 measured properties passed. Dimensions below are actual / target in pixels.
 
