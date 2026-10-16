@@ -180,7 +180,7 @@ const stats = [
     value: '20',
     suffix: 'yrs',
     description: 'designing enterprise and healthcare software. One studio, deep specialism.',
-    label: 'Founded 2009 · Boston, MA',
+    label: 'Boston, MA',
   },
   {
     value: '60',
@@ -409,8 +409,6 @@ export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }
             className="eid-reveal mx-auto mt-7 max-w-[54ch] text-[19px] leading-[1.55] text-white/[.78] sm:text-[21px]"
             style={{ '--d': 1 } as CSSProperties}
           >
-            Little of it is designed well.
-            <br />
             We&rsquo;re a design studio that turns nascent ideas into shipped software for enterprise and healthcare leaders.
           </p>
 
