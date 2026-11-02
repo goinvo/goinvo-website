@@ -34,6 +34,11 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  async rewrites() {
+    return [
+      { source: '/demos/clinical-evidence-engine', destination: '/demos/clinical-evidence-engine/index.html' },
+    ]
+  },
   async redirects() {
     return Object.entries(redirectsJson).map(([source, destination]) => ({
       source: source.startsWith('/') ? source : `/${source}`,
