@@ -15,6 +15,7 @@ import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { ImageCarousel } from '@/components/ui/ImageCarousel'
 import { DataTable } from '@/components/ui/DataTable'
 import { References } from '@/components/ui/References'
+import { GuidedWalkthrough } from '@/components/portable-text/GuidedWalkthrough'
 import { FIHCFaceDevelopmentSection } from '@/components/portable-text/FIHCFaceDevelopmentSection'
 import { FIHCPersuasionEmotionSection } from '@/components/portable-text/FIHCPersuasionEmotionSection'
 import { IpsosWorkflowWidget } from '@/components/portable-text/IpsosWorkflowWidget'
@@ -337,6 +338,7 @@ const InsideLinkContext = createContext(false)
 
 const components: PortableTextComponents = {
   types: {
+    guidedWalkthrough: ({ value }) => <GuidedWalkthrough value={value} />,
     image: ({ value }) => <PortableImage value={value} />,
     quote: ({ value }) => (
       <ArticleReveal intensity="visual">

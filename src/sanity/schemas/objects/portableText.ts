@@ -6,6 +6,7 @@ import { CodeTextareaInput, HtmlEmbedInput } from '../../components/HtmlEmbedInp
 import { CustomComponentInput } from '../../components/CustomComponentInput'
 import { TextColorAnnotation } from '../../components/TextColorAnnotation'
 import { sectionBackgroundOptions } from '../../../lib/sectionBackgrounds'
+import { guidedWalkthroughBlock } from './guidedWalkthrough'
 import {
   WIDTH_OPTIONS,
   COLUMN_LAYOUT_OPTIONS,
@@ -25,6 +26,7 @@ export default defineType({
   name: 'portableText',
   type: 'array',
   of: [
+    guidedWalkthroughBlock,
     defineArrayMember({
       type: 'block',
       styles: [
