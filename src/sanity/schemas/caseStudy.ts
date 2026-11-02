@@ -156,6 +156,14 @@ export default defineType({
 
     // --- Advanced Settings -------------------------------------------
     defineField({
+      name: 'heroLayout',
+      title: 'Page Hero',
+      type: 'string',
+      group: 'advanced',
+      description: 'Use a text-only opening when the main image would repeat an embedded demo. The image remains on listing cards.',
+      options: { list: [{ title: 'Image hero', value: 'image' }, { title: 'Text only', value: 'textOnly' }] },
+    }),
+    defineField({
       name: 'heading',
       title: 'Page Heading',
       type: 'string',

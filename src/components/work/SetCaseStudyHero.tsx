@@ -27,8 +27,10 @@ export function SetCaseStudyHero({
   expandAfterSlide,
   bgPosition,
   editTarget,
+  variant = 'image',
 }: {
   image: string
+  variant?: 'image' | 'textOnly'
   expandAfterSlide?: boolean
   /** CSS object-position value (e.g. "top center", "bottom center", "center") */
   bgPosition?: string
@@ -42,13 +44,13 @@ export function SetCaseStudyHero({
     : ''
 
   useEffect(() => {
-    setCurrentHero(image, bgPosition, expandAfterSlide, editTarget)
+    setCurrentHero(variant === 'textOnly' ? '' : image, bgPosition, expandAfterSlide, editTarget)
     // editTargetKey is a stable serialization of editTarget
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [image, bgPosition, expandAfterSlide, editTargetKey, setCurrentHero])
+  }, [image, bgPosition, expandAfterSlide, editTargetKey, variant, setCurrentHero])
 
   // A draft's click-to-edit placeholder is left to PersistentHero.
-  if (editTarget) return null
+  if (editTarget || variant === 'textOnly') return null
 
   return (
     <div data-hero-ssr aria-hidden className="absolute inset-x-0 top-0 pt-[var(--spacing-header-height)]">
