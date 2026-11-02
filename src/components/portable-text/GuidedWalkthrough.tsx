@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { motion, useReducedMotion } from 'framer-motion'
 import { urlForImage } from '@/sanity/lib/image'
 import { cn } from '@/lib/utils'
+import { option } from '@/lib/sanityOptions'
 import { captionTextClassName } from '@/lib/typography'
 import { focusCrop, imageDimensions, validFocus, walkthroughUrl, type GuidedWalkthroughValue } from '@/lib/guidedWalkthrough'
 
@@ -26,7 +27,7 @@ export function GuidedWalkthrough({ value }: { value: GuidedWalkthroughValue }) 
   }, [])
   const scenes = (value.scenes || []).filter(scene => scene.image?.asset && scene.title && scene.description)
   const scene = scenes[Math.min(active, scenes.length - 1)]
-  const previewOnly = value.variant === 'preview'
+  const previewOnly = option(value.variant) === 'preview'
   if (!scene && !previewOnly) return null
   const dimensions = scene ? imageDimensions(scene.image) : { width: 1440, height: 960 }
   const crop = overview ? { x: 0, y: 0, width: 100, height: 100 } : focusCrop(scene?.focus, dimensions)
