@@ -40,6 +40,7 @@ export interface CaseStudy {
   client?: string | null
   hideClientSubtitle?: boolean
   hideAuthors?: boolean
+  heroLayout?: 'image' | 'textOnly'
   image?: SanityImage
   caption?: string
   categories?: Category[]

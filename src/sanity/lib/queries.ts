@@ -35,6 +35,7 @@ export const caseStudyBySlugQuery = groq`
     hideClientSubtitle,
     hideAuthors,
     image,
+    heroLayout,
     caption,
     categories[]-> { _id, title, slug, isMainCategory, filterOrder },
     displayTags,

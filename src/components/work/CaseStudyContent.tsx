@@ -583,7 +583,7 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
 
   return (
     <div>
-      <SetCaseStudyHero image={heroImageUrl} editTarget={heroEditTarget} />
+      <SetCaseStudyHero image={heroImageUrl} editTarget={heroEditTarget} variant={caseStudy.heroLayout} />
 
       <Reveal style="slide-up" duration={0.5}>
         <div className="max-width max-width-md content-padding mx-auto">
