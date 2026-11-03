@@ -84,9 +84,9 @@ describe('orderable feature groups', () => {
     expect(isFeaturedFeatureDocument({ ...document('b'), featured: false })).toBe(false)
   })
 
-  // One switch: the retired hiddenWorkPage flag silently overrode Selected Feature, so editors toggled a
+  // One switch: the retired hiddenWorkPage flag silently overrode `featured` ("Also show on /work"), so editors toggled a
   // control that did nothing. An unset flag means not selected.
-  it('decides by Selected Feature alone', () => {
+  it('decides by the featured flag alone', () => {
     expect(isFeaturedFeatureDocument(document('c'))).toBe(false)
   })
 

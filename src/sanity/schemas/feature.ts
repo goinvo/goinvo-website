@@ -2,6 +2,7 @@ import { defineField, defineType } from 'sanity'
 import { orderRankField } from '@sanity/orderable-document-list'
 import { orderRankInitialValue } from '../orderable/rank'
 import { publicSlugProblem } from '@/lib/publicSlug'
+import { LinkedPageEditNotice } from '../components/LinkedPageEditNotice'
 import { sectionBackgroundOptions } from '../../lib/sectionBackgrounds'
 import {
   ContentWidthInput,
@@ -47,6 +48,7 @@ export default defineType({
   name: 'feature',
   title: 'Vision Piece',
   type: 'document',
+  components: { input: LinkedPageEditNotice },
   groups: [
     { name: 'properties', title: 'Properties', default: true },
     { name: 'content', title: 'Main Content' },
@@ -313,15 +315,15 @@ export default defineType({
     }),
     defineField({
       name: 'featured',
-      title: 'Selected Feature',
+      title: 'Also show on /work',
       type: 'boolean',
       group: 'properties',
       description:
-        'Shows this piece in the Selected Features cards on /work. The Spotlight at the top of /vision is chosen separately, in Content → Spotlight.',
+        'Every published piece is a card on /vision. Turn this on to also list it in the /work project grid, after the case studies. The Spotlight at the top of /vision is chosen separately, in Content → Spotlight.',
       initialValue: false,
     }),
     defineField({
-      // Retired: Selected Feature is the only switch. Kept hidden so older documents still validate.
+      // Retired: `featured` ("Also show on /work") is the only switch. Kept hidden so older documents still validate.
       name: 'hiddenWorkPage',
       title: 'Hidden on Work Page (retired)',
       type: 'boolean',
@@ -645,7 +647,7 @@ export default defineType({
       featured: 'featured',
     },
     prepare({ title, subtitle, media, featured }) {
-      const selectionLabel = featured === true ? 'Selected feature' : 'Not selected'
+      const selectionLabel = featured === true ? 'On /vision and /work' : 'On /vision only'
 
       return {
         title,
