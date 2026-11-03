@@ -159,6 +159,25 @@ function OrderableGroup({
   )
 }
 
+const SPOTLIGHT_QUERY = `*[_id == "visionSpotlight"][0].items[]{ "title": coalesce(@->title, title) }.title`
+
+/**
+ * The /vision Spotlight is a separate list (Content → Spotlight), not either section below, and editors have
+ * toggled these sections trying to change it. Say what is in it, right where they look.
+ */
+function SpotlightSummary({ client }: { client: SanityClient }) {
+  const { data } = useLiveQuery<Array<string | null> | null>(client, SPOTLIGHT_QUERY, {}, 'goinvo-orderable.spotlight')
+  const titles = (data ?? []).filter((title): title is string => Boolean(title))
+  return (
+    <Card padding={3} radius={2} tone="primary">
+      <Text size={1}>
+        <strong>Spotlight on /vision:</strong> {titles.length ? titles.join(', ') : 'empty'}. Change it in{' '}
+        <strong>Content → Spotlight</strong>; the sections below don&apos;t affect it.
+      </Text>
+    </Card>
+  )
+}
+
 export function DocumentListQuery({
   client,
   currentVersion,
@@ -272,9 +291,10 @@ export function DocumentListQuery({
           <Box padding={2}>
             {orderingWarning}
             <Stack space={4}>
+              <SpotlightSummary client={client} />
               <OrderableGroup
-                title="Published / Selected features"
-                description="Shown in the Selected Features cards on /work, in this order. The /vision Spotlight is set in Content → Spotlight."
+                title="Published / On /vision and /work"
+                description="Cards on /vision, and also in the /work project grid after the case studies, in this order. The /vision Spotlight is set in Content → Spotlight."
                 documents={publishedFeatureGroups.featured}
                 droppableId="featurePublishedFeaturedSortZone"
                 listIsUpdating={listIsUpdating}
@@ -282,8 +302,8 @@ export function DocumentListQuery({
                 setListIsUpdating={setListIsUpdating}
               />
               <OrderableGroup
-                title="Published / Not selected"
-                description="Live on /vision and in the archive, not in the /work Selected Features cards."
+                title="Published / On /vision only"
+                description="Cards on /vision only. Turn on “Also show on /work” in a piece to list it on /work too."
                 documents={publishedFeatureGroups.nonFeatured}
                 droppableId="featurePublishedNonFeaturedSortZone"
                 listIsUpdating={listIsUpdating}
@@ -293,7 +313,7 @@ export function DocumentListQuery({
               {publicationGroups.drafts.length > 0 && (
                 <>
                   <OrderableGroup
-                    title="Drafts / Selected features"
+                    title="Drafts / On /vision and /work"
                     description="Draft vision pieces are separated from the public ordering."
                     documents={draftFeatureGroups.featured}
                     droppableId="featureDraftFeaturedSortZone"
@@ -302,7 +322,7 @@ export function DocumentListQuery({
                     setListIsUpdating={setListIsUpdating}
                   />
                   <OrderableGroup
-                    title="Drafts / Not selected"
+                    title="Drafts / On /vision only"
                     description="Draft vision pieces are separated from the public ordering."
                     documents={draftFeatureGroups.nonFeatured}
                     droppableId="featureDraftNonFeaturedSortZone"

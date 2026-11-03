@@ -1574,12 +1574,12 @@ const categories: Category[] = [
           },
           {
             id: 'authoring.vision.spotlight',
-            title: 'Optional — feature it on listing surfaces',
+            title: 'Optional — list it on /work, or spotlight it',
             body: (
               <>
-                Toggle <strong>Selected Feature</strong> to include the piece
-                in selected/featured surfaces such as the /work feature cards.
-                To feature it at the top of /vision, open{' '}
+                Every published piece is a card on /vision. Toggle{' '}
+                <strong>Also show on /work</strong> to list it in the /work
+                project grid too, after the case studies. To feature it at the top of /vision, open{' '}
                 <strong>Content → Spotlight</strong> and add it to the
                 Spotlight list — the first item is shown large, the rest appear
                 beside it, and you can drag to reorder.
