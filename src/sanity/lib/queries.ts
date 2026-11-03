@@ -115,8 +115,7 @@ export const draftFeaturesQuery = groq`{
     showPageMeta,
     client,
     externalLink,
-    "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
-    hiddenWorkPage
+    "featured": coalesce(featured, false)
   },
   "publishedIds": *[_type == "feature" && !(_id in path("drafts.**"))]._id
 }`
@@ -148,7 +147,6 @@ export const mainCategoriesQuery = groq`
 export const teamMembersQuery = groq`
   *[
     _type == "teamMember"
-    && _id match "team-*"
     && isAlumni != true
     && (!defined(showOnAboutPage) || showOnAboutPage != false)
   ] | order(orderRank asc) {
@@ -194,8 +192,7 @@ export const allFeaturesQuery = groq`
     showPageMeta,
     client,
     externalLink,
-    "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
-    hiddenWorkPage
+    "featured": coalesce(featured, false)
   }
 `
 
@@ -222,7 +219,7 @@ export const selectedWorkFeaturesQuery = groq`
   *[_type == "feature"
     && title != "Untitled"
     && !(slug.current match "untitled-*")
-    && coalesce(featured, coalesce(hiddenWorkPage, false) != true) == true
+    && coalesce(featured, false) == true
   ] | order(orderRank asc) {
     _id,
     _type,
@@ -238,8 +235,7 @@ export const selectedWorkFeaturesQuery = groq`
     showPageMeta,
     client,
     externalLink,
-    "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
-    hiddenWorkPage
+    "featured": coalesce(featured, false)
   }
 `
 
@@ -263,8 +259,7 @@ export const featureBySlugQuery = groq`
     showPageMeta,
     client,
     externalLink,
-    "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
-    hiddenWorkPage,
+    "featured": coalesce(featured, false),
     authorLayout,
     authorBackground,
     "authors": authors[] {

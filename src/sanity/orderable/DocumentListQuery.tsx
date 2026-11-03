@@ -273,8 +273,8 @@ export function DocumentListQuery({
             {orderingWarning}
             <Stack space={4}>
               <OrderableGroup
-                title="Published / Featured"
-                description="Published vision pieces selected for featured surfaces and public ordering."
+                title="Published / Selected features"
+                description="Shown in the Selected Features cards on /work, in this order. The /vision Spotlight is set in Content → Spotlight."
                 documents={publishedFeatureGroups.featured}
                 droppableId="featurePublishedFeaturedSortZone"
                 listIsUpdating={listIsUpdating}
@@ -282,8 +282,8 @@ export function DocumentListQuery({
                 setListIsUpdating={setListIsUpdating}
               />
               <OrderableGroup
-                title="Published / Non-featured"
-                description="Published vision pieces that are not selected for featured surfaces."
+                title="Published / Not selected"
+                description="Live on /vision and in the archive, not in the /work Selected Features cards."
                 documents={publishedFeatureGroups.nonFeatured}
                 droppableId="featurePublishedNonFeaturedSortZone"
                 listIsUpdating={listIsUpdating}
@@ -293,7 +293,7 @@ export function DocumentListQuery({
               {publicationGroups.drafts.length > 0 && (
                 <>
                   <OrderableGroup
-                    title="Drafts / Featured"
+                    title="Drafts / Selected features"
                     description="Draft vision pieces are separated from the public ordering."
                     documents={draftFeatureGroups.featured}
                     droppableId="featureDraftFeaturedSortZone"
@@ -302,7 +302,7 @@ export function DocumentListQuery({
                     setListIsUpdating={setListIsUpdating}
                   />
                   <OrderableGroup
-                    title="Drafts / Non-featured"
+                    title="Drafts / Not selected"
                     description="Draft vision pieces are separated from the public ordering."
                     documents={draftFeatureGroups.nonFeatured}
                     droppableId="featureDraftNonFeaturedSortZone"

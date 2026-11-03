@@ -20,8 +20,7 @@ export function partitionPublicationDocuments(documents: SanityDocumentWithOrder
 }
 
 export function isFeaturedFeatureDocument(document: SanityDocumentWithOrder) {
-  if (typeof document.featured === 'boolean') return document.featured
-  return document.hiddenWorkPage !== true
+  return document.featured === true
 }
 
 export function partitionFeatureDocuments(documents: SanityDocumentWithOrder[]) {

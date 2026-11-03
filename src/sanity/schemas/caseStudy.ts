@@ -1,5 +1,7 @@
 import { defineField, defineType } from 'sanity'
 import { orderRankField } from '@sanity/orderable-document-list'
+import { orderRankInitialValue } from '../orderable/rank'
+import { publicSlugProblem } from '@/lib/publicSlug'
 import { CategoriesInput } from '../components/CategoriesInput'
 
 export default defineType({
@@ -16,7 +18,7 @@ export default defineType({
     { name: 'advanced', title: 'Advanced Settings' },
   ],
   fields: [
-    orderRankField({ type: 'caseStudy', newItemPosition: 'before' }),
+    { ...orderRankField({ type: 'caseStudy', newItemPosition: 'before' }), initialValue: orderRankInitialValue('caseStudy') },
 
     // --- Properties (visual order on the page) -----------------------
     defineField({
@@ -34,7 +36,7 @@ export default defineType({
       group: 'properties',
       description: 'URL path segment (e.g. "hgraph" → /work/hgraph). Click Generate.',
       options: { source: 'title', maxLength: 96 },
-      validation: (Rule) => Rule.required(),
+      validation: (Rule) => Rule.required().custom((value) => publicSlugProblem(value?.current) ?? true),
     }),
     defineField({
       name: 'image',

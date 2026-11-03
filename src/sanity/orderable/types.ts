@@ -9,7 +9,6 @@ export type NewItemPosition = 'after' | 'before'
 export interface SanityDocumentWithOrder extends SanityDocument {
   [ORDER_FIELD_NAME]?: string
   featured?: boolean
-  hiddenWorkPage?: boolean
   hasPublished?: boolean
 }
 

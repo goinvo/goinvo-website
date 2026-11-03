@@ -144,7 +144,6 @@ export interface Feature {
   aboutGoInvoPosition?: 'beforeNewsletter' | 'afterNewsletter'
   aboutGoInvoVariant?: 'default' | 'practice'
   externalLink?: string
-  hiddenWorkPage?: boolean
   content?: PortableTextBlock[]
   metaTitle?: string
   metaDescription?: string
@@ -174,7 +173,6 @@ export interface StaticFeature {
   video?: string
   link: string
   externalLink?: boolean
-  hiddenWorkPage?: boolean
   featured?: boolean
   imagePosition?: string
 }

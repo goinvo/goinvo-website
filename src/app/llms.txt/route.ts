@@ -38,8 +38,9 @@ export async function GET() {
       .filter((f) => f?.slug?.current && f?.title && !f.externalLink)
       .slice(0, 60)
       .map((f) => `- [${f.title}](${url}/vision/${f.slug.current})`)
-  } catch {
-    // Sanity not configured — emit the curated sections only.
+  } catch (error) {
+    // Sanity unreachable or not configured: emit the curated sections only, and say so.
+    console.error('llms.txt: could not read work and vision pages from Sanity', error)
   }
 
   const body = [

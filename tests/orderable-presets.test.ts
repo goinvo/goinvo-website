@@ -84,23 +84,22 @@ describe('orderable feature groups', () => {
     expect(isFeaturedFeatureDocument({ ...document('b'), featured: false })).toBe(false)
   })
 
-  it('falls back to the legacy hiddenWorkPage flag for migrated features', () => {
-    expect(isFeaturedFeatureDocument({ ...document('a'), hiddenWorkPage: false })).toBe(true)
-    expect(isFeaturedFeatureDocument({ ...document('b'), hiddenWorkPage: true })).toBe(false)
-    expect(isFeaturedFeatureDocument(document('c'))).toBe(true)
+  // One switch: the retired hiddenWorkPage flag silently overrode Selected Feature, so editors toggled a
+  // control that did nothing. An unset flag means not selected.
+  it('decides by Selected Feature alone', () => {
+    expect(isFeaturedFeatureDocument(document('c'))).toBe(false)
   })
 
   it('partitions feature documents into featured and non-featured groups', () => {
     const docs = [
       { ...document('featured'), featured: true },
-      { ...document('legacy-featured'), hiddenWorkPage: false },
+      { ...document('unset') },
       { ...document('non-featured'), featured: false },
-      { ...document('legacy-hidden'), hiddenWorkPage: true },
     ]
 
     const groups = partitionFeatureDocuments(docs)
 
-    expect(groups.featured.map((doc) => doc._id)).toEqual(['featured', 'legacy-featured'])
-    expect(groups.nonFeatured.map((doc) => doc._id)).toEqual(['non-featured', 'legacy-hidden'])
+    expect(groups.featured.map((doc) => doc._id)).toEqual(['featured'])
+    expect(groups.nonFeatured.map((doc) => doc._id)).toEqual(['unset', 'non-featured'])
   })
 })

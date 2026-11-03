@@ -1,0 +1,35 @@
+# Is the live site showing what the CMS published, and is the CMS data the site relies on sound?
+#
+# Both failures this guards against were silent: published changes that never reached goinvo.com
+# (the cache was never purged), and CMS data that looked right in the Studio but decided nothing
+# (a retired flag overriding the real one, tied sort ranks). A failed run emails the repo owner.
+name: Site integrity
+
+on:
+  schedule:
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+
+jobs:
+  integrity:
+    name: CMS integrity and site freshness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: CMS invariants
+        run: npm run check:cms
+        env:
+          NEXT_PUBLIC_SANITY_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_SANITY_PROJECT_ID }}
+          SANITY_API_READ_TOKEN: ${{ secrets.SANITY_API_READ_TOKEN }}
+      - name: Live site matches the published CMS
+        run: npm run check:freshness
+        env:
+          NEXT_PUBLIC_SANITY_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_SANITY_PROJECT_ID }}
+          SANITY_API_READ_TOKEN: ${{ secrets.SANITY_API_READ_TOKEN }}
