@@ -915,6 +915,33 @@ openings sort first. Pure helpers + tests: `src/lib/marketing/orgResearch.ts`,
 `src/lib/marketing/sourceVerification.ts`, `tests/org-research.test.ts`,
 `tests/source-verification.test.ts`.
 
+## How a publish reaches goinvo.com (fixed 2026-11-03)
+
+Pages cache Sanity data with no time limit (`sanityFetch` from `defineLive` = `revalidate: false`). Two things purge it:
+- **The publish webhook** `POST /api/sanity/revalidate` (signed with `SANITY_REVALIDATE_SECRET`, fail-closed 503
+  without it) purges the whole site plus `/sitemap.xml` and `/llms.txt` on every published-document change.
+  Registered in Sanity (manage → API → Webhooks) on dataset `production`, filter
+  `PUBLISH_WEBHOOK_FILTER` in `src/lib/publishRevalidation.ts`. Before it existed, a publish reached the site only
+  if a visitor had a page open at that moment.
+- `<SanityLive>` in an open tab → `revalidateSanityTags` (`src/lib/sanity-actions.ts`). Sync tags are BASE64
+  (`+`, `/`, `=`): the 2026-09-30 hardening allowed only `[A-Za-z0-9_-]` and silently dropped ~1 tag in 6, so the
+  /vision Spotlight never refreshed. It now warns whenever it drops a tag.
+
+Rule: a validation that drops input must log it. Before tightening one, run it over REAL values (the tags of the
+site's own queries, every slug in the dataset), not hand-written examples.
+
+Checks (daily in `.github/workflows/site-integrity.yml`, emails on failure):
+- `npm run check:freshness`: the live /vision Spotlight and the latest work/vision pages match the published CMS.
+  The only check that sees a dead webhook; every CMS-side check still passes when the site is stale.
+- `npm run check:cms`: one Selected Feature switch per vision piece (`hiddenWorkPage` is retired and must stay
+  unset), no tied or minimum `orderRank`, about-page membership by `showOnAboutPage`/`isAlumni` (NOT by `_id`
+  prefix: Studio-created people get random ids), servable slugs. `--repair [--apply --backup <file outside repo>]`
+  fixes the first three in one transaction.
+- New orderable items are placed with `LexoRank.between(min, first)` (`orderRankInitialValue` in
+  `src/sanity/orderable/rank.ts`), never the plugin default: its `genPrev()` stops at the minimum, so once one item
+  sat there every new item tied with it. A bulk script write is what put items there; scripts that create orderable
+  documents must set a real rank.
+
 ## The production dataset is PRIVATE (since 2026-09-30)
 
 `production`, `production-comments` and `outreach` all read `private`

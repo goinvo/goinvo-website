@@ -1,5 +1,7 @@
 import { defineField, defineType } from 'sanity'
 import { orderRankField } from '@sanity/orderable-document-list'
+import { orderRankInitialValue } from '../orderable/rank'
+import { publicSlugProblem } from '@/lib/publicSlug'
 import { sectionBackgroundOptions } from '../../lib/sectionBackgrounds'
 import {
   ContentWidthInput,
@@ -107,7 +109,7 @@ export default defineType({
     }).warning(),
   ],
   fields: [
-    orderRankField({ type: 'feature', newItemPosition: 'before' }),
+    { ...orderRankField({ type: 'feature', newItemPosition: 'before' }), initialValue: orderRankInitialValue('feature') },
     defineField({
       name: 'title',
       title: 'Title',
@@ -130,13 +132,15 @@ export default defineType({
       group: 'properties',
       description: 'URL path segment (e.g. "determinants-of-health" → /vision/determinants-of-health)',
       options: { source: 'title', maxLength: 96 },
-      validation: (Rule) =>
+      validation: (Rule) => [
         Rule.required().custom((value) => {
           if (isStaticFeatureOverrideSlug(value?.current)) {
             return 'This slug is rendered by a static page override. Studio body/layout edits here will not control the live article.'
           }
           return true
         }).warning(),
+        Rule.custom((value) => publicSlugProblem(value?.current) ?? true),
+      ],
     }),
     defineField({
       name: 'image',
@@ -312,16 +316,18 @@ export default defineType({
       title: 'Selected Feature',
       type: 'boolean',
       group: 'properties',
-      description: 'Include this vision piece in selected/featured feature lists, including the Work page feature cards.',
+      description:
+        'Shows this piece in the Selected Features cards on /work. The Spotlight at the top of /vision is chosen separately, in Content → Spotlight.',
       initialValue: false,
     }),
     defineField({
+      // Retired: Selected Feature is the only switch. Kept hidden so older documents still validate.
       name: 'hiddenWorkPage',
-      title: 'Hidden on Work Page',
+      title: 'Hidden on Work Page (retired)',
       type: 'boolean',
       group: 'properties',
-      description: 'Legacy migration flag. Use Selected Feature for new edits; existing documents use this as a fallback.',
-      initialValue: false,
+      hidden: true,
+      readOnly: true,
     }),
     defineField({
       name: 'authors',
@@ -637,11 +643,9 @@ export default defineType({
       subtitle: 'date',
       media: 'image',
       featured: 'featured',
-      hiddenWorkPage: 'hiddenWorkPage',
     },
-    prepare({ title, subtitle, media, featured, hiddenWorkPage }) {
-      const selected = typeof featured === 'boolean' ? featured : hiddenWorkPage !== true
-      const selectionLabel = selected ? 'Selected feature' : 'Non-featured'
+    prepare({ title, subtitle, media, featured }) {
+      const selectionLabel = featured === true ? 'Selected feature' : 'Not selected'
 
       return {
         title,

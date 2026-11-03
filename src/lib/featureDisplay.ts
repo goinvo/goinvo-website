@@ -56,7 +56,6 @@ export function featureToDisplay(feature: Feature): StaticFeature {
     video: feature.video,
     link,
     externalLink: isExternal,
-    hiddenWorkPage: feature.hiddenWorkPage,
     featured: feature.featured,
     imagePosition,
   }

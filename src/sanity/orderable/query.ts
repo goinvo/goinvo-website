@@ -23,7 +23,7 @@ export function getDocumentQuery({
 
   const querySelect = `*[_type == $type ${perspectiveFilter ? `&& ${perspectiveFilter}` : ''}${filter ? `&& ${filter}` : ''}]`
   const queryOrder = `|order(@[$order] asc)`
-  const queryFields = `{_id, _type, title, slug, ${ORDER_FIELD_NAME}, featured, hiddenWorkPage}`
+  const queryFields = `{_id, _type, title, slug, ${ORDER_FIELD_NAME}, featured}`
 
   return {
     query: `${querySelect}${queryOrder}${queryFields}`,

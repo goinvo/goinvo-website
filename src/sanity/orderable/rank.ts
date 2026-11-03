@@ -19,12 +19,23 @@ export function initialRank(
   newItemPosition: NewItemPosition = 'after',
 ): string {
   const compareRank = parseOrderRank(compareRankValue, LexoRank.min())
-  const rank =
-    newItemPosition === 'before'
-      ? compareRank.genPrev().genPrev()
-      : compareRank.genNext().genNext()
+  if (newItemPosition === 'after') return compareRank.genNext().genNext().toString()
 
-  return rank.toString()
+  // Halve the gap to the minimum rather than stepping back from the first item: genPrev() stops at the
+  // minimum, so once one item sat there every new item landed on the same rank and the order was arbitrary.
+  // between() never returns the minimum itself, so there is always room for the next one.
+  const min = LexoRank.min()
+  if (compareRank.compareTo(min) > 0) return min.between(compareRank).toString()
+
+  // Only legacy data can sit on the minimum; nothing fits before it, so go just after it instead of tying.
+  console.warn('[orderable] the first item is at the minimum rank; placing the new item after it')
+  return compareRank.between(compareRank.genNext()).toString()
+}
+
+/** `initialValue` for an orderRankField: the plugin's own resolver has the genPrev() tie described above. */
+export function orderRankInitialValue(type: string) {
+  return (_params: unknown, context: Pick<InitialValueResolverContext, 'getClient'>) =>
+    getInitialOrderRank(type, context, 'before')
 }
 
 export async function getInitialOrderRank(

@@ -70,8 +70,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: 'monthly' as const,
         priority: 0.7,
       }))
-  } catch {
-    // Sanity not configured — skip dynamic routes
+  } catch (error) {
+    // Sanity unreachable or not configured: ship the static routes, but say so, since this silently drops every
+    // work and vision URL from the sitemap.
+    console.error('sitemap: could not read work and vision pages from Sanity', error)
   }
 
   return [...staticRoutes, ...caseStudyRoutes, ...visionRoutes]

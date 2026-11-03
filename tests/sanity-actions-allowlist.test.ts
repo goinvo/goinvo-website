@@ -51,6 +51,15 @@ describe('revalidateSanityTags', () => {
     expect(revalidateTag).toHaveBeenCalledWith('sanity:s1:abc_DEF-9', { expire: 0 })
   })
 
+  // Sync tags are base64, so they carry '+' and '/'. These two are the /vision Spotlight query's real tags: a
+  // pattern without those characters dropped them, and the Spotlight never refreshed after a publish.
+  it('revalidates sync tags containing base64 + and /', async () => {
+    await revalidateSanityTags(['s1:a/RjmA', 's1:d+NH5A'])
+    expect(revalidateTag).toHaveBeenCalledWith('sanity:fetch-sync-tags', { expire: 0 })
+    expect(revalidateTag).toHaveBeenCalledWith('sanity:s1:a/RjmA', { expire: 0 })
+    expect(revalidateTag).toHaveBeenCalledWith('sanity:s1:d+NH5A', { expire: 0 })
+  })
+
   it('ignores anything that is not a sync tag, and purges nothing when none are left', async () => {
     await revalidateSanityTags(['homepage', 'sanity:fetch-sync-tags', 's1:', 's1:a b', 42 as never])
     expect(revalidateTag).not.toHaveBeenCalled()
