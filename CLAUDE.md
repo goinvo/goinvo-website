@@ -922,7 +922,10 @@ Pages cache Sanity data with no time limit (`sanityFetch` from `defineLive` = `r
   without it) purges the whole site plus `/sitemap.xml` and `/llms.txt` on every published-document change.
   Registered in Sanity (manage → API → Webhooks) on dataset `production`, filter
   `PUBLISH_WEBHOOK_FILTER` in `src/lib/publishRevalidation.ts`. Before it existed, a publish reached the site only
-  if a visitor had a page open at that moment.
+  if a visitor had a page open at that moment. **Registered and verified 2026-11-03** ("Refresh goinvo.com on
+  publish"); delivery log: `GET https://api.sanity.io/v2021-10-04/hooks/projects/<projectId>/<hookId>/attempts`
+  with a `sanity login` token. It is the project's ONLY webhook: the calendar → `/api/marketing/publish/schedule`
+  webhook described under "Social auto-publishing" was never created.
 - `<SanityLive>` in an open tab → `revalidateSanityTags` (`src/lib/sanity-actions.ts`). Sync tags are BASE64
   (`+`, `/`, `=`): the 2026-09-30 hardening allowed only `[A-Za-z0-9_-]` and silently dropped ~1 tag in 6, so the
   /vision Spotlight never refreshed. It now warns whenever it drops a tag.
