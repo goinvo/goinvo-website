@@ -27,7 +27,8 @@
     "shop:sync-stripe": "tsx scripts/sync-stripe-shop-catalog.ts",
     "check:heartbeat": "node scripts/check-heartbeat.mjs",
     "check:cms": "node scripts/check-cms-integrity.mjs",
-    "check:freshness": "node scripts/check-site-freshness.mjs"
+    "check:freshness": "node scripts/check-site-freshness.mjs",
+    "check:studio-validation": "node scripts/check-studio-validation.mjs"
   },
   "dependencies": {
     "@flags-sdk/vercel": "^1.3.0",

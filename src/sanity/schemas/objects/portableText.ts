@@ -65,9 +65,9 @@ export default defineType({
                 title: 'URL',
                 name: 'href',
                 type: 'url',
-                description: 'Full URL, relative path (/work/hgraph), or mailto: link',
+                description: 'Full URL, relative path (/work/hgraph), mailto: or tel: link',
                 validation: (Rule) =>
-                  Rule.uri({ allowRelative: true, scheme: ['https', 'http', 'mailto'] }),
+                  Rule.uri({ allowRelative: true, scheme: ['https', 'http', 'mailto', 'tel'] }),
               },
               {
                 title: 'Open in new tab',
@@ -171,7 +171,7 @@ export default defineType({
           title: 'Image Link',
           description: 'Optional URL to open when the image is clicked',
           validation: (Rule) =>
-            Rule.uri({ allowRelative: true, scheme: ['https', 'http', 'mailto'] }),
+            Rule.uri({ allowRelative: true, scheme: ['https', 'http', 'mailto', 'tel'] }),
         },
         {
           name: 'mobileImageUrl',

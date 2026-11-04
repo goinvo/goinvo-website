@@ -2,7 +2,8 @@
 #
 # Both failures this guards against were silent: published changes that never reached goinvo.com
 # (the cache was never purged), and CMS data that looked right in the Studio but decided nothing
-# (a retired flag overriding the real one, tied sort ranks). A failed run emails the repo owner.
+# (a retired flag overriding the real one, tied sort ranks), and a published document whose Studio
+# validation fails, which blocks the next person who edits it. A failed run emails the repo owner.
 name: Site integrity
 
 on:
@@ -25,6 +26,11 @@ jobs:
         run: npm ci --legacy-peer-deps
       - name: CMS invariants
         run: npm run check:cms
+        env:
+          NEXT_PUBLIC_SANITY_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_SANITY_PROJECT_ID }}
+          SANITY_API_READ_TOKEN: ${{ secrets.SANITY_API_READ_TOKEN }}
+      - name: Published documents pass Studio validation
+        run: npm run check:studio-validation
         env:
           NEXT_PUBLIC_SANITY_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_SANITY_PROJECT_ID }}
           SANITY_API_READ_TOKEN: ${{ secrets.SANITY_API_READ_TOKEN }}
