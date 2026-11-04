@@ -15,6 +15,8 @@
  * - about-page:  who appears on the about page is decided by Show on About page / Is Alumni, not by
  *                the document id (a Studio-created person has a random id).
  * - slugs:       published work and vision slugs are servable (no "untitled-", lowercase only).
+ * - anchors:     text a page's code splits the CMS body on (src/lib/contentAnchors.json) is still in
+ *                that published piece; editing it away silently moves a section.
  *
  * Output names document ids and problems only: CI logs on this repo are public.
  */
@@ -138,6 +140,20 @@ for (const { _id, slug } of slugs) {
   if (!slug) continue
   if (slug.startsWith('untitled-')) problems.push(`slugs       ${_id}: slug starts with "untitled-" (hidden from listings)`)
   else if (!/^[a-z0-9][a-z0-9-]{0,199}$/.test(slug)) problems.push(`slugs       ${_id}: slug is not lowercase letters, digits and hyphens`)
+}
+
+// anchors (reported, never repaired: the fix is to edit the text back, or the anchor and the page together)
+const anchors = JSON.parse(readFileSync(new URL('../src/lib/contentAnchors.json', import.meta.url), 'utf8'))
+const anchorBodies = await client.fetch(
+  `*[_type == "feature" && slug.current in $slugs && !(_id in path("drafts.**")) && !(_id in path("versions.**"))]{
+    _id, "slug": slug.current, "text": pt::text(content)
+  }`,
+  { slugs: anchors.map((anchor) => anchor.slug) },
+)
+for (const anchor of anchors) {
+  const doc = anchorBodies.find((body) => body.slug === anchor.slug)
+  if (!doc) problems.push(`anchors     ${anchor.slug}: no published piece with this slug`)
+  else if (!doc.text?.includes(anchor.text)) problems.push(`anchors     ${doc._id}: the text the page splits on is gone (${anchor.why})`)
 }
 
 console.log(problems.length ? problems.join('\n') : 'CMS integrity: no problems.')

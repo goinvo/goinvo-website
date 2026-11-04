@@ -1,14 +1,13 @@
 import type { SectionBackground } from './sectionBackgrounds'
 
+// Code-side defaults only: a Studio value always wins. Fields editors can set (page meta, author and contributor
+// layouts) live on the document, never here; tests/feature-fallbacks.test.ts holds that line.
 export interface FeatureSectionBackgroundFallback {
   authorBackground: SectionBackground
-  authorLayout?: 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list'
   newsletterBackground: SectionBackground
   newsletterCardWidth?: 'standard' | 'narrow'
   peopleSectionPosition?: 'beforeNewsletter' | 'afterNewsletter'
   contributorsBackground?: SectionBackground
-  contributorsLayout?: 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list'
-  showPageMeta?: boolean
   portableTextVariant?: 'case-study' | 'gray-body'
   referencesBackground?: SectionBackground
   forceNewsletterBand?: boolean
@@ -29,8 +28,6 @@ export const featureSectionBackgroundFallbacks: Record<string, FeatureSectionBac
   },
   'national-cancer-navigation': {
     authorBackground: 'white',
-    authorLayout: 'legacy-text-list',
-    contributorsLayout: 'legacy-text-list',
     newsletterBackground: 'gray',
   },
   'history-of-health-design': {
@@ -80,7 +77,6 @@ export const featureSectionBackgroundFallbacks: Record<string, FeatureSectionBac
   'healthcare-ai': {
     authorBackground: 'white',
     newsletterBackground: 'gray',
-    showPageMeta: false,
   },
   'healthcare-dollars-redux': {
     authorBackground: 'white',
@@ -93,7 +89,6 @@ export const featureSectionBackgroundFallbacks: Record<string, FeatureSectionBac
   'loneliness-in-our-human-code': {
     authorBackground: 'white',
     contributorsBackground: 'white',
-    contributorsLayout: 'stacked-subheading',
     newsletterBackground: 'gray',
   },
   'virtual-care': {
@@ -103,7 +98,6 @@ export const featureSectionBackgroundFallbacks: Record<string, FeatureSectionBac
   'open-source-healthcare': {
     authorBackground: 'gray',
     newsletterBackground: 'gray',
-    showPageMeta: false,
     portableTextVariant: 'gray-body',
   },
   'open-pro': {

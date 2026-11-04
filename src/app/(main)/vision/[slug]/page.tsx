@@ -1792,10 +1792,10 @@ export async function renderVisionFeaturePage(
   const usesLegacyTransforms = usesLegacyFeatureTransforms(slug)
   const backgroundFallbacks = usesCodeAssistedCms ? featureSectionBackgroundFallbacks[slug] : undefined
   const titleClassName = useLegacyFacesLayout ? 'header-xl mt-6 mb-6' : 'header-xl mt-8 mb-6'
-  const showPageMeta = backgroundFallbacks?.showPageMeta ?? (feature.showPageMeta !== false)
+  const showPageMeta = feature.showPageMeta !== false
   const transformedContributors = transformFeatureContributorsForSlug(slug, feature.contributors)
-  const authorVariant = (backgroundFallbacks?.authorLayout || feature.authorLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
-  const contributorsVariant = (backgroundFallbacks?.contributorsLayout || feature.contributorsLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
+  const authorVariant = feature.authorLayout as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
+  const contributorsVariant = feature.contributorsLayout as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
   const authorBackground = resolveSectionBackground(feature.authorBackground, backgroundFallbacks?.authorBackground || 'white')
   const contributorsBackground = resolveSectionBackground(
     feature.contributorsBackground,
