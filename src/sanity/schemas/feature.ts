@@ -362,6 +362,7 @@ export default defineType({
         list: [
           { title: 'Equal (all same size)', value: 'equal' },
           { title: 'Stacked rows (legacy author layout)', value: 'stacked' },
+          { title: 'Stacked rows, small heading', value: 'stacked-subheading' },
           { title: 'Primary + sidebar', value: 'primary-sidebar' },
           { title: 'Plain list', value: 'plain-list' },
           { title: 'Legacy text list', value: 'legacy-text-list' },
@@ -413,6 +414,7 @@ export default defineType({
         list: [
           { title: 'Cards (default)', value: 'equal' },
           { title: 'Stacked rows (legacy author layout)', value: 'stacked' },
+          { title: 'Stacked rows, small heading', value: 'stacked-subheading' },
           { title: 'Plain list', value: 'plain-list' },
           { title: 'Legacy text list', value: 'legacy-text-list' },
         ],
