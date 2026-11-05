@@ -4,6 +4,7 @@ import {
   DEFAULT_EXPIRY_DAYS,
   bareDocId,
   expiresAtFrom,
+  isReleaseVersionId,
   isShareLinkActive,
   isShareableDocType,
   normalizeExpiryDays,
@@ -31,6 +32,12 @@ describe('previewShare pure helpers', () => {
   it('strips the drafts. prefix to a shared key', () => {
     expect(bareDocId('drafts.abc-123')).toBe('abc-123')
     expect(bareDocId('abc-123')).toBe('abc-123')
+  })
+
+  it('keys a release version to its document, and recognises it as one', () => {
+    expect(bareDocId('versions.rSpring.abc-123')).toBe('abc-123')
+    expect(isReleaseVersionId('versions.rSpring.abc-123')).toBe(true)
+    expect(isReleaseVersionId('drafts.abc-123')).toBe(false)
   })
 
   it('clamps expiry to an offered option, defaulting otherwise', () => {

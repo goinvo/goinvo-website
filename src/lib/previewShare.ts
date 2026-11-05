@@ -47,9 +47,16 @@ export function normalizeExpiryDays(days: unknown): number {
   return Number.isFinite(n) && ALLOWED_EXPIRY_DAYS.has(n) ? n : DEFAULT_EXPIRY_DAYS
 }
 
-/** Strip a leading `drafts.` so a draft id and its published id share one key. */
+/** Strip a leading `drafts.` or `versions.<release>.` so every edition of a document shares one key. */
 export function bareDocId(id: string): string {
-  return id.startsWith('drafts.') ? id.slice('drafts.'.length) : id
+  if (id.startsWith('drafts.')) return id.slice('drafts.'.length)
+  const version = /^versions\.[^.]+\.(.+)$/.exec(id)
+  return version ? version[1] : id
+}
+
+/** A share link opens the current draft, so a release version cannot be shared as itself. */
+export function isReleaseVersionId(id: string): boolean {
+  return id.startsWith('versions.')
 }
 
 /** Resolve the public page path for a shareable document, or null when unshareable / slugless. */

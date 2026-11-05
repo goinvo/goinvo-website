@@ -14,6 +14,9 @@ import { resolveSectionBackground } from '@/lib/sectionBackgrounds'
 import { stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import { ModelViewerSection } from './ModelViewerSection'
 import type { Feature } from '@/types'
+import contentAnchors from '@/lib/contentAnchors.json'
+
+const MODEL_SECTION_ANCHOR = contentAnchors.find((anchor) => anchor.slug === 'visual-storytelling-with-genai')!.text
 
 const SLUG = 'visual-storytelling-with-genai'
 
@@ -46,12 +49,12 @@ export default async function VisualStorytellingPage() {
     })
   }
 
-  // Split content: find the 3D model overview image (right before the model viewer)
+  // Split content after the paragraph holding the anchor text (checked daily by scripts/check-cms-integrity.mjs)
   // Skip this image since the ModelViewerSection renders its own version
   const splitIdx = content.findIndex((b: any, i: number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (b._type !== 'block') return false
     const text = (b.children || []).map((c: any) => c.text || '').join('') // eslint-disable-line @typescript-eslint/no-explicit-any
-    return text.includes('developing a digital library of 3D environments')
+    return text.includes(MODEL_SECTION_ANCHOR)
   })
   // Split after the "developing a digital library" paragraph
   const actualSplit = splitIdx >= 0 ? splitIdx + 1 : -1

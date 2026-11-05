@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 import redirectsJson from './redirects.json'
+import { toRedirectRules } from './src/lib/redirectRules'
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -40,11 +41,7 @@ const nextConfig: NextConfig = {
     ]
   },
   async redirects() {
-    return Object.entries(redirectsJson).map(([source, destination]) => ({
-      source: source.startsWith('/') ? source : `/${source}`,
-      destination: destination as string,
-      permanent: true,
-    }))
+    return toRedirectRules(redirectsJson)
   },
 }
 

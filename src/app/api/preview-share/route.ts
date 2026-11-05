@@ -6,6 +6,7 @@ import { generateShareToken, hashShareToken } from '@/lib/previewShare.server'
 import {
   SHARE_LINK_TYPE,
   bareDocId,
+  isReleaseVersionId,
   expiresAtFrom,
   isShareableDocType,
   normalizeExpiryDays,
@@ -62,6 +63,12 @@ export async function POST(req: Request) {
   const rawId = typeof body.docId === 'string' ? body.docId.trim() : ''
   if (!rawId) return NextResponse.json({ error: 'docId is required' }, { status: 400 })
 
+  if (isReleaseVersionId(rawId)) {
+    return NextResponse.json(
+      { error: 'Share preview shows the current draft, not a release. Open the draft to share it.' },
+      { status: 400 },
+    )
+  }
   const bare = bareDocId(rawId)
   const doc = await resolveDoc(bare)
   if (!doc) return NextResponse.json({ error: 'Document not found' }, { status: 404 })

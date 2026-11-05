@@ -207,34 +207,33 @@ async function checkRedirect(source, expectedDest) {
   if (expectedDest.startsWith('http') && !expectedDest.startsWith(BASE)) {
     return { source, destination: expectedDest, status: 'skip', issues: [] }
   }
+  // A pattern rule (":path*", "(.*)") has no single URL to request.
+  if (/[:*(]/.test(source)) return { source, destination: expectedDest, status: 'skip', issues: [] }
 
-  const url = `${BASE}/${source}`
+  // Follow the whole chain: a rule is only right if a visitor ENDS on its destination, and only cheap if they get
+  // there in one rule hop (plus the trailing-slash hop Next adds before custom redirects run).
+  const pathOf = (url) => (url.startsWith('http') ? new URL(url).pathname : url.split(/[?#]/)[0]).replace(/\/+$/, '') || '/'
+  const issues = []
+  let url = `${BASE}/${source.replace(/^\/+/, '')}`
+  let hops = 0
   try {
-    const res = await fetchWithTimeout(url, {}, 5000)
-    const status = res.status
-    const location = res.headers.get('location')
-
-    const issues = []
-
-    if (status === 301 || status === 308) {
-      // Redirect exists - check destination
-      if (location) {
-        const locPath = location.startsWith('http') ? new URL(location).pathname : location
-        const expectedPath = expectedDest.startsWith('http') ? new URL(expectedDest).pathname : expectedDest
-        if (locPath !== expectedPath && locPath !== expectedPath.replace(/\/$/, '')) {
-          issues.push({ severity: 'warn', msg: `Redirects to ${locPath}, expected ${expectedPath}` })
-        }
-      }
-    } else if (status === 200) {
-      // Page exists at this URL (no redirect needed, or redirect not firing)
-      issues.push({ severity: 'info', msg: `Returns 200 instead of redirecting to ${expectedDest}` })
-    } else if (status === 404) {
-      issues.push({ severity: 'error', msg: `404 — redirect not working` })
-    } else {
-      issues.push({ severity: 'warn', msg: `HTTP ${status}` })
+    let res = await fetchWithTimeout(url, {}, 5000)
+    while ([301, 302, 307, 308].includes(res.status) && hops < 8) {
+      url = new URL(res.headers.get('location'), url).toString()
+      hops += 1
+      res = await fetchWithTimeout(url, {}, 5000)
     }
-
-    return { source, destination: expectedDest, status, location, issues }
+    const status = res.status
+    if (hops === 0 && status === 200) {
+      issues.push({ severity: 'info', msg: `Returns 200 instead of redirecting to ${expectedDest}` })
+    } else if (status !== 200) {
+      issues.push({ severity: 'error', msg: `ends on HTTP ${status} at ${pathOf(url)} after ${hops} hop(s)` })
+    } else if (pathOf(url) !== pathOf(expectedDest)) {
+      issues.push({ severity: 'error', msg: `ends on ${pathOf(url)}, expected ${pathOf(expectedDest)}` })
+    } else if (hops > (source.endsWith('/') ? 2 : 1)) {
+      issues.push({ severity: 'warn', msg: `takes ${hops} hops` })
+    }
+    return { source, destination: expectedDest, status, location: url, issues }
   } catch (err) {
     return { source, destination: expectedDest, status: 0, issues: [{ severity: 'error', msg: err.message }] }
   }
@@ -333,12 +332,12 @@ async function main() {
   const redirectOk = redirectResults.filter(r => r.issues.length === 0 && r.status !== 'skip')
 
   console.log(`\n   ✅ ${redirectOk.length} redirects OK`)
-  console.log(`   ⏭️  ${redirectSkipped.length} skipped (external targets)`)
+  console.log(`   ⏭️  ${redirectSkipped.length} skipped (external targets and pattern rules)`)
   if (redirectErrors.length > 0) {
     console.log(`   ❌ ${redirectErrors.length} redirect errors:`)
     for (const r of redirectErrors) {
       for (const issue of r.issues.filter(i => i.severity === 'error')) {
-        console.log(`      /${r.source} → ${r.destination} — ${issue.msg}`)
+        console.log(`      /${r.source.replace(/^\/+/, '')} → ${r.destination} — ${issue.msg}`)
       }
     }
   }
@@ -346,7 +345,7 @@ async function main() {
     console.log(`   ⚠️  ${redirectWarns.length} redirect warnings:`)
     for (const r of redirectWarns) {
       for (const issue of r.issues) {
-        console.log(`      /${r.source} → ${r.destination} — ${issue.msg}`)
+        console.log(`      /${r.source.replace(/^\/+/, '')} → ${r.destination} — ${issue.msg}`)
       }
     }
   }
