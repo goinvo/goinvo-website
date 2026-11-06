@@ -239,7 +239,7 @@ try {
       if (phase === 'idle' && where === '/work/prior-auth' && morphing === 'false') break
       await pause(40)
     }
-    check(phases.join('>').replace(/^idle>/, '') === 'collapsing>navigating>open>idle' && new URL(page.url()).pathname === '/work/prior-auth', `Clicking the preview runs the card transition to its case study (${phases.join('>')} at ${new URL(page.url()).pathname})`)
+    check(/^collapsing>(navigating>)?open>idle$/.test(phases.join('>').replace(/^idle>/, '')) && new URL(page.url()).pathname === '/work/prior-auth', `Clicking the preview runs the card transition to its case study (${phases.join('>')} at ${new URL(page.url()).pathname})`)
     await pause(800)
     check(await page.evaluate(() => { const band = document.querySelector('[data-case-header]')?.getBoundingClientRect(), img = document.querySelector('[data-case-header-design]'); return !!band && band.width >= innerWidth - 20 && img?.complete && img.naturalWidth > 0 }), 'The case study opens with the prototype as its full-width header')
     await page.goBack()

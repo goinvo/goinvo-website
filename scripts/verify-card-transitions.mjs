@@ -144,7 +144,9 @@ try {
     await openConcept(page)
     await page.evaluate(() => history.pushState(history.state, '', location.href + '#step'))
     await clickPreview(page)
-    await waitPhase(page, 'navigating', 5000)
+    // A production build with the route prefetched can pass through 'navigating'
+    // faster than a poll sees it; Back during 'open' must also land on the concept.
+    await page.waitForFunction(() => ['navigating', 'open'].includes(document.querySelector('[data-transition-phase]')?.dataset.transitionPhase), { timeout: 5000, polling: 'raf' })
     await page.goBack()
     await pause(4000) // long enough for the abandoned route request to come back
     await settled(page, name, concept)
@@ -168,7 +170,7 @@ try {
     const { context, page } = await fresh({ name })
     await openConcept(page)
     await clickPreview(page)
-    await waitPhase(page, 'navigating', 5000)
+    await page.waitForFunction(() => ['navigating', 'open'].includes(document.querySelector('[data-transition-phase]')?.dataset.transitionPhase), { timeout: 5000, polling: 'raf' })
     await page.evaluate(() => document.querySelector('header a[href="/about"]').click())
     await pause(4000)
     await settled(page, `${name} (the newer navigation wins)`, '/about')
