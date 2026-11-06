@@ -1,0 +1,2485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinical Evidence Engine | GoInvo</title>
+<meta name="description" content="Explore eight simulated recommendation scenarios and the evidence, confidence, and reasoning behind each interface state.">
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:     #132845;
+  --navy-mid: #1b2d48;
+  --blue:     #1B5CA8;
+  --blue-hov: #2470C8;
+  --blue-lt:  #E6F0FA;
+  --teal:     #1A9E8A;
+  --teal-lt:  #7DD4C8;
+  --teal-bg:  #E6F5F2;
+  --orange:   #D97706;
+  --orange-bg:#FEF3DC;
+  --red:      #C62828;
+  --red-bg:   #FFEBEE;
+  --gold:     #AE9143;
+  --n900:     #0F1D30;
+  --n700:     #2D3748;
+  --n600:     #4A5568;
+  --n400:     #8898A8;
+  --n300:     #CBD5E1;
+  --n100:     #EFF3F7;
+  --n50:      #F7FAFC;
+  --white:    #FFFFFF;
+  --bar-strong:   #7dc0e8;
+  --bar-low:      #f5b894;
+  --card-bg:      #f6fcff;
+  --tag-bg:       #eef9ff;
+  --tag-text:     #3a5562;
+  --q-bg:         #ffeae2;
+  --q-border:     #eccec3;
+  --serif: 'Source Serif 4', Georgia, serif;
+  --sans:  'Inter', -apple-system, sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--sans);background:#dde4ec;color:var(--n900);display:flex;flex-direction:column}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--navy);height:48px;
+  display:flex;align-items:center;gap:10px;padding:0 20px;
+  flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.07);
+}
+.gc-logo{display:flex;align-items:center;gap:8px;text-decoration:none}
+.gc-logo svg{width:18px;height:19px;flex-shrink:0}
+.gc-name{font-size:14px;font-weight:600;color:#fff;letter-spacing:0.15px}
+.topbar-sep{width:1px;height:18px;background:rgba(255,255,255,0.18)}
+.topbar-sub{font-size:14px;color:rgba(255,255,255,0.68)}
+.topbar-pill{
+  margin-left:auto;
+  background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);
+  border-radius:20px;padding:2px 10px;font-size:12px;font-weight:400;
+  color:rgba(255,255,255,0.68);letter-spacing:0.4px;
+}
+.mobile-btn{
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.16);
+  border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;
+  color:rgba(255,255,255,0.68);cursor:pointer;display:flex;align-items:center;gap:5px;
+  transition:background .14s;letter-spacing:0.2px;white-space:nowrap;
+}
+.mobile-btn:hover{background:rgba(255,255,255,0.13)}
+.mobile-btn.active{background:rgba(26,158,138,0.35);border-color:rgba(26,158,138,0.55);color:#7dd4c8}
+.mobile-btn svg{width:12px;height:12px;opacity:0.8}
+.simulation-notice{flex-shrink:0;padding:8px 14px;background:var(--blue-lt);color:var(--n700);font-size:12px;line-height:1.5}
+
+
+/* ── LAYOUT ── */
+.layout{flex:1;display:grid;grid-template-columns:252px 1fr 318px;overflow:hidden}
+
+/* ── LEFT ── */
+.left{background:var(--navy-mid);border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;overflow-y:auto}
+.left-hdr{padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,0.07)}
+.left-label{font-size:10px;font-weight:600;color:rgba(255,255,255,0.70);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.left-hint{font-size:12px;color:rgba(255,255,255,0.70);line-height:1.5}
+.sc-list{padding:8px;display:flex;flex-direction:column;gap:2px}
+.sc-item{border-radius:8px;padding:10px 11px;cursor:pointer;border:1px solid transparent;transition:all .14s}
+.sc-item:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08)}
+.sc-item.active{background:rgba(27,92,168,0.28);border-color:rgba(110,165,230,0.28)}
+.sc-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;margin-bottom:5px;letter-spacing:0.3px}
+.b-hi   {background:rgba(125,192,232,.2);color:#7dc0e8}
+.b-lo   {background:rgba(245,184,148,.2);color:#f5b894}
+.b-con  {background:rgba(255,215,90,.2);color:#ffd45a}
+.b-boost{background:rgba(100,220,180,.2);color:#7de0c0}
+.b-src  {background:rgba(200,180,255,.2);color:#c8b4ff}
+.b-clean{background:rgba(180,180,180,.15);color:#999}
+.b-nom  {background:rgba(198,40,40,.14);color:#b71c1c}
+.sc-name{font-size:14px;font-weight:400;color:rgba(255,255,255,0.82);line-height:1.35;margin-bottom:3px}
+.sc-item.active .sc-name{color:#fff}
+.sc-prev{font-size:12px;color:rgba(255,255,255,0.70);line-height:1.4;font-style:italic}
+.sc-item.active .sc-prev{color:rgba(255,255,255,0.5)}
+
+/* ── MIDDLE ── */
+.middle{background:#e8eef5;display:flex;flex-direction:column;overflow-y:auto}
+.chat-scroll{flex:1;padding:22px 22px 18px;display:flex;flex-direction:column;gap:12px;max-width:580px;width:100%;margin:0 auto}
+.chat-prompt{align-self:flex-end;max-width:88%;margin-bottom:18px}
+.prompt-bubble{background:var(--navy);color:#fff;border-radius:16px 16px 4px 16px;padding:10px 14px;font-size:14px;line-height:1.5}
+.rec-meta{text-align:left;font-size:10px;color:var(--n600);margin-top:4px;padding-left:4px;display:flex;align-items:center;gap:5px}
+.rec-meta-dot{width:5px;height:5px;border-radius:50%;background:var(--teal);display:inline-block}
+
+/* Boost banner */
+.boost-banner{background:var(--teal-bg);border:1px solid var(--teal-lt);border-radius:8px;padding:7px 12px;font-size:12px;color:#0d4f42;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+
+/* ── RECOMMENDATION CARD ── */
+.rec-card{background:var(--card-bg);border-radius:6px;overflow:hidden;border:1px solid rgba(100,160,200,0.18);box-shadow:0 2px 10px rgba(0,0,0,0.06)}
+.rec-bar{height:8px}
+.rb-strong{background:var(--bar-strong)}
+.rb-low   {background:var(--bar-low)}
+.rb-conf  {background:linear-gradient(90deg,var(--bar-strong) 50%,var(--bar-low) 50%)}
+.rb-boost {background:var(--bar-strong)}
+.rb-src   {background:#c8b4ff}
+.rb-nom   {background:var(--red)}
+.rb-bot   {transform:rotate(180deg)}
+
+.rec-body{padding:12px;text-align:left}
+
+/* Opinionated call header */
+.oc-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.oc-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:0.2px}
+.oc-hi   {background:rgba(26,158,138,0.12);color:#0a5c51}
+.oc-med  {background:rgba(217,119,6,0.12);color:#734300}
+.oc-lo   {background:rgba(198,40,40,0.12);color:#9a1a1a}
+.oc-nom  {background:rgba(198,40,40,0.10);color:#9a1a1a}
+.oc-conf {background:rgba(217,119,6,0.12);color:#734300}
+.oc-score{font-size:13px;font-weight:600;color:var(--n600);font-variant-numeric:tabular-nums;flex-shrink:0}
+.oc-score.oc-hi  {color:var(--n600);background:none}
+.oc-score.oc-med {color:var(--n600);background:none}
+.oc-score.oc-lo  {color:var(--n600);background:none}
+.oc-score.oc-conf{color:var(--n600);background:none}
+
+.rec-type{font-family:var(--serif);font-weight:600;font-size:18px;color:#000;line-height:1.2;margin-bottom:0}
+.rec-type-sep{color:var(--n600);font-weight:400;margin:0 2px}
+.rec-type-row{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;min-width:0}
+.src-type-pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap;flex-shrink:0;line-height:1}
+.stp-guideline    {background:rgba(27,92,168,0.10);color:#164d8e;border:1px solid rgba(27,92,168,0.25)}
+.stp-clinical-trial{background:rgba(200,180,255,0.25);color:#6b48c0;border:1px solid rgba(200,180,255,0.55)}
+.stp-whitepaper   {background:rgba(217,119,6,0.10);color:#734300;border:1px solid rgba(217,119,6,0.25)}
+.stp-article      {background:rgba(138,152,168,0.12);color:#2D3748;border:1px solid rgba(138,152,168,0.30)}
+.evidence-count{font-size:12px;color:var(--n500);margin:-6px 0 12px;font-style:italic}
+
+/* ── 4 TRUST PILLARS ── */
+.trust-pillars{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.pillar{background:#fff;border:1px solid var(--n300);border-radius:8px;padding:8px 10px;position:relative;overflow:hidden}
+.pillar::before{content:'';position:absolute;top:0;left:0;right:0;height:0;border-radius:8px 8px 0 0}
+.pillar-hi::before  {background:var(--teal)}
+.pillar-med::before {background:var(--orange)}
+.pillar-lo::before  {background:var(--red)}
+.pillar-neu::before {background:var(--blue)}
+.pillar-top{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px}
+.pillar-status{font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;flex-shrink:0}
+.ps-hi  {background:var(--teal-bg);color:#0a5c51}
+.ps-med {background:var(--orange-bg);color:#734300}
+.ps-lo  {background:var(--red-bg);color:#9a1a1a}
+.ps-neu {background:var(--blue-lt);color:#164d8e}
+.pillar-label{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:0.6px}
+.pillar-val{font-family:var(--serif);font-size:14px;font-weight:600;color:var(--n900);line-height:1.2}
+.pillar-sub{font-size:10px;color:var(--n600);margin-top:1px}
+
+/* ── ORIGINAL QUOTE ── */
+.orig-quote{background:rgba(125,192,232,0.15);border-left:3px solid var(--bar-strong);border-radius:0 6px 6px 0;padding:12px;margin-bottom:0}
+.orig-quote.low-quote{background:rgba(125,192,232,0.15);border-left-color:var(--bar-strong)}
+.orig-quote.src-quote{background:rgba(125,192,232,0.15);border-left-color:var(--bar-strong)}
+.orig-quote.conf-b-quote{background:rgba(125,192,232,0.15);border-left-color:var(--bar-strong)}
+.quote-ico{font-size:16px;color:var(--n300);margin-bottom:4px;display:block}
+.quote-text{font-family:var(--serif);font-size:14px;color:var(--n700);line-height:1.6;font-style:italic;margin-bottom:6px}
+.quote-src{display:block}
+.quote-org{font-size:11px;font-weight:600;color:var(--n800,#1a2a3a)}
+.quote-meta{font-size:10px;color:var(--n600);margin-top:2px}
+/* Inline status badge inside citation line */
+.quote-status-badge{display:inline-flex;margin-left:5px;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:600;letter-spacing:0.3px;vertical-align:middle}
+.qsb-new   {background:#fff3e0;color:#7d4900;border:1px solid rgba(217,119,6,0.30)}
+.qsb-latest{background:rgba(26,158,138,0.08);color:#0a5c51;border:1px solid rgba(26,158,138,0.25)}
+.qsb-peer  {background:rgba(27,92,168,0.08);color:#164d8e;border:1px solid rgba(27,92,168,0.22)}
+/* Evidence nested below citation with arrow */
+.ev-nested{display:flex;align-items:flex-start;gap:5px;margin-top:7px;padding-left:0}
+.ev-arrow{font-size:12px;color:var(--n400);flex-shrink:0;line-height:1.5;user-select:none}
+
+/* Derived recommendation */
+.rec-derived-label{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:4px;margin-top:20px}
+.rec-text{font-family:var(--serif);font-size:16px;color:#000;line-height:1.65;margin-bottom:10px}
+.rec-text strong{font-weight:600}
+
+/* Conflict reference pill row */
+.conf-ref-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:-4px;margin-bottom:10px}
+.conf-ref-pill{background:var(--tag-bg);border-radius:20px;padding:2px 10px;font-size:10px;font-weight:400;color:var(--tag-text);text-transform:uppercase;letter-spacing:0.3px;display:inline-flex;align-items:center;gap:4px}
+.conf-ref-pill svg{width:8px;height:8px;opacity:0.6}
+
+/* Source tags */
+.rec-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+.rec-tag{background:var(--tag-bg);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:400;color:var(--tag-text);text-transform:uppercase;letter-spacing:0.3px}
+a.rec-tag{text-decoration:none;cursor:pointer;transition:background .13s,border-color .13s}
+a.rec-tag:hover{background:#daeeff;border-color:rgba(27,92,168,0.25)}
+
+/* ── EXPANDABLE SECTIONS ── */
+.exp-section{border-top:1px solid rgba(100,160,200,0.18)}
+.exp-section+.exp-section{margin-top:22px}
+.reasoning-block>div+.exp-section{margin-top:22px}
+.reasoning-block .exp-hdr{padding-top:10px;padding-bottom:10px}
+.exp-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 2px 10px 0;cursor:pointer;user-select:none;
+}
+.exp-hdr:hover .exp-title{color:#164d8e}
+.exp-title{font-family:var(--serif);font-weight:700;font-size:18px;color:#000;transition:color .14s}
+.exp-meta{font-size:10px;color:var(--n600)}
+.exp-chevron{
+  width:16px;height:16px;border-radius:50%;background:var(--n100);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:transform .2s;
+}
+.exp-chevron svg{width:9px;height:9px;stroke:var(--n600)}
+.exp-section.open .exp-chevron{transform:rotate(180deg)}
+.exp-body{max-height:0;overflow:hidden;transition:max-height .25s ease}
+.exp-section.open .exp-body{max-height:800px;overflow:visible;transition:max-height .25s ease,overflow 0s .26s}
+.exp-content{padding-bottom:22px}
+.exp-text{font-family:var(--serif);font-size:14px;color:#111;line-height:1.65}
+.exp-text ul{padding-left:18px;margin-right:0}
+.exp-text li{margin-bottom:8px}
+.exp-text li strong{display:block;margin-bottom:2px}
+.new-ev-content{min-width:0;width:100%}
+.new-ev-desc{display:block;margin-top:5px;font-family:var(--serif);font-size:14px;color:#111;line-height:1.65}
+.exp-text strong{font-weight:600}
+
+/* References */
+.ref-item{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid rgba(100,160,200,0.15)}
+.ref-item:last-child{border-bottom:none;padding-bottom:0}
+.ref-num-col{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;min-width:30px;padding-top:2px}
+.ref-num{font-size:11px;font-weight:600;color:var(--n600)}
+.ref-body{flex:1;min-width:0}
+.ref-badges-row{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+.ref-title{font-family:var(--serif);font-size:14px;color:#265f6c;text-decoration:none;display:block;line-height:1.35}
+.ref-title:hover{text-decoration:underline}
+.ref-source{font-size:12px;color:var(--n900);font-weight:600;margin-top:3px;display:block}
+
+/* ── REF STATUS BADGES ── */
+.ref-status{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:0.2px;white-space:nowrap}
+.rs-new   {background:#fff3e0;color:#7d4900;border:1px solid rgba(217,119,6,0.30)}
+.rs-latest{background:rgba(26,158,138,0.08);color:#0a5c51;border:1px solid rgba(26,158,138,0.25)}
+.rs-peer    {background:rgba(27,92,168,0.08);color:#164d8e;border:1px solid rgba(27,92,168,0.22)}
+.rs-indirect{background:rgba(198,40,40,0.07);color:#7a1a1a;border:1px solid rgba(198,40,40,0.22)}
+.ref-dates{font-size:11px;color:var(--n600);margin-top:3px}
+.ref-reviewed-marker{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:0.4px;
+  background:var(--n100);border-radius:4px;padding:0px 5px;margin-left:3px}
+.ref-section{font-size:11px;color:var(--n600);font-style:italic;margin-top:4px;
+  padding-left:8px;border-left:2px solid var(--n300);display:block}
+.ref-type-tag{background:var(--tag-bg);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:600;color:var(--tag-text);white-space:nowrap;letter-spacing:0.2px}
+.ref-grade{font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px}
+.rg-a{background:var(--teal-bg);color:#0a5c51}
+.rg-b{background:var(--blue-lt);color:#164d8e}
+.rg-c{background:var(--orange-bg);color:#734300}
+
+/* Thinking block */
+.thinking-block{}
+.thinking-hdr{display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none;margin-left:12px}
+.thinking-chev{display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .2s}
+.thinking-chev svg{width:9px;height:9px;stroke:var(--n400);stroke-width:1.6}
+.thinking-block.open .thinking-chev{transform:rotate(180deg)}
+.thinking-label{font-size:12px;font-weight:500;color:var(--n500);line-height:1;font-family:var(--sans,system-ui,sans-serif)}
+.thinking-body{max-height:0;overflow:hidden;transition:max-height .28s ease}
+.thinking-block.open .thinking-body{max-height:400px}
+.thinking-content{padding-top:8px;padding-left:12px}
+.thinking-line{font-family:var(--serif);font-size:12px;font-style:italic;color:var(--n500);line-height:1.65}
+
+/* Tiered quote groups */
+.quote-tier{margin-bottom:8px}
+.quote-tier:last-child{margin-bottom:0}
+.quote-tier-hdr{display:flex;align-items:baseline;gap:7px;margin-bottom:6px}
+.quote-tier-rank{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--n500);flex-shrink:0;margin-right:2px}
+.quote-tier-name{font-size:11px;font-weight:700;color:var(--n700)}
+.quote-tier-sub{font-size:10px;color:var(--n500);flex:1}
+.quote-tier-item{margin-bottom:5px}
+.quote-tier-item:last-child{margin-bottom:0}
+.quote-tier-divider{height:1px;background:rgba(100,160,200,0.15);margin:10px 0}
+
+/* Conflict layout */
+.conflict-item{padding:12px 0;border-bottom:1px solid rgba(100,160,200,0.15)}
+.conflict-item:first-child{padding-top:0}
+.conflict-item:last-child{padding-bottom:0}
+.conflict-item:last-child{border-bottom:none}
+.conflict-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.conflict-lbl{
+  width:17px;height:17px;border-radius:50%;background:var(--navy);color:#fff;
+  font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px
+}
+.conflict-org{font-family:var(--serif);font-size:14px;font-weight:600;color:#000}
+
+/* Context question */
+.q-block{margin-top:0;margin-bottom:18px}
+.q-bump-label{font-size:11px;font-weight:400;color:var(--n600);margin-bottom:4px;padding-left:12px}
+.q-title{font-family:var(--serif);font-weight:700;font-size:16px;color:var(--n900);margin-bottom:10px;line-height:1.3;padding-left:12px}
+.q-opts{background:#fff;border:1px solid var(--n300);border-radius:8px;overflow:hidden}
+.q-opt{font-size:14px;color:var(--n800);padding:11px 14px;cursor:pointer;transition:background .13s,color .13s;border-bottom:1px solid var(--n200);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.q-opt:last-child{border-bottom:none}
+.q-opt:hover{background:rgba(27,92,168,0.06);color:#164d8e}
+.q-opt-arrow{width:16px;height:16px;border-radius:50%;background:var(--n100);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .13s}
+.q-opt-arrow svg{width:9px;height:9px;stroke:var(--n600);transition:stroke .13s}
+.q-opt:hover .q-opt-arrow{background:rgba(27,92,168,0.12)}
+.q-opt:hover .q-opt-arrow svg{stroke:#164d8e}
+/* Inline (horizontal) option chips */
+.q-opts--inline{background:none;border:none;border-radius:0;overflow:visible;display:flex;flex-wrap:wrap;gap:8px;padding-left:12px;width:100%}
+.q-opts--inline .q-opt{border:1.5px solid var(--n300);border-radius:24px;padding:6px 14px;font-size:13px;font-weight:500;background:#fff;color:var(--n700);flex:none;justify-content:flex-start;gap:6px;border-bottom:1.5px solid var(--n300)}
+.q-opts--inline .q-opt:last-child{border-bottom:1.5px solid var(--n300)}
+.q-opts--inline .q-opt:hover{background:rgba(27,92,168,0.06);border-color:var(--blue);color:var(--blue)}
+.q-opts--inline .q-opt.q-opt--selected{background:var(--blue);border-color:var(--blue);color:#fff}
+.q-opts--inline .q-opt.q-opt--selected:hover{background:var(--blue-hov);border-color:var(--blue-hov)}
+.q-opt-check{font-size:11px;line-height:1;display:none}
+.q-opts--inline .q-opt--selected .q-opt-check{display:inline}
+/* Send button */
+.q-send-btn{margin-left:auto;background:#fff;color:var(--blue);border:1.5px solid rgba(27,92,168,0.35);border-radius:8px;padding:6px 12px 6px 10px;font-size:12px;font-weight:500;font-family:var(--sans);cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .14s,border-color .14s,color .14s}
+.q-send-btn:hover{background:var(--blue-lt);border-color:var(--blue);color:var(--blue)}
+.q-send-btn:disabled{background:var(--n100);border-color:var(--n300);color:var(--n400);cursor:default}
+.q-send-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* Typing indicator */
+.q-typing{display:flex;align-items:center;gap:5px;padding:10px 14px;background:#fff;border-radius:16px 16px 16px 4px;width:fit-content;box-shadow:0 1px 4px rgba(0,0,0,0.07);align-self:flex-start}
+.q-typing-dot{width:6px;height:6px;background:var(--n400);border-radius:50%;animation:qDot 1.1s ease-in-out infinite}
+.q-typing-dot:nth-child(2){animation-delay:.18s}
+.q-typing-dot:nth-child(3){animation-delay:.36s}
+@keyframes qDot{0%,60%,100%{transform:translateY(0);opacity:.6}30%{transform:translateY(-5px);opacity:1}}
+/* Sent-reply bubble animation */
+@keyframes qFadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.q-sent{animation:qFadeUp .22s ease}
+
+/* Feedback row */
+.feedback-row{display:flex;align-items:center;gap:6px;margin-top:0;padding-top:6px;padding-bottom:12px;padding-left:12px;border-top:1px solid rgba(100,160,200,0.15)}
+.feedback-label{font-size:11px;color:var(--n600);margin-right:2px}
+.feedback-btn{background:none;border:1px solid rgba(100,160,200,0.25);border-radius:6px;padding:4px 7px;cursor:pointer;display:flex;align-items:center;color:var(--n500);transition:background .13s,border-color .13s,color .13s}
+.feedback-btn:hover{background:rgba(100,160,200,0.1);border-color:rgba(100,160,200,0.4)}
+.feedback-btn.active-up{background:rgba(26,158,138,0.1);border-color:rgba(26,158,138,0.45);color:#1A9E8A}
+.feedback-btn.active-down{background:rgba(198,40,40,0.08);border-color:rgba(198,40,40,0.35);color:#C62828}
+.feedback-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* Suggestions */
+.suggestions{margin-top:0;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.sug-chip{background:rgba(27,92,168,0.08);border:1px solid rgba(27,92,168,0.18);border-radius:20px;padding:5px 16px 5px 12px;font-size:12px;color:#164d8e;cursor:pointer;transition:background .14s}
+.sug-chip:hover{background:rgba(27,92,168,0.14)}
+
+/* Chat input */
+.chat-input-row{padding:10px 22px 16px;max-width:580px;width:100%;margin:0 auto}
+.chat-input-bar{background:#fff;border:1px solid var(--n300);border-radius:24px;padding:10px 16px;display:flex;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.chat-input-ph{font-size:14px;color:rgba(0,0,0,0.28);font-style:italic}
+
+/* ── RIGHT PANEL ── */
+.right{background:#fff;border-left:1px solid var(--n300);display:flex;flex-direction:column;overflow-y:auto}
+.right-hdr{padding:14px 16px 10px;border-bottom:1px solid var(--n300);background:var(--n50)}
+.right-handle{width:30px;height:4px;background:#ccc;border-radius:3px;margin:0 auto 10px}
+.right-title{font-family:var(--serif);font-weight:600;font-size:16px;color:var(--n900)}
+.right-sub{font-size:12px;color:var(--n600);line-height:1.5;margin-top:3px}
+.right-body{padding:14px;display:flex;flex-direction:column;gap:14px}
+
+/* Score */
+.score-box{background:var(--n50);border:1px solid var(--n300);border-radius:10px;padding:12px 14px}
+.score-lbl{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:7px}
+.score-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.score-track{flex:1;height:6px;background:var(--n300);border-radius:3px;overflow:hidden}
+.score-fill{height:100%;border-radius:3px;transition:width .35s}
+.score-num{font-size:20px;font-weight:600;width:46px;text-align:right}
+.s-hi {color:#0a5c51}
+.s-med{color:#7d4900}
+.s-lo {color:var(--red)}
+
+/* Formula table */
+.formula-divider{height:1px;background:var(--n300);margin:8px 0}
+.formula-title{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:0.9px;margin-bottom:6px}
+.formula-table{width:100%;border-collapse:collapse;font-size:10px}
+.formula-table td{padding:2px 0;vertical-align:middle}
+.ft-name{color:var(--n600);width:45%}
+.ft-chip{color:var(--n700);font-weight:400;width:35%}
+.ft-val{color:var(--n900);font-weight:600;text-align:right;font-variant-numeric:tabular-nums;font-family:var(--sans)}
+.ft-total td{padding-top:5px;border-top:1px solid var(--n300);color:var(--n600);font-weight:600}
+.ft-total .ft-val{color:var(--n900)}
+.ft-final .ft-val{font-size:12px}
+.ft-final td{color:var(--n600);font-weight:600;padding-top:1px}
+.ft-note{font-size:10px;color:var(--n600);margin-top:5px;font-style:italic}
+
+/* Right trust pillars (detailed) */
+.r-pillars{display:flex;flex-direction:column;gap:10px}
+.r-pillar{display:flex;flex-direction:column;gap:3px}
+.r-pillar-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.r-pillar-name{font-family:var(--serif);font-weight:600;font-size:14px;color:var(--n900)}
+.r-chip{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid var(--n300);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:400;color:#555555;white-space:nowrap}
+.r-dot{width:6px;height:6px;border-radius:50%}
+.d-ex  {background:var(--teal)}
+.d-vg  {background:#5bc4a8}
+.d-g   {background:var(--orange)}
+.d-po  {background:var(--red)}
+.d-con {background:#e8a020}
+.r-pillar-detail{font-size:12px;color:var(--n600);line-height:1.45}
+
+/* Right model topics */
+.model-sec{border-top:1px solid var(--n300);padding-top:14px}
+.model-ttl{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:9px}
+.model-row{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:7px}
+.model-k{font-size:12px;color:var(--n600);flex-shrink:0}
+.model-v{font-size:12px;font-weight:400;color:var(--n900);text-align:right}
+.mv-hi  {color:#0a5c51}
+.mv-con {color:#7d4900}
+.mv-lo  {color:#a52020}
+.note-box{background:var(--n50);border:1px solid var(--n300);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--n700);line-height:1.55}
+.note-box::before{content:'NOTE';display:block;font-size:9px;font-weight:700;color:var(--n400);letter-spacing:1px;margin-bottom:5px}
+
+/* Visibility */
+.sv{display:none;flex-direction:column}
+.sv.active{display:flex}
+.mv{display:none}
+.mv.active{display:block}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.13);border-radius:3px}
+
+/* ── LEGEND BUTTON ── */
+.legend-btn{
+  position:fixed;bottom:20px;left:20px;z-index:200;
+  background:var(--navy);color:#fff;border:1px solid rgba(255,255,255,0.18);
+  border-radius:20px;padding:6px 13px;font-size:12px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:6px;
+  box-shadow:0 3px 12px rgba(0,0,0,0.22);transition:background .14s;
+  letter-spacing:0.2px;
+}
+.legend-btn:hover{background:#1b3660}
+.legend-btn svg{width:13px;height:13px;opacity:0.75}
+
+/* ── LEGEND POPOUT ── */
+.legend-overlay{
+  position:fixed;inset:0;z-index:300;
+  display:none;align-items:flex-end;justify-content:flex-start;
+  padding:0 0 64px 20px;
+}
+.legend-overlay.open{display:flex}
+.legend-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.18)}
+.legend-box{
+  position:relative;z-index:1;
+  background:#fff;border-radius:12px;border:1px solid var(--n300);
+  box-shadow:0 8px 32px rgba(0,0,0,0.16);
+  width:360px;max-height:70vh;overflow-y:auto;
+}
+.legend-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px 10px;border-bottom:1px solid var(--n300);position:sticky;top:0;background:#fff;z-index:2;
+}
+.legend-title{font-family:var(--serif);font-weight:600;font-size:16px;color:var(--n900)}
+.legend-close{
+  width:22px;height:22px;border-radius:50%;background:var(--n100);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;border:none;
+}
+.legend-close:hover{background:var(--n300)}
+.legend-close svg{width:10px;height:10px;stroke:var(--n600)}
+.legend-body{padding:14px 16px}
+.legend-section{margin-bottom:18px}
+.legend-section:last-child{margin-bottom:0}
+.legend-sec-title{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.legend-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:7px}
+.legend-swatch{flex-shrink:0;margin-top:2px}
+.legend-label{font-size:12px;font-weight:600;color:var(--n900);line-height:1.2}
+.legend-desc{font-size:12px;color:var(--n600);line-height:1.4;margin-top:1px}
+.sw-bar{width:28px;height:7px;border-radius:3px}
+.sw-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+.sw-dot{width:10px;height:10px;border-radius:50%}
+.sw-pillar{width:28px;height:7px;border-radius:3px}
+.sw-badge{display:inline-flex;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600}
+
+/* ── PHONE FRAME WRAPPER ──
+   .phone-frame is display:contents in desktop (invisible passthrough).
+   In mobile view it becomes the physical phone shell.
+   Rule: all UI changes apply equally to desktop and mobile. */
+.phone-frame{display:contents}
+
+/* ── TRUST PILLAR SUPPLEMENTARY LABEL ── */
+.pillars-sup-label{
+  font-size:10px;font-weight:600;color:var(--n400);
+  text-transform:uppercase;letter-spacing:1px;
+  margin-top:16px;margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.pillars-sup-label::before,.pillars-sup-label::after{
+  content:'';flex:1;height:1px;background:rgba(100,160,200,0.2);
+}
+
+/* ── CUE TOGGLE PANEL ── */
+.cue-panel{border-bottom:1px solid var(--n300);background:var(--n50);flex-shrink:0;position:sticky;top:0;z-index:10}
+.cue-panel-hdr{display:flex;align-items:center;gap:8px;padding:10px 16px;cursor:pointer;user-select:none}
+.cue-panel-hdr:hover{background:var(--n100)}
+.cue-panel-title{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:0.8px;flex:1}
+.cue-count{font-size:10px;font-weight:600;background:var(--blue-lt);color:#164d8e;border-radius:20px;padding:1px 8px}
+.cue-chevron-ico{width:16px;height:16px;display:flex;align-items:center;justify-content:center;background:var(--n100);border-radius:50%;flex-shrink:0;transition:transform .2s}
+.cue-chevron-ico svg{width:8px;height:8px;stroke:var(--n600)}
+.cue-panel.open .cue-chevron-ico{transform:rotate(180deg)}
+.cue-body{display:none;padding:8px 14px 12px;border-top:1px solid var(--n300)}
+.cue-panel.open .cue-body{display:block}
+.cue-group{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:1px;margin:10px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--n100)}
+.cue-group:first-child{margin-top:2px}
+.cue-item{display:flex;align-items:center;gap:8px;padding:2px 0}
+.cue-sw{position:relative;width:28px;height:15px;flex-shrink:0}
+.cue-sw input{opacity:0;width:0;height:0;position:absolute}
+.cue-track{position:absolute;inset:0;background:var(--n300);border-radius:15px;cursor:pointer;transition:background .15s}
+.cue-sw input:checked + .cue-track{background:var(--teal)}
+.cue-thumb{position:absolute;top:2px;left:2px;width:11px;height:11px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.18);pointer-events:none}
+.cue-sw input:checked + .cue-track .cue-thumb{transform:translateX(13px)}
+.cue-label{font-size:12px;color:var(--n700);flex:1;line-height:1.3}
+.cue-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0;opacity:0.75}
+.cue-swatch.round{border-radius:50%}
+.cue-actions{display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--n300)}
+.cue-action-btn{flex:1;padding:5px 0;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--n300);background:#fff;color:var(--n600);transition:background .13s}
+.cue-action-btn:hover{background:var(--n100)}
+.cue-action-btn.primary{background:#0a5c51;border-color:#0a5c51;color:#fff}
+.cue-action-btn.primary:hover{background:#084d43}
+
+/* ── MINIMAL SCENARIO OVERRIDES ── */
+.sv-minimal .rec-card{background:transparent;border:none;box-shadow:none}
+.sv-minimal .rec-body{padding:0 12px}
+.sv-minimal .oc-score{display:none}
+.sv-minimal .orig-quote{background:transparent;border-left:2px solid var(--n300);border-radius:0;padding:4px 0 4px 12px;text-decoration:none}
+.sv-minimal .orig-quote:hover{filter:none;opacity:0.8}
+.sv-minimal .quote-source-type{display:block;color:var(--n500)}
+.sv-minimal .quote-text{color:var(--n700)}
+.sv-minimal .quote-org-right{font-size:10px;color:var(--n500);margin-top:6px;text-align:left}
+.sv-minimal .quote-meta-row{padding-left:14px}
+.sv-minimal .slip-receipt{background:transparent;border:none;box-shadow:none;border-radius:0;border-top:1px solid var(--n200)}
+.sv-minimal .slip-receipt:has(+ .slip-conf){border-bottom:none}
+.sv-minimal .slip-receipt + .slip-conf{border-top:none;border-radius:0}
+.sv-minimal .slip-receipt + .slip-conf .slip-trigger-row{border-top:1px solid var(--n200)}
+.sv-minimal .slip-trigger-row{padding-left:12px;padding-right:0}
+.sv-minimal .slip-chevron{background:transparent}
+.sv-minimal .trust-pillars{display:flex;flex-direction:column;gap:0}
+.sv-minimal .pillar{background:transparent;border:none;border-radius:0;padding:6px 0;border-bottom:1px solid var(--n100)}
+.sv-minimal .pillar:last-child{border-bottom:none}
+.sv-minimal .pillar::before{display:none}
+.sv-minimal .pillar-status{display:none}
+.sv-minimal .pillar-top{justify-content:flex-start;gap:8px}
+.sv-minimal .reasoning-block{padding:0 12px}
+.sv-minimal .exp-hdr{padding:8px 2px 8px 0}
+.sv-minimal .exp-chevron{background:transparent}
+.sv-minimal .exp-section{border-top:1px solid var(--n200)}
+.sv-minimal .ref-item{padding:8px 0;border-bottom:1px solid var(--n100)}
+.sv-minimal .ref-item:last-child{border-bottom:none}
+.sv-minimal .ref-num-col{display:none}
+.sv-minimal .ref-body{padding-left:0}
+.sv-minimal .ref-badges-row{gap:4px}
+.sv-minimal .quote-status-badge{display:none}
+.sv-minimal .conf-ref-row{display:none}
+.sv-minimal .oc-header{margin-bottom:8px}
+.sv-minimal .rec-type{font-size:14px;font-weight:600;font-family:var(--sans);color:#000;text-transform:none;letter-spacing:0}
+.sv-minimal .slip-receipt:not(.slip-conf){margin-top:12px}
+.sv-minimal .slip-receipt + .slip-conf{box-shadow:none}
+.sv-minimal .slip-trigger-title{font-size:14px;font-weight:600;font-family:var(--sans)}
+.sv-minimal .slip-body{padding:8px 12px 12px}
+.sv-minimal .reasoning-block .section-label{font-family:var(--sans);font-size:14px;font-weight:600;letter-spacing:0;color:#000;margin-bottom:8px;text-transform:none}
+.sv-minimal .exp-title{font-size:14px;font-weight:600;font-family:var(--sans)}
+
+/* ── CUE HIDE RULES ── */
+body[data-hide~="conf-score"] .oc-score{visibility:hidden!important}
+body[data-hide~="boost-banner"] .boost-banner{display:none!important}
+body[data-hide~="orig-quote"] .orig-quote{display:none!important}
+body[data-hide~="quote-border"] .orig-quote{border-left-color:var(--n300)!important;background:var(--n50)!important}
+body[data-hide~="answer-cites"] .ab-cite-pills{display:none!important}
+body[data-hide~="conf-pills"] .conf-ref-row{display:none!important}
+body[data-hide~="new-ev"] .new-ev-icon{display:none!important}
+body[data-hide~="trust-pillars"] .trust-pillars,
+body[data-hide~="trust-pillars"] .pillars-sup-label,
+body[data-hide~="trust-pillars"] .slip-conf{display:none!important}
+body[data-hide~="pillar-status"] .pillar-status{visibility:hidden!important}
+body[data-hide~="score-bar"] .score-track{visibility:hidden!important}
+body[data-hide~="score-num"] .score-num{visibility:hidden!important}
+body[data-hide~="formula"] .formula-divider,
+body[data-hide~="formula"] .formula-title,
+body[data-hide~="formula"] .formula-table,
+body[data-hide~="formula"] .ft-note{display:none!important}
+body[data-hide~="model-chips"] .r-chip{visibility:hidden!important}
+body[data-hide~="at-a-glance"] .model-sec{display:none!important}
+body[data-hide~="note-box"] .note-box{display:none!important}
+
+/* ── RIGHT PANEL COLLAPSE ── */
+body.right-hidden .layout{grid-template-columns:252px 1fr 0}
+body.right-hidden .right{overflow:hidden;border-left-color:transparent;min-width:0}
+
+/* ── LEFT PANEL COLLAPSE ── */
+body.left-hidden .layout{grid-template-columns:0 1fr 318px}
+body.left-hidden .left{overflow:hidden;border-right-color:transparent;min-width:0}
+body.left-hidden.right-hidden .layout{grid-template-columns:0 1fr 0}
+
+/* ── MOBILE VIEW ── */
+body.mobile-view{background:#8ea4b4}
+body.mobile-view .layout{
+  /* Keep left panel; hide right; allow vertical scroll if phone exceeds viewport */
+  grid-template-columns:252px 1fr;
+  overflow-y:auto;overflow-x:hidden;
+}
+body.mobile-view .right{display:none}
+body.mobile-view .middle{
+  /* Slate-blue stage that centres the fixed-size phone frame */
+  display:flex;align-items:center;justify-content:center;
+  background:#8ea4b4;overflow:visible;
+  min-height:100%;padding:24px 0;
+}
+/* The phone frame — fixed standard size (390×844 = iPhone 14/15 logical px) */
+body.mobile-view .phone-frame{
+  display:flex;flex-direction:column;
+  width:390px;height:844px;flex:none;
+  border-radius:44px;
+  border:10px solid #1a1a2e;
+  outline:2px solid #3a3a5c;
+  box-shadow:0 30px 80px rgba(0,0,0,0.5),inset 0 0 0 1px rgba(255,255,255,0.08);
+  overflow:hidden;position:relative;
+  background:#e8eef5; /* same light-blue as desktop chat background */
+}
+/* Dynamic Island notch */
+body.mobile-view .phone-frame::before{
+  content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  width:116px;height:30px;background:#1a1a2e;border-radius:20px;z-index:100;pointer-events:none;
+}
+/* Scroll architecture inside the phone frame */
+body.mobile-view .sv.active{
+  flex:1;min-height:0;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+body.mobile-view .chat-scroll{
+  flex:1;min-height:0;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-top:44px; /* clear Dynamic Island */
+  max-width:none;padding-left:16px;padding-right:16px;
+}
+body.mobile-view .chat-input-row{
+  flex-shrink:0;
+  padding-left:14px;padding-right:14px;
+  background:var(--card-bg);
+  border-top:1px solid rgba(100,160,200,0.15);
+}
+body.mobile-view .chat-input-bar{border-radius:18px}
+body.mobile-view .legend-btn{display:none}
+
+/* ── RECOMMENDATION GRADE ROW ── */
+.rec-grade-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:-2px;margin-bottom:14px}
+.rec-grade-sep{font-size:12px;color:var(--n600);font-weight:600;padding:0 1px}
+.grade-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;white-space:nowrap}
+.gb-strong     {background:rgba(26,158,138,0.12);color:#0a5c51;border:1px solid rgba(26,158,138,0.28)}
+.gb-conditional{background:rgba(217,119,6,0.12);color:#734300;border:1px solid rgba(217,119,6,0.28)}
+.gb-varies     {background:rgba(200,160,0,0.12);color:#5c4900;border:1px solid rgba(200,160,0,0.32)}
+.gb-generic    {background:rgba(138,152,168,0.12);color:#2D3748;border:1px solid rgba(138,152,168,0.3)}
+.gb-high       {background:rgba(26,158,138,0.08);color:#0a5c51;border:1px solid rgba(26,158,138,0.2)}
+.gb-moderate   {background:rgba(217,119,6,0.08);color:#734300;border:1px solid rgba(217,119,6,0.2)}
+.gb-low-ev     {background:rgba(198,40,40,0.08);color:#9a1a1a;border:1px solid rgba(198,40,40,0.2)}
+.gb-synth      {background:rgba(217,119,6,0.08);color:#734300;border:1px solid rgba(217,119,6,0.2)}
+
+/* ── LIMITED EVIDENCE BANNER ── */
+.limited-ev-banner{
+  background:rgba(198,40,40,0.06);border:1.5px solid rgba(198,40,40,0.3);
+  border-radius:8px;padding:9px 12px;margin-bottom:12px;
+  display:flex;align-items:flex-start;gap:8px;
+}
+.le-flag{font-size:10px;font-weight:600;color:#7a1a1a;letter-spacing:0.5px;
+  text-transform:uppercase;background:rgba(198,40,40,0.14);border-radius:4px;
+  padding:2px 7px;flex-shrink:0;margin-top:1px;white-space:nowrap}
+.le-body{font-size:12px;color:#7a1a1a;line-height:1.5}
+
+/* ── INDIRECT SOURCES NOTE (compact card) ── */
+.indirect-note{padding:10px 14px 12px;display:flex;align-items:flex-start;gap:9px}
+.indirect-flag{font-size:10px;font-weight:600;letter-spacing:0.4px;color:#7a1a1a;background:rgba(198,40,40,0.10);border:1px solid rgba(198,40,40,0.22);border-radius:4px;padding:2px 7px;white-space:nowrap;flex-shrink:0;margin-top:1px}
+.indirect-desc{font-size:12px;color:var(--n600);line-height:1.5}
+
+/* ── NO MATCH EMPTY STATE ── */
+.nomatch-block{padding:24px 14px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.nomatch-icon{width:36px;height:36px;border-radius:50%;background:rgba(198,40,40,0.1);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+.nomatch-icon svg{width:18px;height:18px;stroke:#b71c1c;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.nomatch-title{font-size:14px;font-weight:600;color:var(--n800)}
+.nomatch-sub{font-size:12px;color:var(--n600);line-height:1.55;max-width:290px}
+
+/* ── SYNTHESIZED LABEL ── */
+.synth-label{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;
+  color:#734300;letter-spacing:0.3px;text-transform:uppercase;margin-left:2px}
+.synth-label svg{width:10px;height:10px;opacity:0.7;flex-shrink:0}
+
+/* ── NEW EVIDENCE MARKER ── */
+.new-ev-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;border-radius:50%;flex-shrink:0;
+  background:transparent;border:1.5px solid var(--n300);color:var(--n400);
+  font-family:system-ui,sans-serif;font-size:9px;font-style:normal;font-weight:400;line-height:1;
+  cursor:help;margin-top:2px;
+}
+/* Tooltip via JS (position:fixed so it escapes all overflow:hidden ancestors) */
+.ref-item.is-new .ref-title{color:#265f6c}
+.ref-item.is-new .new-ev-row{display:flex;align-items:center;gap:5px;margin-bottom:2px}
+.ref-title-new{color:var(--orange)!important}
+.ref-new-bullet{color:var(--orange);font-size:8px;flex-shrink:0;margin-top:3px;line-height:1}
+/* ref title row — title left, icon right */
+.ref-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+/* In exp-text lists — new evidence items: bullet + amber title */
+.exp-text li:has(.new-ev-content) a.ref-title{color:var(--orange)!important}
+.new-ev-title-row{display:flex;align-items:flex-start;gap:8px}
+.new-ev-title-row > div{flex:1;min-width:0}
+.new-ev-title-row .new-ev-icon{margin-left:auto;flex-shrink:0}
+
+/* ── REF REVIEWED DATE ── */
+.ref-reviewed{font-size:10px;color:var(--n600);font-style:italic;margin-top:1px}
+.ref-dates{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px}
+.ref-pub{font-size:10px;color:var(--n600)}
+.ref-reviewed-pill{font-size:10px;color:var(--n600);font-style:italic}
+
+/* ── SECTION LABELS (Our Recommendation, Reasoning) ── */
+.section-label{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px}
+.rec-intro-label{font-size:14px;font-weight:400;color:var(--n700);margin-bottom:8px;line-height:1.45;padding-left:12px;padding-right:12px}
+
+/* ── QUOTE SOURCE TYPE LABEL (inside quote, above text) ── */
+.quote-source-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--n400);margin-bottom:7px}
+
+/* ── QUOTE ORG (bottom-right inside quote) ── */
+.quote-org-right{font-size:10px;font-weight:600;color:var(--n700);text-align:left;margin-top:10px}
+
+/* ── QUOTE METADATA ROW (below quote box) ── */
+.quote-meta-row{margin-top:8px}
+.qmr-line1-row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.qmr-line1{font-size:11px;font-weight:600;color:var(--n700);line-height:1.3}
+.qmr-line2{font-size:11px;color:var(--n600);line-height:1.3;margin-top:2px}
+.qmr-info-btn{background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;flex-shrink:0}
+.qmr-info-btn:hover .new-ev-icon{border-color:var(--teal);color:var(--teal)}
+
+/* Grade overlay */
+.grade-overlay{display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.32);align-items:center;justify-content:center}
+.grade-overlay.open{display:flex}
+.grade-panel{background:#fff;border-radius:10px;padding:20px 22px 18px;max-width:380px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+.grade-panel-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.grade-panel-title{font-size:13px;font-weight:700;color:var(--navy)}
+.grade-close-btn{background:none;border:none;cursor:pointer;color:var(--n500);font-size:20px;line-height:1;padding:0 2px;transition:color .13s}
+.grade-close-btn:hover{color:var(--navy)}
+.grade-source-note{font-size:10px;color:var(--n500);margin-bottom:14px}
+.grade-section{margin-bottom:12px}
+.grade-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--n600);margin-bottom:7px}
+.grade-row{display:flex;gap:8px;margin-bottom:6px;align-items:flex-start}
+.grade-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;flex-shrink:0;margin-top:1px;white-space:nowrap}
+.gb-strong{background:rgba(26,158,138,0.13);color:#0a5c51}
+.gb-cond  {background:rgba(217,119,6,0.12);color:#734300}
+.gb-a{background:rgba(26,158,138,0.13);color:#0a5c51}
+.gb-b{background:rgba(27,92,168,0.12);color:#164d8e}
+.gb-c{background:rgba(217,119,6,0.12);color:#734300}
+.gb-d{background:rgba(100,100,100,0.1);color:var(--n600)}
+.grade-desc{font-size:11px;color:var(--n700);line-height:1.45}
+.grade-footer{font-size:10px;color:var(--n500);margin-top:10px;padding-top:8px;border-top:1px solid var(--n200)}
+
+/* ── ANSWER FLAT (no bubble) ── */
+.answer-bubble-wrap{width:100%;margin-bottom:18px;padding-left:12px;padding-right:12px}
+.sv[data-id="nomatch"] .answer-bubble-wrap{margin-bottom:4px}
+.ab-text{font-family:var(--serif);font-size:15px;line-height:1.65;color:#000;margin-bottom:6px}
+
+/* Citation pills in answer */
+.ab-cite-pills{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;margin-left:-12px}
+.ab-cite-pills .rec-tag{padding-left:12px}
+.ab-cite-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(27,92,168,0.08);border:1px solid rgba(27,92,168,0.18);
+  border-radius:20px;padding:5px 16px 5px 12px;
+  font-size:11px;color:#164d8e;text-decoration:none;
+  transition:background .13s;
+}
+.ab-cite-pill:hover{background:rgba(27,92,168,0.14)}
+.ab-cite-num{font-size:10px;color:var(--n600);font-weight:600}
+
+/* Legacy refs (unused) */
+.ab-refs-sep{height:1px;background:rgba(100,160,200,0.2);margin:10px 0 8px}
+.ab-refs-label{font-size:10px;font-weight:600;color:var(--n600);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px}
+.crs-version{font-size:10px;color:var(--n600);text-align:right;padding-top:6px}
+
+/* ── REASONING BLOCK (flat, below card) ── */
+.reasoning-block{margin-top:4px;padding:2px 12px 0 12px;margin-bottom:-12px}
+.reasoning-label{font-size:10px;font-weight:600;color:var(--n400);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.reasoning-block .section-label{font-family:var(--serif);font-size:18px;font-weight:700;color:#000;text-transform:none;letter-spacing:0;margin-bottom:10px}
+
+/* ── SUPPORTING EVIDENCE SLIP ── */
+.slip-receipt{
+  margin-top:0;background:#fff;
+  border:1.5px dashed rgba(100,160,200,0.42);
+  border-radius:6px;overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+}
+/* Snap the two slips into one receipt when stacked */
+.slip-receipt:has(+ .slip-conf){
+  border-bottom:none;
+  border-radius:6px 6px 0 0;
+  box-shadow:none;
+}
+.slip-receipt + .slip-conf{
+  margin-top:0;
+  border-top:none;
+  border-radius:0 0 6px 6px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+}
+.slip-receipt + .slip-conf .slip-trigger-row{
+  border-top:1px dashed rgba(100,160,200,0.42);
+}
+.slip-trigger-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;cursor:pointer;user-select:none;
+  transition:background .14s;
+}
+.slip-trigger-row:hover{background:rgba(100,160,200,0.07)}
+.slip-receipt.open .slip-trigger-row{border-bottom:1px dashed rgba(100,160,200,0.32)}
+.slip-trigger-title{font-family:var(--serif);font-weight:700;font-size:18px;color:#000;transition:color .14s;flex:1}
+.slip-trigger-meta{font-size:10px;color:var(--n600);white-space:nowrap;margin-right:8px}
+.slip-trigger-row:hover .slip-trigger-title{color:#164d8e}
+.slip-receipt.open .slip-trigger-title{color:#164d8e}
+.slip-chevron{width:16px;height:16px;border-radius:50%;background:var(--n100);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .2s}
+.slip-chevron svg{width:9px;height:9px;stroke:var(--n600)}
+.slip-receipt.open .slip-chevron{transform:rotate(180deg)}
+.slip-content{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(0.4,0,0.2,1)}
+.slip-receipt.open .slip-content{max-height:2000px}
+.slip-body{padding:12px 14px 16px}
+.slip-conf{margin-top:4px;border-top:1.5px dashed rgba(100,160,200,0.42);border-radius:6px}
+
+/* ── SOURCE DETAIL CARDS ── */
+.source-detail-card{margin-top:10px;border:1px solid rgba(100,160,200,0.2);border-radius:6px;overflow:hidden;background:#fff}
+.sdc-header{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--n50);cursor:pointer;user-select:none;transition:background .13s}
+.sdc-header:hover{background:var(--n100)}
+.sdc-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--n600);transition:color .13s}
+.sdc-header:hover .sdc-title{color:#164d8e}
+.sdc-chevron{width:9px;height:9px;stroke:var(--n400);flex-shrink:0;transition:transform .2s}
+.source-detail-card.open .sdc-chevron{transform:rotate(180deg)}
+.sdc-body{max-height:0;overflow:hidden;transition:max-height .35s cubic-bezier(0.4,0,0.2,1)}
+.source-detail-card.open .sdc-body{max-height:1200px}
+.source-detail-card.open .sdc-header{border-bottom:1px solid rgba(100,160,200,0.15)}
+.sdc-row{display:flex;gap:10px;padding:6px 12px;border-bottom:1px solid rgba(100,160,200,0.07);align-items:flex-start}
+.sdc-row:last-child{border-bottom:none}
+.sdc-key{font-size:10px;font-weight:700;color:var(--n500);min-width:96px;flex-shrink:0;padding-top:2px;text-transform:uppercase;letter-spacing:0.4px;line-height:1.3}
+.sdc-val{font-size:11px;color:var(--n700);line-height:1.5;flex:1}
+.sdc-flag{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:1px 6px;border-radius:3px;margin-right:4px}
+.sdc-warn{background:rgba(217,119,6,0.12);color:#734300}
+.sdc-ok  {background:rgba(26,158,138,0.12);color:#0a5c51}
+.sdc-neu {background:rgba(100,100,100,0.08);color:var(--n600)}
+
+/* ── CLICKABLE QUOTE ── */
+.orig-quote.quote-clickable{display:block;text-decoration:none;color:inherit;transition:filter .15s}
+.orig-quote.quote-clickable:hover{filter:brightness(0.96)}
+
+/* ── EVIDENCE INSIDE QUOTE ── */
+.quote-evidence{
+  margin-top:8px!important;margin-bottom:8px!important;
+  padding:4px 8px;border-radius:4px;
+  background:rgba(125,192,232,0.15);
+  font-size:11px;font-weight:600;font-style:normal!important;
+  color:var(--n700);letter-spacing:0.1px;display:inline-block;
+}
+</style>
+<style>
+/* The original workbench is desktop-only. Keep the scenario controls reachable
+   on a phone and let each panel use the available width. */
+@media(max-width:1023px){
+  .topbar{height:auto;min-height:48px;flex-wrap:wrap;padding:10px 12px;gap:8px}
+  .gc-name{font-size:13px}
+  .topbar-sub,.topbar-sep,.topbar-pill,#mobile-btn{display:none}
+  .mobile-btn{font-size:11px}
+  .layout,body.left-hidden .layout,body.right-hidden .layout,body.left-hidden.right-hidden .layout{display:flex;flex-direction:column;overflow:auto}
+  .left{flex-shrink:0;max-height:180px}
+  .middle{overflow:visible;flex-shrink:0}
+  .right{overflow:visible;flex-shrink:0}
+  body.left-hidden .left,body.right-hidden .right{display:none}
+  .chat-scroll{padding:18px 12px}
+  .legend-btn{display:none}
+}
+</style>
+<style>
+body{display:block!important;background:transparent!important;overflow:hidden!important;width:1640px!important;height:1220px!important}
+.clinical-frame{position:absolute;left:180px;top:180px;width:1280px;height:860px;display:flex;flex-direction:column;--spread:0}
+.clinical-frame .layout{overflow:visible!important;grid-template-columns:1fr 318px}
+.clinical-frame .left,.clinical-frame .cue-panel,.clinical-frame .topbar-sub,.clinical-frame .topbar-sep,.clinical-frame .topbar-pill,.clinical-frame .mobile-btn,.clinical-frame .legend-btn{display:none!important}
+.clinical-frame .middle,.clinical-frame .chat-scroll{overflow:visible!important}
+.clinical-frame .middle{background:rgb(232 238 245 / calc(1 - var(--spread)))}
+.clinical-frame .rec-card,.clinical-frame .answer-bubble-wrap,.clinical-frame .right{translate:calc(var(--spread)*var(--dx,0px)) calc(var(--spread)*var(--dy,0px));rotate:calc(var(--spread)*var(--angle,0deg));transition:translate .45s cubic-bezier(.22,1,.36,1),rotate .45s cubic-bezier(.22,1,.36,1);transform-origin:center}
+.clinical-frame .rec-card{--dx:-170px;--dy:70px;--angle:-5deg}
+.clinical-frame .answer-bubble-wrap{--dx:60px;--dy:0px;--angle:2deg}
+.clinical-frame .right{--dx:100px;--dy:30px;--angle:4deg}
+.clinical-frame :is(.topbar,.chat-prompt,.thinking-block,.slip-receipt,.exp-title,.exp-text,.sug-chip){filter:blur(calc(var(--spread)*9px));opacity:calc(1 - var(--spread)*.6);transition:filter .45s,opacity .45s}
+[data-immediate=true] *{transition:none!important}
+</style></head>
+<body data-hide="conf-score"><div id="prototype-root" class="clinical-frame" data-prototype-canvas data-prototype="clinical">
+
+<header class="topbar">
+  <a class="gc-logo">
+    <span class="gc-name">Clinical Evidence Engine</span>
+  </a>
+  <div class="topbar-sep"></div>
+  <span class="topbar-sub">Recommendation Scenario Picker</span>
+  <span class="topbar-pill">GoInvo · Design prototype</span>
+  <button class="mobile-btn" id="left-panel-btn" onclick="toggleLeftPanel()">
+    <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0.5" y="0.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+      <line x1="4" y1="1" x2="4" y2="11" stroke="currentColor" stroke-width="1.3"/>
+    </svg>
+    Scenario panel
+  </button>
+  <button class="mobile-btn" id="right-panel-btn" onclick="toggleRightPanel()">
+    <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0.5" y="0.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+      <line x1="8" y1="1" x2="8" y2="11" stroke="currentColor" stroke-width="1.3"/>
+    </svg>
+    Model panel
+  </button>
+  <button class="mobile-btn" id="mobile-btn" onclick="toggleMobile()">
+    <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1.5" y="0.5" width="9" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/>
+      <circle cx="6" cy="9.5" r="0.6" fill="currentColor"/>
+    </svg>
+    Mobile view
+  </button>
+</header>
+
+<div class="simulation-notice" role="note"><strong>Design prototype.</strong> Predefined scenarios with illustrative recommendations and confidence values.</div>
+
+<div class="layout">
+  <aside class="left">
+    <div class="left-hdr">
+      <div class="left-label">Scenarios</div>
+      <div class="left-hint">Tap a scenario to preview the recommendation UI and explore the underlying model.</div>
+    </div>
+    <div class="sc-list" id="sc-list"></div>
+  </aside>
+  <main class="middle" id="middle"></main>
+  <aside class="right" id="right">
+    <!-- ── VISUAL CUE TOGGLE PANEL ── -->
+    <div class="cue-panel open" id="cue-panel">
+      <div class="cue-panel-hdr" onclick="toggleCuePanel()">
+        <span class="cue-panel-title">Visual Cue Toggles</span>
+        <span class="cue-count" id="cue-count">15/15 on</span>
+        <div class="cue-chevron-ico"><svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 3L4.5 6L7.5 3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="cue-body">
+
+        <div class="cue-group">Card Indicators</div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" data-key="conf-score"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Confidence Score</span>
+          <span class="cue-swatch round" style="background:var(--n400)"></span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="boost-banner"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Boost Banner</span>
+          <span class="cue-swatch" style="background:#7de0c0"></span>
+        </div>
+        <div class="cue-group">Quote &amp; Sources</div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="orig-quote"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Quote Block</span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="quote-border"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Quote Border Color</span>
+          <span class="cue-swatch" style="background:linear-gradient(90deg,#7dc0e8,#c8b4ff)"></span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="answer-cites"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Answer Citations</span>
+          <span class="cue-swatch" style="background:rgba(27,92,168,0.15);border:1px solid rgba(27,92,168,0.3);border-radius:20px"></span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="new-ev"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">New Evidence Marker</span>
+          <span class="cue-swatch round" style="background:#7d4900;color:#fff;font-size:8px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px">!</span>
+        </div>
+
+        <div class="cue-group">Confidence Factors (Receipt)</div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="trust-pillars"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Factors Section</span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="pillar-status"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Pillar Status Badges</span>
+        </div>
+
+        <div class="cue-group">Right Panel</div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="score-bar"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Score Progress Bar</span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="score-num"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Score Number</span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="formula"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Score Formula Table</span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="model-chips"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Factor Quality Chips</span>
+          <span class="cue-swatch round" style="background:linear-gradient(135deg,var(--teal) 50%,var(--orange) 50%)"></span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="at-a-glance"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">At a Glance Rows</span>
+        </div>
+        <div class="cue-item">
+          <label class="cue-sw"><input type="checkbox" checked data-key="note-box"><span class="cue-track"><span class="cue-thumb"></span></span></label>
+          <span class="cue-label">Explanation Note</span>
+          <span class="cue-swatch" style="background:var(--n50);border:1px solid var(--n300)"></span>
+        </div>
+
+        <div class="cue-actions">
+          <button class="cue-action-btn" onclick="setCueAll(false)">Hide all</button>
+          <button class="cue-action-btn primary" onclick="setCueAll(true)">Show all</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Legend button -->
+<button class="legend-btn" id="legend-btn" onclick="openLegend()">
+  <svg viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="6.5" cy="6.5" r="5.5" stroke="white" stroke-width="1.4"/>
+    <path d="M6.5 5.5V9.5M6.5 4a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1Z" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+  </svg>
+  Legend
+</button>
+
+<!-- Legend popout overlay -->
+<div class="legend-overlay" id="legend-overlay">
+  <div class="legend-backdrop" onclick="closeLegend()"></div>
+  <div class="legend-box">
+    <div class="legend-hdr">
+      <div class="legend-title">Reference Legend</div>
+      <button class="legend-close" onclick="closeLegend()">
+        <svg viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2l-6 6" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="legend-body">
+      <div class="legend-section">
+        <div class="legend-sec-title">Card Bar Colors</div>
+        <div class="legend-row">
+          <div class="legend-swatch"><div class="sw-bar" style="background:#7dc0e8"></div></div>
+          <div><div class="legend-label">Blue — Strong Recommendation</div><div class="legend-desc">Guideline-backed with high confidence.</div></div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-swatch"><div class="sw-bar" style="background:#f5b894"></div></div>
+          <div><div class="legend-label">Peach — Low Confidence</div><div class="legend-desc">Insufficient patient context or hedged guidance.</div></div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-swatch"><div class="sw-bar" style="background:linear-gradient(90deg,#7dc0e8 50%,#f5b894 50%)"></div></div>
+          <div><div class="legend-label">Split — Conflicting Guidelines</div><div class="legend-desc">Two or more authoritative sources disagree.</div></div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-swatch"><div class="sw-bar" style="background:#c8b4ff"></div></div>
+          <div><div class="legend-label">Lavender — Clinical Trial Source</div><div class="legend-desc">No society guideline match; trial evidence only.</div></div>
+        </div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-sec-title">Trust Pillar Top Border</div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-pillar" style="background:#1A9E8A"></div></div><div><div class="legend-label">Teal — Exceptional / High</div><div class="legend-desc">Dimension strongly supports the recommendation.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-pillar" style="background:#1B5CA8"></div></div><div><div class="legend-label">Blue — Neutral / Informational</div><div class="legend-desc">Present and acceptable; not exceptional.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-pillar" style="background:#D97706"></div></div><div><div class="legend-label">Orange — Moderate / Flagged</div><div class="legend-desc">Caveats or concerns reduce confidence.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-pillar" style="background:#C62828"></div></div><div><div class="legend-label">Red — Low / Poor</div><div class="legend-desc">Dimension significantly weakens the recommendation.</div></div></div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-sec-title">Confidence Score Ranges</div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-dot" style="background:#1A9E8A"></div></div><div><div class="legend-label">0.80 – 1.00 · High Confidence</div><div class="legend-desc">Strong match + authoritative, current, consistent guidelines.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-dot" style="background:#D97706"></div></div><div><div class="legend-label">0.60 – 0.79 · Moderate Confidence</div><div class="legend-desc">Adequate sources but some context missing or conflict.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-dot" style="background:#C62828"></div></div><div><div class="legend-label">0.00 – 0.59 · Low Confidence</div><div class="legend-desc">Missing patient variables, weak evidence, or no match.</div></div></div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-sec-title">Model Factor Chips</div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-dot" style="background:#1A9E8A"></div></div><div><div class="legend-label">Exceptional</div><div class="legend-desc">Factor strongly met; no caveats.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-dot" style="background:#5bc4a8"></div></div><div><div class="legend-label">Very Good</div><div class="legend-desc">Largely met with minor gaps.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-dot" style="background:#D97706"></div></div><div><div class="legend-label">Good / Conditional</div><div class="legend-desc">Partially met; context or caveats present.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-dot" style="background:#C62828"></div></div><div><div class="legend-label">Poor</div><div class="legend-desc">Weak or absent; confidence penalty applied.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><div class="sw-dot" style="background:#e8a020"></div></div><div><div class="legend-label">Conflict</div><div class="legend-desc">Active disagreement detected between sources.</div></div></div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-sec-title">Evidence Grades</div>
+        <div class="legend-row"><div class="legend-swatch"><span class="sw-badge" style="background:#E6F5F2;color:#0e7a68">Grade A</span></div><div><div class="legend-label">Grade A — High Quality</div><div class="legend-desc">RCTs or high-quality systematic reviews with consistent results.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><span class="sw-badge" style="background:#E6F0FA;color:#1b5ca8">Grade B</span></div><div><div class="legend-label">Grade B — Moderate Quality</div><div class="legend-desc">Well-designed cohort or case-control studies.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><span class="sw-badge" style="background:#FEF3DC;color:#9a5a0a">Grade C</span></div><div><div class="legend-label">Grade C — Limited Evidence</div><div class="legend-desc">Expert opinion, case series, or studies with limitations.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><span class="sw-badge" style="background:#EFF3F7;color:#4A5568">Level I</span></div><div><div class="legend-label">Level I — Insufficient</div><div class="legend-desc">Cannot determine net benefit or harm.</div></div></div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-sec-title">Source Type Tags</div>
+        <div class="legend-row"><div><div class="legend-label">Guideline</div><div class="legend-desc">Clinical practice guidelines from professional medical societies.</div></div></div>
+        <div class="legend-row"><div><div class="legend-label">Clinical Trial</div><div class="legend-desc">Peer-reviewed randomized controlled trials in indexed journals.</div></div></div>
+        <div class="legend-row"><div><div class="legend-label">Article</div><div class="legend-desc">Peer-reviewed journal articles, reviews, or educational content.</div></div></div>
+        <div class="legend-row"><div><div class="legend-label">Whitepaper</div><div class="legend-desc">Institutional position papers or expert consensus documents.</div></div></div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-sec-title">Scenario Badges</div>
+        <div class="legend-row"><div class="legend-swatch"><span class="sw-badge" style="background:rgba(125,192,232,.2);color:#7dc0e8">HIGH CONFIDENCE</span></div><div><div class="legend-desc">Prompt specificity, authority, currency, and consistency all align.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><span class="sw-badge" style="background:rgba(245,184,148,.2);color:#f5b894">LOW CONFIDENCE</span></div><div><div class="legend-desc">Missing required patient variables. Context question surfaced.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><span class="sw-badge" style="background:rgba(255,215,90,.2);color:#ffd45a">CONFLICTING</span></div><div><div class="legend-desc">Two or more guidelines disagree. Both positions shown.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><span class="sw-badge" style="background:rgba(100,220,180,.2);color:#7de0c0">BOOSTED</span></div><div><div class="legend-desc">Confidence increased after a context question was answered.</div></div></div>
+        <div class="legend-row"><div class="legend-swatch"><span class="sw-badge" style="background:rgba(200,180,255,.2);color:#c8b4ff">SOURCE TYPE</span></div><div><div class="legend-desc">Evidence from clinical trials — no guideline match available.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CHEV = `<svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 3L4.5 6L7.5 3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const EXT  = `<svg viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 8L8 2M5 2h3v3" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+// ── CITATION STATUS FOR QUOTE BOX ──
+function citationStatus(ref){
+  if(!ref) return null;
+  if(ref.isNew)    return {cls:'qsb-new',    label:'New'};
+  if(ref.reviewed) return {cls:'qsb-latest', label:'Most Recent Update'};
+  if(['Clinical Trial','Article','Systematic Review'].includes(ref.tag))
+                   return {cls:'qsb-peer',   label:'Peer Reviewed'};
+  return null;
+}
+function buildQuoteCitation(ref, fallback){
+  if(!ref) return `<div class="quote-org">${fallback||''}</div>`;
+  const st = citationStatus(ref);
+  const badge = st ? `<span class="quote-status-badge ${st.cls}">${st.label}</span>` : '';
+  return `<div class="quote-org">${ref.src}</div>
+          <div class="quote-meta">${ref.title}${ref.published?' · '+ref.published:''}${badge}</div>`;
+}
+
+// ── STRIP GUIDELINE METHOD FOOTNOTES FROM QUOTE END ──
+// Removes e.g. " (Standard; Evidence Strength Grade B)" before the closing "
+// Leaves trial identifiers like (JUPITER Trial; NEJM 2008) intact.
+function stripMethodNote(q){
+  return q.replace(/\s*\((?:Standard|Strong Recommendation|Conditional Recommendation|Conditional);[^)]*\)(?=")/, '');
+}
+
+// ── VIEW LABEL ──
+function viewLabel(tag){
+  const map={'Guideline':'View guideline','Clinical Trial':'View trial','Article':'View article','Whitepaper':'View whitepaper'};
+  return map[tag]||'View source';
+}
+
+// ── LEGEND ──
+function openLegend(){ document.getElementById('legend-overlay').classList.add('open'); }
+function closeLegend(){ document.getElementById('legend-overlay').classList.remove('open'); }
+
+// ── CUE TOGGLE PANEL ──
+function toggleCuePanel(){
+  document.getElementById('cue-panel').classList.toggle('open');
+}
+
+function toggleSlip(id){
+  const receipt = document.getElementById('slip-'+id);
+  if(receipt) receipt.classList.toggle('open');
+}
+function selectQOpt(el){
+  // Just update the chip selection — does not send anything
+  const container = el.closest('.q-opts--inline');
+  container.querySelectorAll('.q-opt').forEach(o=>o.classList.remove('q-opt--selected'));
+  el.classList.add('q-opt--selected');
+}
+function sendQOpt(btn){
+  const qBlock = btn.closest('.q-block');
+  const chatScroll = btn.closest('.chat-scroll');
+  const container = qBlock.querySelector('.q-opts--inline');
+  const selected = container.querySelector('.q-opt--selected');
+  if(!selected) return;
+
+  const optText = selected.querySelector('span:last-child').textContent;
+  const dest    = selected.dataset.dest || '';
+
+  // Lock chips and button
+  container.querySelectorAll('.q-opt').forEach(o=>o.style.pointerEvents='none');
+  btn.disabled = true;
+
+  // Append user reply bubble
+  const replyEl = document.createElement('div');
+  replyEl.className = 'chat-prompt q-sent';
+  replyEl.innerHTML = `<div class="prompt-bubble">${optText}</div>`;
+  qBlock.insertAdjacentElement('afterend', replyEl);
+
+  // Append typing indicator
+  const typingEl = document.createElement('div');
+  typingEl.className = 'q-typing';
+  typingEl.innerHTML = '<div class="q-typing-dot"></div><div class="q-typing-dot"></div><div class="q-typing-dot"></div>';
+  replyEl.insertAdjacentElement('afterend', typingEl);
+
+  setTimeout(()=>{ chatScroll.scrollTop = chatScroll.scrollHeight; }, 50);
+
+  if(dest){
+    setTimeout(()=>{ select(dest); }, 1500);
+  } else {
+    // No mapped destination — roll back and re-enable
+    setTimeout(()=>{
+      typingEl.remove();
+      replyEl.remove();
+      container.querySelectorAll('.q-opt').forEach(o=>o.style.pointerEvents='');
+      btn.disabled = false;
+    }, 1500);
+  }
+}
+function toggleThinking(id){
+  const el = document.getElementById('think-'+id);
+  if(el) el.classList.toggle('open');
+}
+
+function showGradeOverlay(e){
+  e.stopPropagation();
+  document.getElementById('grade-overlay').classList.add('open');
+}
+function closeGradeOverlay(){
+  document.getElementById('grade-overlay').classList.remove('open');
+}
+
+function toggleFeedback(id, dir){
+  const up   = document.getElementById('fb-up-'+id);
+  const down = document.getElementById('fb-down-'+id);
+  if(!up || !down) return;
+  const wasActive = dir==='up' ? up.classList.contains('active-up') : down.classList.contains('active-down');
+  up.classList.remove('active-up');
+  down.classList.remove('active-down');
+  if(!wasActive){
+    if(dir==='up') up.classList.add('active-up');
+    else down.classList.add('active-down');
+  }
+}
+
+function updateCueCount(){
+  const inputs = document.querySelectorAll('.cue-sw input[data-key]');
+  const on = [...inputs].filter(i => i.checked).length;
+  const el = document.getElementById('cue-count');
+  if(el) el.textContent = `${on}/${inputs.length} on`;
+}
+
+function setCueAll(checked){
+  const inputs = document.querySelectorAll('.cue-sw input[data-key]');
+  inputs.forEach(inp => { inp.checked = checked; });
+  document.body.dataset.hide = checked ? '' : [...inputs].map(i => i.dataset.key).join(' ');
+  updateCueCount();
+}
+
+function initCueToggles(){
+  const inputs = document.querySelectorAll('.cue-sw input[data-key]');
+  inputs.forEach(inp => {
+    inp.addEventListener('change', () => {
+      const key = inp.dataset.key;
+      const hidden = new Set((document.body.dataset.hide || '').split(' ').filter(Boolean));
+      if(inp.checked) hidden.delete(key);
+      else hidden.add(key);
+      document.body.dataset.hide = [...hidden].join(' ');
+      updateCueCount();
+    });
+  });
+}
+
+// ── RIGHT PANEL TOGGLE ──
+function toggleRightPanel(){
+  const btn = document.getElementById('right-panel-btn');
+  document.body.classList.toggle('right-hidden');
+  btn.classList.toggle('active', document.body.classList.contains('right-hidden'));
+}
+
+function toggleLeftPanel(){
+  const btn = document.getElementById('left-panel-btn');
+  document.body.classList.toggle('left-hidden');
+  btn.classList.toggle('active', document.body.classList.contains('left-hidden'));
+}
+
+// ── MOBILE TOGGLE ──
+function toggleMobile(){
+  const btn = document.getElementById('mobile-btn');
+  document.body.classList.toggle('mobile-view');
+  btn.classList.toggle('active');
+  btn.querySelector('span') && (btn.lastChild.textContent = document.body.classList.contains('mobile-view') ? ' Desktop view' : ' Mobile view');
+}
+
+// ── SCORE FORMULA ──
+const CHIP_VAL  = {Exceptional:1.00,'Very Good':0.85,Good:0.65,Poor:0.20,Conflict:0.50,Conditional:0.65,Conditional:0.65};
+const WEIGHTS   = [0.30, 0.25, 0.25, 0.20];
+const W_LABELS  = ['Relevancy','Authority','Content','Recency'];
+
+function buildFormula(m){
+  let wsum = 0;
+  const rows = m.pillars.slice(0,4).map((p,i)=>{
+    const w  = WEIGHTS[i]||0.20;
+    const v  = CHIP_VAL[p.chip]??0.65;
+    const contrib = +(v * w).toFixed(3);
+    wsum += contrib;
+    return `<tr>
+      <td class="ft-name">${W_LABELS[i]} ×${(w).toFixed(2)}</td>
+      <td class="ft-chip">${p.chip}</td>
+      <td class="ft-val">+${contrib.toFixed(3)}</td>
+    </tr>`;
+  }).join('');
+  const wsumFmt = wsum.toFixed(3);
+  const finalFmt = m.score.toFixed(2);
+  const scoreColor = m.sc==='s-hi' ? 'var(--teal)' : m.sc==='s-lo' ? 'var(--red)' : 'var(--orange)';
+  const adjusted = Math.abs(wsum - m.score) > 0.005
+    ? `<tr class="ft-final"><td colspan="2">Final score <span style="font-size:10px;color:var(--n400)">(context-adjusted)</span></td><td class="ft-val" style="color:${scoreColor}">${finalFmt}</td></tr>`
+    : '';
+  return `
+    <div class="formula-divider"></div>
+    <div class="formula-title">Score calculation</div>
+    <table class="formula-table">
+      ${rows}
+      <tr class="ft-total">
+        <td colspan="2">Weighted sum</td>
+        <td class="ft-val">${wsumFmt}</td>
+      </tr>
+      ${adjusted}
+    </table>
+    <div class="ft-note">Weights: Relevancy 30% · Authority 25% · Content 25% · Recency 20%</div>`;
+}
+
+// ── SCENARIO DATA ──
+const SCENARIOS = [
+  // ─── 1. HIGH CONFIDENCE ───
+  {
+    id:'high', badge:'HIGH CONFIDENCE', bc:'b-hi',
+    name:'Strong Recommendation',
+    prev:'"Should a healthy 60-year-old man be screened for prostate cancer…"',
+    prompt:'Should a healthy 60-year-old man be screened for prostate cancer with a PSA blood test?',
+    barClass:'rb-strong', ocClass:'oc-hi', ocLabel:'High Confidence', ocScore:'0.87',
+    recType:'Strong Recommendation', srcType:'Guideline',
+    recGrade:'STRONG', evidenceGrade:'HIGH',
+    recIntro:'Based on AUA guidelines with Grade B evidence, here\'s a strong recommendation:',
+    evidenceCount:'5 RCTs, 3 meta-analyses',
+    trust:[
+      {icon:'🏛',label:'Authority',val:'Medical Society',sub:'AUA + SUO',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Exceptional'},
+      {icon:'📊',label:'Evidence',val:'Grade B',sub:'Well-designed studies',pillCls:'pillar-neu',stCls:'ps-neu',stLbl:'Strong'},
+      {icon:'💪',label:'Rec Strength',val:'Strong',sub:'Panel consensus',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Definitive'},
+      {icon:'🕐',label:'Recency',val:'< 12 months',sub:'Oct 2025',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Current'},
+    ],
+    origQuote:`"For men ages 55 to 69 years, the Panel strongly recommends shared decision-making for men considering PSA screening and proceeding based on a man's values and preferences. The benefits of preventing prostate cancer mortality in 1 man for every 1,000 men screened over a decade are weighed against the known harms associated with screening and treatment. (Standard; Evidence Strength Grade B)"`,
+    origAttr:'AUA Early Detection of Prostate Cancer · Oct 2025 · § 4.1 – PSA Screening Recommendations',
+    origLink:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/',
+    origQuoteCls:'',
+    derivedLabel:'Our recommendation',
+    thinking:[
+      'Checking patient profile: age 60, healthy, average risk.',
+      'Matching to AUA guideline criteria: 55–69 year screening window → confirmed.',
+      'Verifying recommendation strength: Standard, Grade B evidence.',
+      'Confirming source recency: published Oct 2025, reviewed Feb 2026.',
+      'No contraindications or high-risk modifiers noted in the prompt.',
+    ],
+    recText:'<strong>Yes</strong> — the <strong>American Urological Association (AUA)</strong> recommends PSA screening for a <strong>healthy 60-year-old man at average risk</strong>, offered after <strong>shared decision-making</strong> that weighs a small mortality benefit (1 death prevented per 1,000 men screened over 10 years) against harms of overdiagnosis and treatment complications, under a <strong>Strong Recommendation</strong> with <strong>Grade B evidence</strong>.',
+    tags:['Guideline: AUA (Strong, B) 2026'],
+    sections:[
+      {title:'Supporting Evidence', meta:'2 guidelines · Grade B', body:`
+        <p class="exp-text">Two major US medical societies independently endorse PSA screening for this patient profile:</p><br>
+        <div class="exp-text"><ul>
+          <li><strong><a class="ref-title" href="https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/" target="_blank">AUA Early Detection of Prostate Cancer</a> (Oct 2025, reviewed Feb 2026):</strong> Strongly recommends shared decision-making and PSA screening for men 55–69 (Standard, Grade B)</li>
+          <li><strong><a class="ref-title" href="https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/" target="_blank">AUA/SUO Early Detection of Prostate Cancer</a> (Oct 2025, reviewed Feb 2026):</strong> Corroborating guidance from the joint urology panel — same age window, same Grade B evidence</li>
+          <li><div class="new-ev-content"><div class="new-ev-title-row"><div><strong><a class="ref-title" href="https://jamanetwork.com/journals/jamaoncology" target="_blank">MRI-Targeted vs. Standard PSA Screening in Men 55–69</a> (JAMA Oncology, Mar 2026):</strong></div><span class="new-ev-icon">i</span></div><div class="new-ev-desc">New RCT showing MRI-guided screening reduces unnecessary biopsies by 28% with equivalent cancer detection. Pending guideline update.</div></div></li>
+          <li><strong>Mortality benefit:</strong> PSA screening prevents prostate cancer death in approximately 1 of every 1,000 men screened over a decade</li>
+          <li><strong>Evidence base:</strong> Drawn from well-designed RCTs including ERSPC and PLCO, both large-scale multi-year trials</li>
+        </ul></div>
+      `},
+      {title:'Reasoning', meta:'3 clinical factors', body:`
+        <p class="exp-text"><strong>Age 60 = screening window.</strong> Falls in the 55–69 range where PSA screening may reduce prostate cancer mortality.</p><br>
+        <p class="exp-text"><strong>"Healthy" matters.</strong> Life expectancy &lt;10–15 years due to comorbidities removes the recommendation. Clarify functional status and competing health risks.</p><br>
+        <p class="exp-text"><strong>Risk stratification needed.</strong> High-risk groups (Black ancestry, germline BRCA1/2 mutations, first-degree relative diagnosed before 65) should consider screening from age 40–45.</p><br>
+        <p class="exp-text"><strong>Shared decision-making points:</strong></p>
+        <div class="exp-text"><ul>
+          <li><strong>Benefit:</strong> ~0.1% absolute reduction in prostate cancer mortality over 10 years</li>
+          <li><strong>Harms:</strong> False positives → biopsy complications; overdiagnosis → unnecessary treatment</li>
+          <li><strong>Interval:</strong> If he opts in, repeat every 2–4 years</li>
+          <li><strong>Stopping point:</strong> Discontinue at age 70 or if life expectancy drops below 10 years</li>
+        </ul></div>
+      `},
+      {title:'References', meta:'5 sources', refs:[
+        {n:1,title:'Early Detection of Prostate Cancer',src:'American Urological Association (AUA)',published:'Oct 2025',reviewed:'Feb 2026',section:'§ 4.1 – PSA Screening Recommendations',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/'},
+        {n:2,title:'Early Detection of Prostate Cancer',src:'American Urological Association, Society of Urologic Oncology (AUA/SUO)',published:'Oct 2025',reviewed:'Feb 2026',section:'§ 4.1 – PSA Screening Recommendations',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/'},
+        {n:3,title:'Screening for Prostate Cancer',src:'American College of Physicians (ACP)',published:'Sep 2025',reviewed:'Jan 2026',section:'§ 3.2 – Screening Guidance for Average-Risk Men',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.acpjournals.org/doi/10.7326/M21-1051'},
+        {n:4,title:'Prostate Cancer Screening',src:'NIH: National Cancer Institute (NCI)',published:'2026',reviewed:null,section:'Full article',tag:'Article',grade:null,gradeLabel:null,link:'https://www.cancer.gov/types/prostate/patient/prostate-screening-pdq'},
+        {n:5,title:'MRI-Targeted vs. Standard PSA Screening in Men 55–69: A Randomized Trial',src:'JAMA Oncology · Peterson et al.',published:'Mar 2026',reviewed:null,section:'Primary Outcomes',tag:'Clinical Trial',grade:'rg-a',gradeLabel:'Grade A',link:'https://jamanetwork.com/journals/jamaoncology',isNew:true},
+      ]},
+    ],
+    suggestions:['What if the patient has a family history of prostate cancer?','Can I prioritize or exclude specific sources?'],
+    model:{
+      score:0.87, sc:'s-hi', bc:'#1A9E8A',
+      pillars:[
+        {name:'Relevancy to prompt',chip:'Very Good',dot:'d-vg',detail:'Patient age (60), health status (healthy), and screening intent clearly specified. Sources are US-based guidelines (AUA, SUO) — well-matched to a US patient context.'},
+        {name:'Credible authors & orgs',chip:'Exceptional',dot:'d-ex',detail:'2 major medical associations: AUA, AUA/SUO.'},
+        {name:'Credible content',chip:'Exceptional',dot:'d-ex',detail:'2 clinical practice guidelines — both focused on prostate cancer screening.'},
+        {name:'Recency of content',chip:'Exceptional',dot:'d-ex',detail:'All sources published within the last 12 months.'},
+      ],
+      rows:[
+        {k:'Types of sources',v:'Clinical guidelines ×2',c:'mv-hi'},
+        {k:'How strong is the rec',v:'Strong — most patients should follow',c:'mv-hi'},
+        {k:'Evidence quality',v:'Grade B — well-designed studies',c:''},
+        {k:'Fit for this patient',v:'Age 60, average risk — good match',c:''},
+        {k:'How recent',v:'Less than 12 months old',c:''},
+        {k:'Do sources agree?',v:'Yes — no conflict found',c:'mv-hi'},
+      ],
+      note:'High confidence requires a specific question, trustworthy sources, up-to-date guidelines, and agreement across organizations. All four factors are met here.'
+    }
+  },
+
+  // ─── 2. LOW CONFIDENCE ───
+  {
+    id:'low', badge:'LOW CONFIDENCE', bc:'b-lo',
+    name:'Generic Recommendation',
+    prev:'"Should a man be screened for prostate cancer with a PSA blood test?"',
+    prompt:'Should a man be screened for prostate cancer with a PSA blood test?',
+    barClass:'rb-low', ocClass:'oc-lo', ocLabel:'Low Confidence', ocScore:'0.38',
+    recType:'Generic Recommendation', srcType:'Guideline',
+    recGrade:'CONDITIONAL', evidenceGrade:'LOW', limitedEvidence:true,
+    recIntro:'The question is too broad to give a precise answer — age and health context are missing. Here\'s a general guideline-based starting point:',
+    evidenceCount:'5 RCTs, 3 meta-analyses · age context missing',
+    trust:[
+      {icon:'🏛',label:'Authority',val:'Medical Society',sub:'AUA only',pillCls:'pillar-neu',stCls:'ps-neu',stLbl:'Good'},
+      {icon:'📊',label:'Evidence',val:'Grade B',sub:'Well-designed studies',pillCls:'pillar-neu',stCls:'ps-neu',stLbl:'Moderate'},
+      {icon:'💪',label:'Rec Strength',val:'Context-dependent',sub:'Age not specified',pillCls:'pillar-lo',stCls:'ps-lo',stLbl:'Unclear'},
+      {icon:'🕐',label:'Recency',val:'< 12 months',sub:'Oct 2025',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Current'},
+    ],
+    origQuote:`"Clinicians should not screen for prostate cancer in average-risk men under age 50, men over 70, or men with a life expectancy of less than 10–15 years… the decision to screen men aged 55–69 requires individualized shared decision-making."`,
+    origAttr:'AUA Early Detection of Prostate Cancer · Oct 2025 · § 4.1 – Age-Based Screening Criteria',
+    origLink:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/',
+    origQuoteCls:'low-quote',
+    derivedLabel:'General guidance',
+    thinking:[
+      'Parsing prompt: no patient age, health status, or risk context provided.',
+      'Cannot determine if patient falls within the 55–69 screening window.',
+      'Guideline match found (AUA), but applicability is uncertain without patient specifics.',
+      'Confidence capped at low — missing inputs significantly change the recommendation.',
+      'Returning general guideline-based answer with a caveat flagging the gap.',
+    ],
+    recText:'<strong>PSA screening every 2–4 years may be appropriate for men 55–69 years, after shared decision-making.</strong> <em>This is a general answer — patient age and health context were not specified and significantly change the recommendation.</em>',
+    tags:['Guideline: AUA (Strong, B) 2026'],
+    question:{label:'Increase recommendation confidence', title:'What age range is the patient?', opts:['0 – 54','55 – 69','70+'], dests:[null,'boost',null], defaultOpt:1},
+    sections:[
+      {title:'Supporting Evidence', meta:'1 guideline · cannot apply', limitedEvidence:true, body:`
+        <p class="exp-text">One authoritative US guideline was matched, but without patient age the applicable recommendation cannot be determined — effective evidence is <strong>limited</strong>:</p><br>
+        <div class="exp-text"><ul>
+          <li><strong><a class="ref-title" href="https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/" target="_blank">AUA Early Detection of Prostate Cancer</a> (Oct 2025, reviewed Feb 2026):</strong> Age-stratified guidance covering three distinct patient groups — the correct recommendation depends entirely on age</li>
+          <li><strong>Grade B evidence exists</strong> but its applicability is undetermined without the patient's age and health status</li>
+          <li><strong>Age range matters:</strong> The same guideline recommends against screening for men under 50 or over 70, and conditionally for men 55–69</li>
+        </ul></div>
+      `},
+      {title:'Reasoning', meta:'Missing context', body:`
+        <p class="exp-text">This prompt lacks key patient context. Age, health status, and risk factors all significantly alter the recommendation:</p><br>
+        <div class="exp-text"><ul>
+          <li><strong>Age 0–54:</strong> Screening is not recommended for average-risk men</li>
+          <li><strong>Age 55–69:</strong> Screening may be offered after shared decision-making (Strong, Grade B)</li>
+          <li><strong>Age 70+:</strong> Screening not recommended</li>
+          <li><strong>High-risk:</strong> Black ancestry or family history — begin at 40–45</li>
+        </ul></div><br>
+        <p class="exp-text">Answering the context question below will route to a patient-specific, higher-confidence recommendation.</p>
+      `},
+      {title:'References', meta:'1 source', refs:[
+        {n:1,title:'Early Detection of Prostate Cancer',src:'American Urological Association (AUA)',published:'Oct 2025',reviewed:'Feb 2026',section:'§ 4.1 – Age-Based Screening Criteria',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/'},
+      ]},
+    ],
+    suggestions:['The patient is a healthy 60-year-old male','The patient has a BRCA1 mutation and is 45 years old'],
+    model:{
+      score:0.38, sc:'s-lo', bc:'#C62828',
+      pillars:[
+        {name:'Relevancy to prompt',chip:'Poor',dot:'d-po',detail:'No patient age, health status, or risk factors specified. US-based guideline used, but with no patient geography stated we cannot confirm geographic alignment.'},
+        {name:'Credible authors & orgs',chip:'Good',dot:'d-g',detail:'1 medical association matched — American Urological Association.'},
+        {name:'Credible content',chip:'Good',dot:'d-g',detail:'1 Guideline matched — Early Detection of Prostate Cancer.'},
+        {name:'Recency of content',chip:'Exceptional',dot:'d-ex',detail:'Source published within the last 12 months.'},
+      ],
+      rows:[
+        {k:'Types of sources',v:'Clinical guideline ×1',c:''},
+        {k:'How strong is the rec',v:'Depends on patient details',c:''},
+        {k:'Fit for this patient',v:'Unknown — patient age missing',c:'mv-lo'},
+        {k:'What we still need',v:'Age and health status',c:'mv-con'},
+        {k:'Do sources agree?',v:'Yes — no conflict found',c:'mv-hi'},
+      ],
+      note:'Low confidence happens when key patient details are missing from the question. Answering even one follow-up question can significantly improve the score.'
+    }
+  },
+
+  // ─── 3. CONFIDENCE BOOST (moved above conflicting) ───
+  {
+    id:'boost', badge:'BOOSTED', bc:'b-boost',
+    name:'Confidence Boosted',
+    prev:'Low conf → patient age "55–69" answered → Strong Recommendation unlocked',
+    prompt:'Should a man be screened for prostate cancer with a PSA blood test?',
+    boostBanner:'Context added: <strong>Patient age 55–69</strong> (answered context question)',
+    barClass:'rb-boost', ocClass:'oc-hi', ocLabel:'Boosted to High', ocScore:'0.84',
+    recType:'Strong Recommendation', srcType:'Guideline',
+    recGrade:'STRONG', evidenceGrade:'HIGH',
+    recIntro:'With age confirmed at 55–69, AUA guidelines apply directly. Here\'s a strong recommendation with Grade B evidence:',
+    evidenceCount:'5 RCTs, 3 meta-analyses',
+    trust:[
+      {icon:'🏛',label:'Authority',val:'Medical Society',sub:'AUA + SUO',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Exceptional'},
+      {icon:'📊',label:'Evidence',val:'Grade B',sub:'Well-designed studies',pillCls:'pillar-neu',stCls:'ps-neu',stLbl:'Strong'},
+      {icon:'💪',label:'Rec Strength',val:'Strong',sub:'Age confirmed',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Definitive'},
+      {icon:'🕐',label:'Recency',val:'< 12 months',sub:'Oct 2025',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Current'},
+    ],
+    origQuote:`"For men ages 55 to 69 years the Panel strongly recommends shared decision-making… proceeding based on a man's values and preferences. (Standard; Evidence Strength Grade B)"`,
+    origAttr:'AUA Early Detection of Prostate Cancer · Oct 2025 · § 4.1 – PSA Screening Recommendations',
+    origLink:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/',
+    origQuoteCls:'',
+    derivedLabel:'Our recommendation (context-boosted)',
+    thinking:[
+      'Initial prompt lacked patient age — confidence scored low at 0.38.',
+      'Follow-up confirmed age 55 — falls within the AUA 55–69 screening window.',
+      'Re-evaluating: age-specific guideline criteria now fully met.',
+      'Recommendation strength upgrades from conditional to strong (Standard, Grade B).',
+      'Confidence boosted to 0.84 — all key inputs resolved.',
+    ],
+    recText:'<strong>PSA screening every 2–4 years for men 55–69 years, but only after shared decision-making.</strong> Confidence increased from 0.38 → 0.84 after patient age was confirmed within the optimal screening window.',
+    tags:['Guideline: AUA (Strong, B) 2026'],
+    sections:[
+      {title:'Supporting Evidence', meta:'2 guidelines · Grade B', body:`
+        <p class="exp-text">With patient age 55–69 confirmed, two guidelines now directly apply:</p><br>
+        <div class="exp-text"><ul>
+          <li><strong><a class="ref-title" href="https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/" target="_blank">AUA Early Detection of Prostate Cancer</a> (Oct 2025, reviewed Feb 2026):</strong> Strongly recommends PSA screening for men 55–69 after shared decision-making (Standard, Grade B)</li>
+          <li><strong><a class="ref-title" href="https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/" target="_blank">AUA/SUO Early Detection of Prostate Cancer</a> (Oct 2025, reviewed Feb 2026):</strong> Corroborating guidance — identical age window and evidence grade</li>
+          <li><strong>Confidence improvement:</strong> Relevancy upgraded from Poor → Very Good; overall score boosted from 0.38 → 0.84</li>
+          <li><strong>Age-exclusion resolved:</strong> 0–54 and 70+ categories screened out; age 55–69 confirmed as the applicable group</li>
+        </ul></div>
+      `},
+      {title:'Reasoning', meta:'Context boost', body:`
+        <p class="exp-text">The initial prompt lacked patient age. By confirming the age range as 55–69, the system was able to:</p><br>
+        <div class="exp-text"><ul>
+          <li>Route to age-specific guideline language (AUA Standard, Evidence Grade B)</li>
+          <li>Eliminate age-exclusion categories (0–54 and 70+ are screened out)</li>
+          <li>Match 2 guidelines instead of 1</li>
+          <li>Raise relevancy score from Poor → Very Good</li>
+          <li>Boost overall confidence: <strong>0.38 → 0.84</strong></li>
+        </ul></div>
+      `},
+      {title:'References', meta:'2 sources', refs:[
+        {n:1,title:'Early Detection of Prostate Cancer',src:'American Urological Association (AUA)',published:'Oct 2025',reviewed:'Feb 2026',section:'§ 4.1 – PSA Screening Recommendations',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/'},
+        {n:2,title:'Early Detection of Prostate Cancer',src:'American Urological Association, Society of Urologic Oncology (AUA/SUO)',published:'Oct 2025',reviewed:'Feb 2026',section:'§ 4.1 – PSA Screening Recommendations',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/'},
+      ]},
+    ],
+    suggestions:['What other patient factors would further refine this?'],
+    model:{
+      score:0.84, sc:'s-hi', bc:'#1A9E8A',
+      pillars:[
+        {name:'Relevancy to prompt',chip:'Very Good',dot:'d-vg',detail:'Patient age confirmed via follow-up (55–69). US-based guidelines (AUA, SUO) used — aligned with assumed US clinical setting.'},
+        {name:'Credible authors & orgs',chip:'Exceptional',dot:'d-ex',detail:'2 medical associations: AUA, AUA/SUO.'},
+        {name:'Credible content',chip:'Exceptional',dot:'d-ex',detail:'2 Guidelines matched to confirmed patient age group.'},
+        {name:'Recency of content',chip:'Exceptional',dot:'d-ex',detail:'Both sources published within 12 months.'},
+      ],
+      rows:[
+        {k:'Starting confidence',v:'0.38 — Low',c:'mv-lo'},
+        {k:'Information provided',v:'Patient age: 55–69',c:''},
+        {k:'Updated confidence',v:'0.84 — High',c:'mv-hi'},
+        {k:'How strong is the rec',v:'Strong — most patients should follow',c:'mv-hi'},
+        {k:'How it improved',v:'Patient age answered via follow-up',c:''},
+      ],
+      note:'Answering a single follow-up question about patient age moved this from low to high confidence. Follow-up questions appear whenever an important patient detail is missing.'
+    }
+  },
+
+  // ─── 4. CONFLICTING (moved below boost) ───
+  {
+    id:'conf', badge:'CONFLICTING', bc:'b-con',
+    thinking:[
+      'Patient profile confirmed: age 60, average risk — within the 55–69 screening window.',
+      'Checking multiple guidelines for this population.',
+      'AUA/SUO (Oct 2025): strong recommendation for shared decision-making and PSA screening.',
+      'ACP (Sep 2025): advises against routine screening; only if patient expresses preference.',
+      'Conflict detected — two authoritative sources reach opposite conclusions.',
+      'Returning both positions with confidence score reflecting the disagreement.',
+    ],
+    directAnswer:'<strong>Guidelines disagree on PSA screening for this patient.</strong> AUA/SUO strongly recommends offering PSA screening every 2–4 years to men 55–69 after shared decision-making, while ACP advises against routine screening unless the patient expresses a clear preference.',
+    name:'Conflicting Guidelines',
+    prev:'"Should a 60-year-old man be screened for prostate cancer?" — AUA vs ACP disagree',
+    prompt:'Should a 60-year-old man be screened for prostate cancer with a PSA blood test?',
+    barClass:'rb-conf', ocClass:'oc-conf', ocLabel:'Guidelines Conflict', ocScore:'0.71',
+    recType:'Recommendation Varies by Guideline', srcType:'Guideline',
+    recGrade:'VARIES', evidenceGrade:'MODERATE',
+    recIntro:'Two major guidelines address this — and they reach opposite conclusions. Here\'s where each one stands:',
+    trust:[
+      {icon:'🏛',label:'Authority',val:'3 Organizations',sub:'AUA, SUO, ACP',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Exceptional'},
+      {icon:'📊',label:'Evidence',val:'Grade B',sub:'Both guidelines',pillCls:'pillar-neu',stCls:'ps-neu',stLbl:'Moderate'},
+      {icon:'💪',label:'Rec Strength',val:'Conflicting',sub:'Strong vs. Against',pillCls:'pillar-med',stCls:'ps-med',stLbl:'Conflict'},
+      {icon:'🕐',label:'Recency',val:'< 12 months',sub:'2025–2026',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Current'},
+    ],
+    conflicts:[
+      {lbl:'1', lc:'', recStrength:'Strong Recommendation',
+       org:'AUA / SUO (2025)',
+       origQuote:`"The Panel strongly recommends shared decision-making for men age 55 to 69 years considering PSA screening and proceeding based on a man's values and preferences. (Standard; Evidence Strength Grade B)"`,
+       origAttr:'AUA/SUO Early Detection of Prostate Cancer · Oct 2025 · § 3.2 – PSA Recommendations',
+       origLink:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/',
+       evidenceCount:'5 RCTs, 1 meta-analysis',
+       rec:'Strongly recommends offering PSA screening every 2–4 years for men 55–69 after shared decision-making.',
+       refPill:'Guideline: AUA/SUO (Strong, B) 2025',
+      },
+      {lbl:'2', lc:'conf-b', recStrength:'Conditional Recommendation',
+       org:'ACP (2025)',
+       origQuote:`"Clinicians should have a one-time discussion about the potential benefits and harms of PSA screening with average-risk men aged 50 to 69 years. Clinicians should not screen men who do not express a preference for screening after this discussion. (Conditional Recommendation; Evidence Grade B)"`,
+       origAttr:'ACP Screening for Prostate Cancer in Average-Risk Adults · 2026 · § 2.4 – Prostate Cancer Screening',
+       origLink:'https://www.acpjournals.org/doi/10.7326/M21-1051',
+       evidenceCount:'5 RCTs, 2 meta-analyses (per ACP guideline)',
+       rec:'Does not recommend routine screening without an informed discussion and clear patient preference.',
+       refPill:'Guideline: ACP (Conditional) 2026',
+      },
+    ],
+    tags:['Guideline: AUA/SUO (Strong, B) 2026','Guideline: ACP (Conditional) 2026'],
+    sections:[
+      {title:'Supporting Evidence', meta:'2 guidelines · Grade B + new evidence', body:`
+        <p class="exp-text">Two authoritative US guidelines address this exact patient scenario, both current and Grade B — but they reach opposite conclusions:</p><br>
+        <div class="exp-text"><ul>
+          <li><strong><a class="ref-title" href="https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/" target="_blank">AUA/SUO Early Detection of Prostate Cancer</a> (Oct 2025, reviewed Feb 2026):</strong> Strongly recommends offering PSA screening to men 55–69 after shared decision-making (Standard, Grade B)</li>
+          <li><strong><a class="ref-title" href="https://www.acpjournals.org/doi/10.7326/M21-1051" target="_blank">ACP Screening for Prostate Cancer in Average-Risk Adults</a> (2026, reviewed Mar 2026):</strong> Recommends a one-time discussion; advises against routine screening unless the patient expresses a clear preference (Conditional)</li>
+          <li><div class="new-ev-content"><div class="new-ev-title-row"><div><strong><a class="ref-title" href="https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD004720" target="_blank">PSA Screening for Prostate Cancer — Cochrane Systematic Review</a> (Ilic et al., Jan 2026):</strong></div><span class="new-ev-icon">i</span></div><div class="new-ev-desc">Updated meta-analysis of 5 RCTs (n=721,718) finds screening reduces prostate cancer mortality by 23% but increases overdiagnosis by 50%. Anticipated to influence next ACP guideline cycle.</div></div></li>
+          <li><strong>Same RCT base:</strong> Both guidelines draw from the same large trials (ERSPC, PLCO) but weigh screening benefit vs. overdiagnosis risk differently</li>
+          <li><strong>No consensus:</strong> Disagreement is active — neither guideline is outdated or superseded</li>
+        </ul></div>
+      `},
+      {title:'Reasoning', meta:'Resolution framework', body:`
+        <p class="exp-text">Both guidelines are authoritative and current. The disagreement reflects different interpretations of the same RCT evidence (ERSPC, PLCO). Resolution depends on:</p><br>
+        <div class="exp-text"><ul>
+          <li><strong>Patient values:</strong> Does this patient prioritize avoiding biopsy complications, or prostate cancer mortality risk reduction?</li>
+          <li><strong>Risk profile:</strong> Black ancestry, BRCA mutations, or family history shifts toward AUA's screening-forward position</li>
+          <li><strong>Clinician context:</strong> AUA = urology-forward; ACP = primary care context where over-testing risk is higher</li>
+          <li><strong>Informed preference:</strong> ACP requires patient to express preference — if neutral, do not screen</li>
+        </ul></div>
+      `},
+      {title:'References', meta:'3 sources', refs:[
+        {n:1,title:'Early Detection of Prostate Cancer',src:'American Urological Association, Society of Urologic Oncology (AUA/SUO)',published:'Oct 2025',reviewed:'Feb 2026',section:'§ 3.2 – PSA Recommendations',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/'},
+        {n:2,title:'Screening for Prostate Cancer in Average-Risk Adults',src:'American College of Physicians (ACP)',published:'2026',reviewed:'Mar 2026',section:'§ 2.4 – Prostate Cancer Screening',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.acpjournals.org/doi/10.7326/M21-1051'},
+        {n:3,title:'PSA Screening for Prostate Cancer — Cochrane Systematic Review',src:'Cochrane Library (CDR) · Ilic et al.',published:'Jan 2026',reviewed:null,section:'Abstract · Summary of Findings',tag:'Systematic Review',grade:'rg-a',gradeLabel:'Grade A',link:'https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD004720',isNew:true},
+      ]},
+    ],
+    suggestions:['Which guideline should I follow for this patient?','What do patient values typically indicate here?'],
+    model:{
+      score:0.71, sc:'s-med', bc:'#D97706',
+      pillars:[
+        {name:'Relevancy to prompt',chip:'Very Good',dot:'d-vg',detail:'Patient age (60) specified; health status implied as average-risk. Both guidelines (AUA/SUO, ACP) are US-based — well-matched to a US patient context.'},
+        {name:'Credible authors & orgs',chip:'Exceptional',dot:'d-ex',detail:'3 organizations — AUA, SUO, ACP — all major medical societies.'},
+        {name:'Credible content',chip:'Exceptional',dot:'d-ex',detail:'2 clinical practice guidelines, both current and directly relevant.'},
+        {name:'Guideline alignment',chip:'Conflict',dot:'d-con',detail:'AUA/SUO actively recommend screening; ACP advises against routine screening without patient preference.'},
+      ],
+      rows:[
+        {k:'Types of sources',v:'Clinical guidelines ×2',c:''},
+        {k:'Do sources agree?',v:'No — 2 organizations disagree',c:'mv-con'},
+        {k:'AUA / SUO says',v:'Screening recommended',c:'mv-hi'},
+        {k:'ACP says',v:'Against routine screening',c:'mv-con'},
+        {k:'How to decide',v:'Ask the patient their preference',c:''},
+      ],
+      note:'When guidelines disagree, we show both sides equally rather than picking one. The right answer depends on what matters most to this patient.'
+    }
+  },
+
+  // ─── 5. CLINICAL TRIAL SOURCE ───
+  {
+    id:'src', badge:'SOURCE TYPE', bc:'b-src',
+    name:'Clinical Trial Source',
+    prev:'"What does the latest research say about statins for primary prevention?"',
+    prompt:'What does the latest research say about statin therapy for primary cardiovascular prevention in low-risk adults?',
+    barClass:'rb-src', ocClass:'oc-med', ocLabel:'No Guideline Match', ocScore:'0.72',
+    recType:'Conditional Recommendation', srcType:'Clinical Trial',
+    recGrade:'CONDITIONAL', evidenceGrade:'MODERATE', synthesized:true,
+    recIntro:'No clinical guideline covers this population, but two Grade A RCTs support a conditional recommendation:',
+    evidenceCount:'2 RCTs · n=23,320 participants (JUPITER + ACCORD-Lipid)',
+    trust:[
+      {icon:'🏛',label:'Authority',val:'Peer-reviewed RCT',sub:'Lancet + NEJM',pillCls:'pillar-neu',stCls:'ps-neu',stLbl:'Good'},
+      {icon:'📊',label:'Evidence',val:'Grade A',sub:'Level 1 RCT · Double-blind, large N',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Exceptional'},
+      {icon:'💪',label:'Rec Strength',val:'Conditional',sub:'No society endorsement',pillCls:'pillar-med',stCls:'ps-med',stLbl:'Conditional'},
+      {icon:'⚠️',label:'Funding Flag',val:'Industry-funded',sub:'JUPITER: partial',pillCls:'pillar-med',stCls:'ps-med',stLbl:'Flagged'},
+    ],
+    origQuote:`"In apparently healthy persons without hyperlipidemia but with elevated high-sensitivity C-reactive protein levels, rosuvastatin significantly reduced the incidence of major cardiovascular events... The trial was stopped early."`,
+    origAttr:'JUPITER Trial · Ridker et al. · Lancet 2024 replication · Methods § · Primary Outcome',
+    origLink:'https://www.nejm.org/doi/full/10.1056/NEJMoa0807646',
+    origQuoteCls:'src-quote',
+    derivedLabel:'Research-based guidance',
+    thinking:[
+      'Patient profile: low-risk adult, no hyperlipidemia, elevated hsCRP.',
+      'Searching clinical practice guidelines — AHA, ACC, USPSTF.',
+      'No guideline found covering routine statin use for this specific population.',
+      'Falling back to primary research: JUPITER and ACCORD-Lipid trials match the profile.',
+      'Benefit is modest (NNT ~200 over 5 years); one trial carries industry-funding risk.',
+      'Returning research-based conditional recommendation; confidence capped at medium.',
+    ],
+    recText:'<strong>Statin therapy may be considered for low-risk adults with elevated LDL-C (≥190 mg/dL) or elevated hsCRP, but benefits are modest</strong> — NNT ~200 over 5 years to prevent 1 cardiovascular event. No professional society guideline endorses routine statin use in this population.',
+    tags:['Clinical Trial: JUPITER (Lancet) 2024'],
+    trialDetail:{
+      design:'Double-blind, placebo-controlled RCT · ClinicalTrials.gov NCT00239681',
+      sampleSize:'n = 17,802 (JUPITER) · n = 5,518 (ACCORD-Lipid) · Combined: n = 23,320',
+      geography:'JUPITER: 26 countries, 1,315 sites (multinational) · ACCORD-Lipid: 77 US clinical sites',
+      funding:'JUPITER: <span class="sdc-flag sdc-warn">⚠ Partial industry funding — AstraZeneca</span> independently replicated by EURO-AIM consortium, 2024 · ACCORD-Lipid: NIH-funded (no industry conflict)',
+      endpoint:'First major CV event — non-fatal MI, non-fatal stroke, arterial revascularization, hospitalization for unstable angina, or CV death',
+      effectSize:'JUPITER: HR 0.56 (95% CI 0.46–0.69) · NNT ≈ 200 over 5 years · ACCORD-Lipid: No significant added benefit (HR 0.92, p=0.32)',
+      replication:'3 independent replications since 2008 original · Most recent: EURO-AIM consortium, Lancet 2024 — confirmed primary outcomes',
+    },
+    journalDetail:{
+      recency:'2024 replication · Original trial 2008 · Cardiology field half-life ≈ 5.3 years — still within active citation window',
+      impactFactor:'The Lancet IF: 98.4 (2024) · 5-year IF: 102.1 · Top 0.1% of all medical journals globally',
+      citationCount:'Original JUPITER (2008): >6,400 citations · 2024 Lancet replication: 142 citations (3 months post-publication)',
+      geography:'UK-based journal · Multinational editorial board · Accepted as authoritative across US, EU, and international clinical guidelines',
+      citedBy:['ESC Guidelines 2023 (European Society of Cardiology)','ACC/AHA Lipid Management Guidelines 2023','USPSTF Statin Use Recommendation 2022'],
+      peerReviewed:true,
+      preprint:false,
+      medline:true,
+    },
+    sections:[
+      {title:'Supporting Evidence', meta:'2 RCTs · Grade A · synthesized', body:`
+        <p class="exp-text">Two large, peer-reviewed randomized controlled trials form the evidence base. No clinical practice guideline covers this population — this recommendation is synthesized directly from primary evidence:</p><br>
+        <div class="exp-text"><ul>
+          <li><div class="new-ev-content"><div class="new-ev-title-row"><div><strong><a class="ref-title" href="https://www.nejm.org/doi/full/10.1056/NEJMoa0807646" target="_blank">JUPITER Trial — Rosuvastatin to Prevent Vascular Events in Low-Risk Persons</a> (Lancet 2024 replication):</strong></div><span class="new-ev-icon">i</span></div><div class="new-ev-desc">Rosuvastatin significantly reduced cardiovascular events in low-risk adults with elevated hsCRP; NNT ~200 over 5 years to prevent 1 event. Partially industry-funded (AstraZeneca); independently replicated.</div></div></li>
+          <li><div class="new-ev-content"><div class="new-ev-title-row"><div><strong><a class="ref-title" href="https://www.nejm.org/doi/full/10.1056/NEJMoa1001282" target="_blank">ACCORD-Lipid — Effects of Combination Lipid Therapy in Type 2 Diabetes</a> (NEJM 2023):</strong></div><span class="new-ev-icon">i</span></div><div class="new-ev-desc">Combination lipid therapy showed limited additional benefit beyond statin monotherapy in T2DM patients.</div></div></li>
+          <li><strong>Design:</strong> Both double-blind RCTs registered on ClinicalTrials.gov; sample sizes 17,802 (JUPITER) and 5,518 (ACCORD-Lipid)</li>
+        </ul></div>
+      `},
+      {title:'Reasoning', meta:'No guideline endorsement', body:`
+        <p class="exp-text">This recommendation is conditional because the evidence base is research-only — no professional society guideline endorses routine statin use in this population:</p><br>
+        <div class="exp-text"><ul>
+          <li><strong>No guideline match:</strong> AHA, ACC, and USPSTF guidelines do not cover average low-risk adults without additional risk factors</li>
+          <li><strong>Modest benefit:</strong> NNT ~200 over 5 years means most patients who take statins will not experience the prevented event</li>
+          <li><strong>Patient values matter:</strong> Decision to treat depends on individual tolerance for long-term medication vs. marginal cardiovascular risk reduction</li>
+          <li><strong>Research uncertainty:</strong> Trial-only evidence carries more uncertainty than an endorsed guideline; score is capped at medium confidence</li>
+        </ul></div>
+      `},
+      {title:'References', meta:'2 sources', refs:[
+        {n:1,title:'Rosuvastatin to Prevent Vascular Events in Low-Risk Persons (JUPITER)',src:'Ridker et al. · Lancet',published:'2024 replication',reviewed:null,section:'Methods § · Primary Outcome',tag:'Clinical Trial',grade:'rg-a',gradeLabel:'Grade A',link:'https://www.nejm.org/doi/full/10.1056/NEJMoa0807646',isNew:true},
+        {n:2,title:'Effects of Combination Lipid Therapy in Type 2 Diabetes (ACCORD-Lipid)',src:'NEJM · ACCORD Study Group',published:'2023',reviewed:null,section:'Methods § · Lipid-Lowering Therapy Arm',tag:'Clinical Trial',grade:'rg-a',gradeLabel:'Grade A',link:'https://www.nejm.org/doi/full/10.1056/NEJMoa1001282',isNew:true},
+      ]},
+    ],
+    suggestions:['Show me guideline-based statin recommendations instead','What are the funding concerns for JUPITER?'],
+    model:{
+      score:0.72, sc:'s-med', bc:'#D97706',
+      pillars:[
+        {name:'Relevancy to prompt',chip:'Very Good',dot:'d-vg',detail:'Patient type (low-risk adult) and therapy (statins, primary prevention) clearly matched. JUPITER and ACCORD-Lipid are multinational trials — findings apply broadly, including to US patients. No geography-specific guideline was available.'},
+        {name:'Source credibility',chip:'Good',dot:'d-g',detail:'Peer-reviewed RCTs in top journals. JUPITER: industry-funded, results replicated independently.'},
+        {name:'Study design',chip:'Very Good',dot:'d-vg',detail:'Large double-blind RCTs. No professional society endorsement available.'},
+        {name:'Recency',chip:'Very Good',dot:'d-vg',detail:'Studies replicated 2023–2024.'},
+      ],
+      rows:[
+        {k:'Types of sources',v:'Clinical trials ×2',c:''},
+        {k:'Matched to a guideline?',v:'No — research only, no official rec',c:'mv-con'},
+        {k:'How strong is the rec',v:'Conditional — patient choice matters',c:''},
+        {k:'Evidence type',v:'Large randomized trials (strong)',c:''},
+        {k:'Funding concern',v:'One trial partly industry-funded',c:'mv-con'},
+      ],
+      note:'When no official guideline covers a question, we surface research studies instead. The score is medium because research alone carries more uncertainty than an endorsed guideline.'
+    }
+  },
+
+  // ─── 6. TIERED STRONG RECOMMENDATION ───
+  {
+    id:'tiers', badge:'HIGH CONFIDENCE', bc:'b-hi',
+    name:'Tiered Recommendation',
+    prev:'"What medications should I prioritize for HFrEF with EF 28%?"',
+    prompt:'What medications should I prioritize for a 58-year-old man newly diagnosed with HFrEF and an EF of 28%?',
+    barClass:'rb-strong', ocClass:'oc-hi', ocLabel:'High Confidence', ocScore:'0.91',
+    recType:'Strong Recommendation', srcType:'Guideline',
+    recGrade:'STRONG', evidenceGrade:'HIGH',
+    evidenceCount:'4 Class I · Grade A studies',
+    trust:[
+      {icon:'🏛',label:'Authority',val:'ACC/AHA/HFSA',sub:'Joint society guidelines',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Exceptional'},
+      {icon:'📊',label:'Evidence',val:'Grade A',sub:'Multiple RCTs',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Exceptional'},
+      {icon:'💪',label:'Rec Strength',val:'Strong',sub:'All tiers Class I',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Definitive'},
+      {icon:'🕐',label:'Recency',val:'< 24 months',sub:'Updated 2022',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Current'},
+    ],
+    thinking:[
+      'Patient: 58-year-old male, newly diagnosed HFrEF, EF 28%.',
+      'EF < 40% confirms HFrEF classification — GDMT framework applies.',
+      'Retrieving ACC/AHA/HFSA 2022 tiered pharmacotherapy recommendations.',
+      'All four drug classes (ARNi, beta-blocker, SGLT2i, MRA) carry Class I, Level A rating.',
+      'No CKD, electrolyte, or hemodynamic contraindications stated — full regimen appropriate.',
+      'Organizing output by initiation tier per guideline-directed protocol.',
+    ],
+    recText:'<strong>Yes</strong> — the <strong>ACC/AHA/HFSA</strong> provides a clear, tiered pharmacotherapy roadmap for a <strong>58-year-old man with HFrEF and EF 28%</strong>. Start with <strong>ARNi (sacubitril/valsartan) + beta-blocker + SGLT2 inhibitor</strong> as the foundational regimen, then add an <strong>MRA</strong> if he remains symptomatic — all four are Class I, Grade A recommendations with proven mortality benefit.',
+    tags:['Guideline: ACC/AHA/HFSA (Strong, A) 2022'],
+    quoteTiers:[
+      {
+        rank:1,
+        label:'Foundation Therapy',
+        sub:'Start concurrently; proven mortality reduction',
+        quotes:[
+          {
+            text:'"In patients with chronic symptomatic HFrEF NYHA class II or III who tolerate an ACE inhibitor or ARB, replacement by an ARNI is recommended to further reduce morbidity and mortality. (Class I; Level of Evidence: B-R)"',
+            srcType:'Guideline',
+            org:'ACC/AHA/HFSA 2022 Heart Failure Guidelines',
+            link:'https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063'
+          },
+          {
+            text:'"Use of 1 of the 3 beta blockers proven to reduce mortality — bisoprolol, carvedilol, or sustained-release metoprolol succinate — is recommended for all stable patients with HFrEF. (Class I; Level of Evidence: A)"',
+            srcType:'Guideline',
+            org:'ACC/AHA/HFSA 2022 Heart Failure Guidelines',
+            link:'https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063'
+          },
+        ]
+      },
+      {
+        rank:2,
+        label:'High-Priority Add-On',
+        sub:'Initiate early; additive mortality and hospitalization benefit',
+        quotes:[
+          {
+            text:'"In patients with symptomatic HFrEF, an SGLT2 inhibitor (dapagliflozin or empagliflozin) is recommended to reduce the risk of worsening heart failure and cardiovascular death. (Class I; Level of Evidence: A)"',
+            srcType:'Guideline',
+            org:'AHA/ACC/HFSA 2022 Heart Failure Guidelines',
+            link:'https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063'
+          },
+          {
+            text:'"Aldosterone antagonists are recommended in patients with HFrEF, NYHA class II–IV symptoms, eGFR >30 mL/min, and potassium <5.0 mEq/L, to reduce morbidity and mortality. (Class I; Level of Evidence: A)"',
+            srcType:'Guideline',
+            org:'ACC/AHA/HFSA 2022 Heart Failure Guidelines',
+            link:'https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063'
+          },
+        ]
+      },
+      {
+        rank:3,
+        label:'Adjunct Therapy',
+        sub:'Add if symptoms persist despite Tiers 1–2',
+        quotes:[
+          {
+            text:'"In patients with HFrEF who are already receiving optimal medical therapy and remain symptomatic, ivabradine can be beneficial to reduce the risk of hospitalization for heart failure in those with resting HR ≥70 bpm and sinus rhythm. (Class IIa; Level of Evidence: B-R)"',
+            srcType:'Guideline',
+            org:'ACC/AHA/HFSA 2022 Heart Failure Guidelines',
+            link:'https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063'
+          },
+        ]
+      },
+    ],
+    sections:[
+      {title:'Supporting Evidence', meta:'5 quotes · 3 tiers · Grade A', body:`
+        <p class="exp-text">Four proven therapies (ARNi, beta-blocker, SGLT2i, MRA) each independently reduce mortality and hospitalizations in HFrEF. All carry Class I, Level A recommendations from major US societies:</p><br>
+        <div class="exp-text"><ul>
+          <li><strong><a class="ref-title" href="https://www.nejm.org/doi/full/10.1056/NEJMoa1409077" target="_blank">PARADIGM-HF</a> (NEJM 2014):</strong> Sacubitril/valsartan reduced CV death by 20% vs. enalapril (NNT ~36 over 27 months)</li>
+          <li><strong><a class="ref-title" href="https://www.nejm.org/doi/full/10.1056/NEJMoa019744" target="_blank">COPERNICUS</a> (NEJM 2001) + MERIT-HF:</strong> Carvedilol and metoprolol succinate each reduced all-cause mortality ~34% in HFrEF</li>
+          <li><strong><a class="ref-title" href="https://www.nejm.org/doi/full/10.1056/NEJMoa1911303" target="_blank">DAPA-HF</a> (NEJM 2019):</strong> Dapagliflozin reduced worsening HF events and CV death by 26% (NNT ~21 over 18 months)</li>
+          <li><strong><a class="ref-title" href="https://www.nejm.org/doi/full/10.1056/NEJMoa010361" target="_blank">RALES</a> (NEJM 1999) + EMPHASIS-HF (2011):</strong> Spironolactone and eplerenone each cut all-cause mortality ~25–30% in HFrEF</li>
+        </ul></div>
+      `},
+      {title:'Reasoning', meta:'4 clinical factors', body:`
+        <p class="exp-text"><strong>EF of 28% defines HFrEF.</strong> Below 40% is the threshold; 28% is severely reduced and meets all criteria for the full guideline-directed medical therapy (GDMT) stack.</p><br>
+        <p class="exp-text"><strong>Age 58, newly diagnosed.</strong> Start all four drugs simultaneously or within the first few months — defer only for hemodynamic instability. Delay is independently associated with worse outcomes.</p><br>
+        <p class="exp-text"><strong>Contraindication screening before Tier 1.</strong> ARNi contraindicated within 36 hours of ACEi; avoid if bilateral renal artery stenosis. Beta-blockers require stability (no active decompensation).</p><br>
+        <p class="exp-text"><strong>Monitor electrolytes before MRA.</strong> Hold MRA if potassium ≥5.0 mEq/L or eGFR &lt;30. Recheck within 1–2 weeks of initiation.</p>
+      `},
+      {title:'References', meta:'5 sources', refs:[
+        {n:1,title:'2022 AHA/ACC/HFSA Guideline for the Management of Heart Failure',src:'American College of Cardiology / AHA / HFSA',published:'2022',reviewed:'2023',section:'§ 7.3 – Pharmacological Treatment for HFrEF',tag:'Guideline',grade:'rg-a',gradeLabel:'Grade A',link:'https://www.ahajournals.org/doi/10.1161/CIR.0000000000001063'},
+        {n:2,title:'PARADIGM-HF — Angiotensin–Neprilysin Inhibition vs. Enalapril in HF',src:'McMurray et al. · NEJM',published:'2014',reviewed:null,section:'Primary Outcome',tag:'Clinical Trial',grade:'rg-a',gradeLabel:'Grade A',link:'https://www.nejm.org/doi/full/10.1056/NEJMoa1409077'},
+        {n:3,title:'DAPA-HF — Dapagliflozin in Patients with Heart Failure and Reduced EF',src:'McMurray et al. · NEJM',published:'2019',reviewed:null,section:'Primary Outcome',tag:'Clinical Trial',grade:'rg-a',gradeLabel:'Grade A',link:'https://www.nejm.org/doi/full/10.1056/NEJMoa1911303'},
+        {n:4,title:'EMPHASIS-HF — Eplerenone in Mild Patients Hospitalized and Surviving HF',src:'Zannad et al. · NEJM',published:'2011',reviewed:null,section:'Primary Outcome',tag:'Clinical Trial',grade:'rg-a',gradeLabel:'Grade A',link:'https://www.nejm.org/doi/full/10.1056/NEJMoa1009492'},
+        {n:5,title:'SHIFT — Ivabradine in Patients with Heart Failure and Reduced EF',src:'Swedberg et al. · Lancet',published:'2010',reviewed:null,section:'Primary Outcome',tag:'Clinical Trial',grade:'rg-b',gradeLabel:'Grade B-R',link:'https://www.thelancet.com/journals/lancet/article/PIIS0140-6736(10)61198-1/fulltext'},
+      ]},
+    ],
+    suggestions:['What if he has CKD stage 3 — does that change the MRA recommendation?','Show me titration targets for each drug class'],
+    model:{
+      score:0.91, sc:'s-hi', bc:'#1A9E8A',
+      pillars:[
+        {name:'Relevancy to prompt',chip:'Exceptional',dot:'d-ex',detail:'Age (58), diagnosis (HFrEF), and EF (28%) fully specified. Tiers map directly to ACC/AHA/HFSA guideline-directed medical therapy framework.'},
+        {name:'Credible authors & orgs',chip:'Exceptional',dot:'d-ex',detail:'Joint guideline from ACC, AHA, and HFSA — the three major cardiology societies in the US.'},
+        {name:'Credible content',chip:'Exceptional',dot:'d-ex',detail:'All 4 Tier 1–2 recommendations are Class I, Level of Evidence A — the highest possible guideline rating.'},
+        {name:'Recency of content',chip:'Very Good',dot:'d-vg',detail:'2022 guideline, updated 2023. All cited trials remain active in guideline endorsement.'},
+      ],
+      rows:[
+        {k:'Types of sources',v:'Clinical guideline ×1 · RCTs ×4',c:'mv-hi'},
+        {k:'How strong is the rec',v:'Class I Strong — all eligible patients',c:'mv-hi'},
+        {k:'Evidence quality',v:'Grade A — multiple large RCTs',c:'mv-hi'},
+        {k:'Fit for this patient',v:'Age 58, EF 28%, HFrEF — exact match',c:'mv-hi'},
+        {k:'How recent',v:'Updated within 24 months',c:''},
+        {k:'Do sources agree?',v:'Yes — ACC, AHA, HFSA fully aligned',c:'mv-hi'},
+      ],
+      note:'Near-maximum confidence: specific diagnosis, exceptional-authority joint guideline, highest evidence grade (Class I-A), no inter-society disagreement, and all four drug classes independently validated in landmark RCTs.'
+    }
+  },
+
+  // ─── 7. MINIMAL / CLEAN UI ───
+  {
+    id:'clean', badge:'MINIMAL UI', bc:'b-clean',
+    name:'Clean UI',
+    minimal:true,
+    prev:'"Should a healthy 60-year-old man at average risk be screened for prostate cancer?"',
+    prompt:'Should a healthy 60-year-old man at average risk be screened for prostate cancer with a PSA test?',
+    barClass:'rb-strong', ocClass:'oc-hi', ocLabel:'High Confidence', ocScore:'0.87',
+    recType:'Strong Recommendation', srcType:'Guideline',
+    recGrade:'STRONG', evidenceGrade:'HIGH',
+    evidenceCount:'5 RCTs, 3 meta-analyses',
+    trust:[
+      {icon:'🏛',label:'Authority',val:'Medical Society',sub:'AUA + SUO',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Exceptional'},
+      {icon:'📊',label:'Evidence',val:'Grade B',sub:'Well-designed studies',pillCls:'pillar-neu',stCls:'ps-neu',stLbl:'Strong'},
+      {icon:'💪',label:'Rec Strength',val:'Strong',sub:'Panel consensus',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Definitive'},
+      {icon:'🕐',label:'Recency',val:'< 12 months',sub:'Oct 2025',pillCls:'pillar-hi',stCls:'ps-hi',stLbl:'Current'},
+    ],
+    origQuote:`"For men ages 55 to 69 years, the Panel strongly recommends shared decision-making for men considering PSA screening and proceeding based on a man's values and preferences. The benefits of preventing prostate cancer mortality in 1 man for every 1,000 men screened over a decade are weighed against the known harms associated with screening and treatment. (Standard; Evidence Strength Grade B)"`,
+    origAttr:'AUA Early Detection of Prostate Cancer · Oct 2025 · § 4.1 – PSA Screening Recommendations',
+    origLink:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/',
+    origQuoteCls:'',
+    thinking:[
+      'Checking patient profile: age 60, healthy, average risk.',
+      'Matching to AUA guideline criteria: 55–69 year screening window → confirmed.',
+      'Verifying recommendation strength: Standard, Grade B evidence.',
+      'Confirming source recency: published Oct 2025, reviewed Feb 2026.',
+      'No contraindications or high-risk modifiers noted in the prompt.',
+    ],
+    recText:'<strong>Yes</strong> — the <strong>American Urological Association (AUA)</strong> recommends PSA screening for a <strong>healthy 60-year-old man at average risk</strong>, offered after <strong>shared decision-making</strong> that weighs a small mortality benefit (1 death prevented per 1,000 men screened over 10 years) against harms of overdiagnosis and treatment complications, under a <strong>Strong Recommendation</strong> with <strong>Grade B evidence</strong>.',
+    tags:['Guideline: AUA (Strong, B) 2026'],
+    sections:[
+      {title:'Supporting Evidence', meta:'2 guidelines · Grade B', body:`
+        <p class="exp-text">Two major US medical societies independently endorse PSA screening for this patient profile:</p><br>
+        <div class="exp-text"><ul>
+          <li><strong><a class="ref-title" href="https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/" target="_blank">AUA Early Detection of Prostate Cancer</a> (Oct 2025, reviewed Feb 2026):</strong> Strongly recommends shared decision-making and PSA screening for men 55–69 (Standard, Grade B)</li>
+          <li><strong><a class="ref-title" href="https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/" target="_blank">AUA/SUO Early Detection of Prostate Cancer</a> (Oct 2025, reviewed Feb 2026):</strong> Corroborating guidance from the joint urology panel — same age window, same Grade B evidence</li>
+          <li><strong>Mortality benefit:</strong> PSA screening prevents prostate cancer death in approximately 1 of every 1,000 men screened over a decade</li>
+        </ul></div>
+      `},
+      {title:'Reasoning', meta:'3 clinical factors', body:`
+        <p class="exp-text"><strong>Age 60 = screening window.</strong> Falls in the 55–69 range where PSA screening may reduce prostate cancer mortality.</p><br>
+        <p class="exp-text"><strong>"Healthy" matters.</strong> Life expectancy &lt;10–15 years due to comorbidities removes the recommendation. Clarify functional status and competing health risks.</p><br>
+        <p class="exp-text"><strong>Shared decision-making points:</strong></p>
+        <div class="exp-text"><ul>
+          <li><strong>Benefit:</strong> ~0.1% absolute reduction in prostate cancer mortality over 10 years</li>
+          <li><strong>Harms:</strong> False positives → biopsy complications; overdiagnosis → unnecessary treatment</li>
+          <li><strong>Interval:</strong> If he opts in, repeat every 2–4 years</li>
+        </ul></div>
+      `},
+      {title:'References', meta:'3 sources', refs:[
+        {n:1,title:'Early Detection of Prostate Cancer',src:'American Urological Association (AUA)',published:'Oct 2025',reviewed:'Feb 2026',section:'§ 4.1 – PSA Screening Recommendations',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/'},
+        {n:2,title:'Early Detection of Prostate Cancer',src:'American Urological Association, Society of Urologic Oncology (AUA/SUO)',published:'Oct 2025',reviewed:'Feb 2026',section:'§ 4.1 – PSA Screening Recommendations',tag:'Guideline',grade:'rg-b',gradeLabel:'Grade B',link:'https://www.guidelinecentral.com/guideline/prostate-cancer-early-detection/'},
+        {n:3,title:'Prostate Cancer Screening',src:'NIH: National Cancer Institute (NCI)',published:'2026',reviewed:null,section:'Full article',tag:'Article',grade:null,gradeLabel:null,link:'https://www.cancer.gov/types/prostate/patient/prostate-screening-pdq'},
+      ]},
+    ],
+    suggestions:['What if the patient has a family history of prostate cancer?','Can I prioritize or exclude specific sources?'],
+    model:{
+      score:0.87, sc:'s-hi', bc:'#1A9E8A',
+      pillars:[
+        {name:'Relevancy to prompt',chip:'Very Good',dot:'d-vg',detail:'Patient age (60), health status (healthy), and screening intent clearly specified.'},
+        {name:'Credible authors & orgs',chip:'Exceptional',dot:'d-ex',detail:'2 major medical associations: AUA, AUA/SUO.'},
+        {name:'Credible content',chip:'Exceptional',dot:'d-ex',detail:'2 clinical practice guidelines — both focused on prostate cancer screening.'},
+        {name:'Recency of content',chip:'Exceptional',dot:'d-ex',detail:'All sources published within the last 12 months.'},
+      ],
+      rows:[
+        {k:'Types of sources',v:'Clinical guidelines ×2',c:'mv-hi'},
+        {k:'How strong is the rec',v:'Strong — most patients should follow',c:'mv-hi'},
+        {k:'Evidence quality',v:'Grade B — well-designed studies',c:''},
+        {k:'Fit for this patient',v:'Age 60, average risk — good match',c:''},
+        {k:'How recent',v:'Less than 12 months old',c:''},
+        {k:'Do sources agree?',v:'Yes — no conflict found',c:'mv-hi'},
+      ],
+      note:'High confidence: specific question, authoritative sources, current guidelines, and full inter-society agreement.'
+    }
+  },
+
+  // ─── 8. NO MATCH ───
+  {
+    id:'nomatch', badge:'NO MATCH', bc:'b-nom',
+    name:'No Match Found',
+    prev:'"Is intermittent fasting safe for patients taking blood thinners?"',
+    prompt:'Is intermittent fasting safe for patients taking blood thinners?',
+    indirectOnly:true,
+    barClass:'rb-nom', ocClass:'oc-nom', ocLabel:'No Match', ocScore:'0.15',
+    recType:'Inferred from Indirect Sources', srcType:'—',
+    recGrade:null, evidenceGrade:null,
+    thinking:[
+      'Parsing prompt: intermittent fasting + anticoagulation safety.',
+      'Searching anticoagulation management guidelines (ACC, AHA, ASH)...',
+      'Searching dietary and nutrition practice guidelines...',
+      'No guideline directly addresses fasting in anticoagulated patients.',
+      'Found indirect background literature on dietary effects on anticoagulation.',
+      'Generating inferred answer from indirect context — flagging as indirect.',
+    ],
+    recText:'<strong>Proceed with caution and closer monitoring.</strong> While no guideline directly addresses intermittent fasting in anticoagulated patients, anticoagulation management principles suggest that significant dietary changes — particularly shifts in vitamin K intake — can destabilize INR in patients on warfarin. Patients should notify their anticoagulation clinician before beginning a fasting regimen, and more frequent INR checks may be warranted during the transition period. <em>This answer is inferred from indirect sources — no direct guideline quote was matched.</em>',
+    tags:[],
+    sections:[
+      {title:'References', meta:'2 indirect sources', refs:[
+        {n:1,title:'Anticoagulation Management: General Principles',src:'American Society of Hematology (ASH)',published:'2023',reviewed:null,section:'§ 5 – Patient Lifestyle Considerations',tag:'Guideline',grade:null,gradeLabel:null,link:'https://www.hematology.org/education/clinicians/guidelines-and-quality-care/clinical-practice-guidelines/venous-thromboembolism-guidelines',indirect:true},
+        {n:2,title:'Dietary Influences on Anticoagulation Therapy',src:'Journal of Thrombosis and Haemostasis',published:'2022',reviewed:null,section:'§ 3 – Nutritional Factors',tag:'Article',grade:null,gradeLabel:null,link:'https://www.jthjournal.org',indirect:true},
+      ]},
+    ],
+    suggestions:['Warfarin dosing during caloric restriction','Anticoagulation monitoring with dietary changes'],
+    model:{
+      score:0.15, sc:'s-lo', bc:'#C62828',
+      pillars:[
+        {name:'Relevancy to prompt',chip:'Poor',dot:'d-po',detail:'No source directly addresses fasting in anticoagulated patients. Indirect background literature used.'},
+        {name:'Credible authors & orgs',chip:'Poor',dot:'d-po',detail:'No recognized society has published direct indexed guidance on this combination — ASH guideline used as indirect context only.'},
+        {name:'Credible content',chip:'Poor',dot:'d-po',detail:'No clinical practice guidelines matched. Background journal article used as indirect context.'},
+        {name:'Recency of content',chip:'Poor',dot:'d-po',detail:'Indirect sources are from 2022–2023 — moderately recent, but not purpose-written for this question.'},
+      ],
+      rows:[
+        {k:'Types of sources',v:'2 indirect references',c:'mv-lo'},
+        {k:'How strong is the rec',v:'Inferred — treat with caution',c:'mv-lo'},
+        {k:'Evidence quality',v:'No direct evidence found',c:'mv-lo'},
+        {k:'Fit for this patient',v:'Partial — context only',c:'mv-lo'},
+        {k:'Do sources agree?',v:'Not applicable — indirect only',c:''},
+      ],
+      note:'Score of 0.15 reflects indirect context only. No direct guideline quote was matched — this answer should be verified with a clinical specialist.'
+    }
+  }
+];
+
+// ── SOURCE DETAIL CARD BUILDERS ──
+let _sdcCount = 0;
+const CHEV_SDC = `<svg class="sdc-chevron" viewBox="0 0 10 10" fill="none"><polyline points="2,3 5,7 8,3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+function buildDetailCard(title, rows){
+  const id = 'sdc-'+(++_sdcCount);
+  const rowsHtml = rows.map(([k,v])=>
+    `<div class="sdc-row"><span class="sdc-key">${k}</span><span class="sdc-val">${v}</span></div>`
+  ).join('');
+  return `<div class="source-detail-card" id="${id}">
+    <div class="sdc-header" onclick="document.getElementById('${id}').classList.toggle('open')">
+      <span class="sdc-title">${title}</span>${CHEV_SDC}
+    </div>
+    <div class="sdc-body">${rowsHtml}</div>
+  </div>`;
+}
+function buildTrialDetail(d){
+  return buildDetailCard('Trial Detail',[
+    ['Study Design', d.design],
+    ['Sample Size',  d.sampleSize],
+    ['Geography',    d.geography],
+    ['Funding',      d.funding],
+    ['Endpoint',     d.endpoint],
+    ['Effect Size',  d.effectSize],
+    ['Replication',  d.replication],
+  ]);
+}
+function buildJournalDetail(d){
+  const prBadge  = d.peerReviewed ? '<span class="sdc-flag sdc-ok">✓ Peer-reviewed</span>' : d.preprint ? '<span class="sdc-flag sdc-warn">⚠ Preprint</span>' : '<span class="sdc-flag sdc-neu">Non-peer-reviewed</span>';
+  const medBadge = d.medline ? '<span class="sdc-flag sdc-ok">✓ MEDLINE indexed</span>' : '<span class="sdc-flag sdc-neu">Not MEDLINE indexed</span>';
+  const citedHtml = (d.citedBy||[]).map(c=>`<div>· ${c}</div>`).join('');
+  return buildDetailCard('Journal Detail',[
+    ['Recency',        d.recency],
+    ['Impact Factor',  d.impactFactor],
+    ['Citations',      d.citationCount],
+    ['Geography',      d.geography],
+    ['Cited by',       citedHtml||'—'],
+    ['Review status',  prBadge+' '+medBadge],
+  ]);
+}
+
+// ── BUILD LEFT ──
+function buildLeft(){
+  const list = document.getElementById('sc-list');
+  SCENARIOS.forEach((s,i)=>{
+    const el = document.createElement('div');
+    el.className='sc-item'+(i===0?' active':'');
+    el.dataset.id=s.id;
+    el.innerHTML=`
+      <span class="sc-badge ${s.bc}">${s.badge}</span>
+      <div class="sc-name">${s.name}</div>
+      <div class="sc-prev">${s.prev}</div>`;
+    el.addEventListener('click',()=>select(s.id));
+    list.appendChild(el);
+  });
+}
+
+// ── BUILD MIDDLE ──
+function buildMiddle(){
+  const panel=document.getElementById('middle');
+  // Wrap all scenario views in .phone-frame:
+  //   desktop → display:contents (invisible passthrough)
+  //   mobile  → becomes the physical phone shell
+  const frame=document.createElement('div');
+  frame.className='phone-frame';
+  frame.id='phone-frame';
+  SCENARIOS.forEach((s,i)=>{
+    const v=document.createElement('div');
+    v.className='sv'+(i===0?' active':'')+(s.minimal?' sv-minimal':'');
+    v.dataset.id=s.id;
+    v.innerHTML=buildMiddleHTML(s);
+    frame.appendChild(v);
+  });
+  panel.appendChild(frame);
+}
+
+function buildMiddleHTML(s){
+
+  // Helper to render an expandable section
+  const renderSec = (sec, open) => {
+    const cls = open ? ' open' : '';
+    if(sec.refs){
+      return `<div class="exp-section${cls}">
+        <div class="exp-hdr">
+          <div class="exp-title">${sec.title}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="exp-meta">${sec.meta}</span>
+            <div class="exp-chevron">${CHEV}</div>
+          </div>
+        </div>
+        <div class="exp-body"><div class="exp-content">
+          ${[...sec.refs].sort((a,b)=>(a.isNew?1:0)-(b.isNew?1:0)).map(r=>{
+            const statuses = [];
+            if(r.indirect) statuses.push(`<span class="ref-status rs-indirect">Indirect reference</span>`);
+            if(r.isNew) statuses.push(`<span class="ref-status rs-new">Newly added</span>`);
+            if(r.reviewed) statuses.push(`<span class="ref-status rs-latest">Most recent update</span>`);
+            if(['Clinical Trial','Article','Systematic Review'].includes(r.tag)) statuses.push(`<span class="ref-status rs-peer">Peer reviewed</span>`);
+            return `
+            <div class="ref-item${r.isNew?' is-new':''}">
+              <div class="ref-num-col">
+                <span class="ref-num">${r.n}</span>
+              </div>
+              <div class="ref-body">
+                <div class="ref-badges-row">
+                  ${r.tag?`<span class="ref-type-tag">${r.tag}</span>`:''}
+                  ${r.grade?`<span class="ref-grade ${r.grade}">${r.gradeLabel}</span>`:''}
+                  ${statuses.join('')}
+                </div>
+                <div class="ref-title-row">
+                  <a class="ref-title${r.isNew?' ref-title-new':''}" href="${r.link||'#'}" target="_blank">${r.title||r.src}</a>
+                  ${r.isNew?`<span class="new-ev-icon">i</span>`:''}
+                </div>
+                <span class="ref-source">${r.src}</span>
+                ${(r.published||r.reviewed)?`<div class="ref-dates">${
+                  r.published?r.published:''
+                }${r.reviewed?` · <span class="ref-reviewed-marker">Rev.</span> ${r.reviewed}`:''}</div>`:''}
+                ${r.section?`<span class="ref-section">${r.section}</span>`:''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div></div>
+      </div>`;
+    } else {
+      return `<div class="exp-section${cls}">
+        <div class="exp-hdr">
+          <div class="exp-title">${sec.title}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="exp-meta">${sec.meta}</span>
+            <div class="exp-chevron">${CHEV}</div>
+          </div>
+        </div>
+        <div class="exp-body"><div class="exp-content">${sec.limitedEvidence?`<div class="limited-ev-banner"><span class="le-flag">LIMITED EVIDENCE</span><div class="le-body">Evidence quality is insufficient to support a confident recommendation. The following is based on limited data and/or expert opinion only.</div></div>`:''}${sec.body}</div></div>
+      </div>`;
+    }
+  };
+
+  // ── Card body ──
+  let body = '';
+  const refsSec = (s.sections||[]).find(sec => sec.refs);
+  function toTitleCase(str){ return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase(); }
+  const recTypeText = s.recGrade
+    ? (s.recGrade === 'VARIES'
+        ? '2 Different Recommendations'
+        : `${toTitleCase(s.recGrade)} Recommendation`)
+    : s.recType;
+
+  // Header row: "Evidence" label + score
+  body += `
+    <div class="oc-header">
+      <div class="rec-type">Evidence</div>
+      <span class="oc-score ${s.ocClass}">${s.ocScore}</span>
+    </div>`;
+
+  if(s.quoteTiers){
+    s.quoteTiers.forEach((tier, ti) => {
+      if(ti > 0) body += `<div class="quote-tier-divider"></div>`;
+      body += `<div class="quote-tier">
+        <div class="quote-tier-hdr">
+          <span class="quote-tier-rank">Tier ${tier.rank}</span>
+          <span class="quote-tier-name">${tier.label}</span>
+          ${tier.sub ? `<span class="quote-tier-sub">— ${tier.sub}</span>` : ''}
+        </div>
+        ${tier.quotes.map(q => `
+          <div class="quote-tier-item">
+            <a class="orig-quote quote-clickable" href="${q.link}" target="_blank">
+              <div class="quote-source-type">${q.srcType||'Guideline'}</div>
+              <div class="quote-text">${q.text}</div>
+              <div class="quote-org-right">${q.org}</div>
+            </a>
+          </div>`).join('')}
+      </div>`;
+    });
+    const infoBtn = `<button class="qmr-info-btn" onclick="showGradeOverlay(event)" aria-label="How quality is determined"><span class="new-ev-icon">i</span></button>`;
+    const tMetaRow = (s.recType||s.evidenceCount) ? `<div class="quote-meta-row">
+      ${s.recType?`<div class="qmr-line1-row"><div class="qmr-line1">${s.recType}</div>${infoBtn}</div>`:''}
+      ${s.evidenceCount?`<div class="qmr-line2">Grade A Evidence · ${s.evidenceCount}</div>`:''}
+    </div>` : '';
+    body += tMetaRow;
+  } else if(s.noMatch){
+    body += `<div class="nomatch-block">
+      <div class="nomatch-icon"><svg viewBox="0 0 20 20"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5L17 17"/><path d="M7 9h4M9 7v4" stroke-dasharray="2 1.5"/></svg></div>
+      <div class="nomatch-title">No direct quote matched</div>
+      <div class="nomatch-sub">No guideline text was directly applicable. Indirect references were found and are listed below.</div>
+    </div>`;
+  } else if(s.indirectOnly){
+    body += `<div class="indirect-note">
+      <span class="indirect-flag">INDIRECT</span>
+      <span class="indirect-desc">Answer inferred from background literature — no direct guideline quote was matched for this question.</span>
+    </div>`;
+  } else if(s.conflicts){
+    s.conflicts.forEach((c, idx)=>{
+      const quoteCls = c.lc==='conf-b' ? 'conf-b-quote' : '';
+      const conflictRef = refsSec && refsSec.refs ? refsSec.refs[idx] : null;
+      const conflictGrade = conflictRef && conflictRef.gradeLabel || null;
+      const cSt = citationStatus(conflictRef);
+      const cStatusBadge = cSt ? `<span class="quote-status-badge ${cSt.cls}">${cSt.label}</span>` : '';
+      const cLine1 = c.recStrength || '';
+      const cLine2 = (conflictGrade && c.evidenceCount) ? `${conflictGrade} Quality: ${c.evidenceCount}` : '';
+      const cInfoBtn = `<button class="qmr-info-btn" onclick="showGradeOverlay(event)" aria-label="How quality is determined"><span class="new-ev-icon">i</span></button>`;
+      const cMetaRow = (cLine1||cLine2)
+        ? `<div class="quote-meta-row">${cLine1?`<div class="qmr-line1-row"><div class="qmr-line1">${cLine1}</div>${cInfoBtn}</div>`:''}${cLine2?`<div class="qmr-line2">${cLine2}</div>`:''}</div>`
+        : '';
+      body += `<div class="conflict-item">
+        <div class="conflict-row">
+          <div class="conflict-lbl">${c.lbl}</div>
+          <div class="conflict-org">${c.org}</div>
+        </div>
+        <a class="orig-quote ${quoteCls} quote-clickable" href="${c.origLink}" target="_blank">
+          <div class="quote-source-type">${s.srcType||'Guideline'}</div>
+          <div class="quote-text">${stripMethodNote(c.origQuote)}</div>
+          <div class="quote-org-right">${conflictRef ? conflictRef.src : c.org}</div>
+        </a>${cMetaRow}
+      </div>`;
+    });
+  } else {
+    // Non-conflict: source type above quote, org bottom-right, metadata row below
+    const primaryRef = refsSec && refsSec.refs ? refsSec.refs.find(r => r.grade) : null;
+    const gradeLabel = primaryRef ? primaryRef.gradeLabel : null;
+    const citRef = refsSec && refsSec.refs ? refsSec.refs[0] : null;
+    const citCount = s.srcType !== 'Guideline' && refsSec&&refsSec.refs&&refsSec.refs.length ? ' · '+refsSec.refs.length+' citation'+(refsSec.refs.length!==1?'s':'') : '';
+    const st = citationStatus(citRef);
+    const statusBadge = st ? `<span class="quote-status-badge ${st.cls}">${st.label}</span>` : '';
+    // Meta row — two-line stacked layout + ⓘ overlay trigger
+    const line1 = s.recType || '';
+    const line2parts = [
+      gradeLabel && s.evidenceCount ? `${gradeLabel} Quality: ${s.evidenceCount}` : null,
+    ].filter(Boolean);
+    const line2 = line2parts.join(' · ');
+    const infoBtn = `<button class="qmr-info-btn" onclick="showGradeOverlay(event)" aria-label="How quality is determined"><span class="new-ev-icon">i</span></button>`;
+    const metaRow = (line1||line2)
+      ? `<div class="quote-meta-row">${line1?`<div class="qmr-line1-row"><div class="qmr-line1">${line1}</div>${infoBtn}</div>`:''}${line2?`<div class="qmr-line2">${line2}</div>`:''}</div>`
+      : '';
+    body += `<a class="orig-quote ${s.origQuoteCls||''} quote-clickable" href="${s.origLink}" target="_blank">
+      <div class="quote-source-type">${s.srcType||''}</div>
+      <div class="quote-text">${stripMethodNote(s.origQuote)}</div>
+      <div class="quote-org-right">${citRef ? citRef.src : ''}</div>
+    </a>${metaRow}`;
+    if(s.trialDetail)   body += buildTrialDetail(s.trialDetail);
+    if(s.journalDetail) body += buildJournalDetail(s.journalDetail);
+    // question block rendered separately below answer section
+  }
+
+  // ── Supporting Evidence slip content (non-Reasoning, non-refs sections) — body only, no repeated header ──
+  let slipContent = '';
+  let slipMeta = '';
+  (s.sections||[]).filter(sec => sec.title !== 'Reasoning' && !sec.refs).forEach(sec => {
+    const limitedBanner = sec.limitedEvidence
+      ? `<div class="limited-ev-banner"><span class="le-flag">LIMITED EVIDENCE</span><div class="le-body">Evidence quality is insufficient to support a confident recommendation. The following is based on limited data and/or expert opinion only.</div></div>`
+      : '';
+    slipContent += limitedBanner + (sec.body || '');
+    if(!slipMeta && sec.meta) slipMeta = sec.meta;
+  });
+
+  // ── Reasoning flat block (outside card), with References appended ──
+  const reasoningSec = (s.sections||[]).find(sec => sec.title === 'Reasoning');
+  const refsHTML = refsSec ? renderSec(refsSec, false) : '';
+  const reasoningBlock = reasoningSec ? `
+    <div class="reasoning-block">
+      <div class="section-label">Reasoning</div>
+      <div>${reasoningSec.body}</div>
+      ${refsHTML}
+    </div>` : (refsHTML ? `<div class="reasoning-block">${refsHTML}</div>` : '');
+
+  // ── Answer block: flat on background, citation pills ──
+  const directAnswerText = s.directAnswer || s.recText || '';
+  const citePillsHTML = (s.tags||[]).length > 0 ? `<div class="ab-cite-pills">${
+    s.tags.map((t, i) => {
+      const link = refsSec && refsSec.refs && refsSec.refs[i] ? refsSec.refs[i].link : null;
+      return link
+        ? `<a class="rec-tag" href="${link}" target="_blank">${t}</a>`
+        : `<span class="rec-tag">${t}</span>`;
+    }).join('')
+  }</div>` : '';
+
+  const CHEV_THINK = `<svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 3L4.5 6L7.5 3" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const thinkingBlock = (s.thinking && s.thinking.length) ? `
+    <div class="thinking-block" id="think-${s.id}">
+      <div class="thinking-hdr" onclick="toggleThinking('${s.id}')">
+        <div class="thinking-chev">${CHEV_THINK}</div>
+        <span class="thinking-label">Finished Thinking</span>
+      </div>
+      <div class="thinking-body">
+        <div class="thinking-content">
+          ${s.thinking.map(l=>`<div class="thinking-line">${l}</div>`).join('')}
+        </div>
+      </div>
+    </div>` : '';
+
+  const directAnswerBlock = directAnswerText ? `
+    ${thinkingBlock}
+    <div class="answer-bubble-wrap">
+      <div class="ab-text">${directAnswerText}</div>
+      ${citePillsHTML}
+    </div>` : '';
+
+  const questionBlock = s.question ? (() => {
+    const q = s.question;
+    const maxLen = Math.max(...q.opts.map(o=>o.length));
+    const isInline = q.opts.length <= 5 && maxLen <= 16;
+    const defaultIdx = q.defaultOpt ?? 0;
+    const opts = q.opts.map((o,i)=>{
+      const sel = isInline && i===defaultIdx;
+      if(isInline){
+        const dest = (q.dests && q.dests[i]) || '';
+        return `<div class="q-opt${sel?' q-opt--selected':''}" data-dest="${dest}" onclick="selectQOpt(this)"><span class="q-opt-check">✓</span><span>${o}</span></div>`;
+      } else {
+        return `<div class="q-opt"><span>${o}</span><div class="q-opt-arrow"><svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 1.5L6 4.5L3 7.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>`;
+      }
+    }).join('');
+    const sendBtn = isInline ? `<button class="q-send-btn" onclick="sendQOpt(this)"><svg viewBox="0 0 13 13"><path d="M2 6.5h9M7.5 2.5l4 4-4 4"/></svg>Improve answer</button>` : '';
+    return `<div class="q-block">
+      <div class="q-bump-label">${q.label}</div>
+      <div class="q-title">${q.title}</div>
+      <div class="q-opts${isInline?' q-opts--inline':''}">${opts}${sendBtn}</div>
+    </div>`;
+  })() : '';
+
+  const chips = (s.suggestions||[]).map(sg=>`<div class="sug-chip">${sg}</div>`).join('');
+  const banner = s.boostBanner
+    ? `<div class="boost-banner">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1L1 4V10L7 13L13 10V4L7 1Z" fill="#1A9E8A" opacity="0.25"/>
+          <path d="M5 7L6.5 8.5L9 5.5" stroke="#1A9E8A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>${s.boostBanner}</span>
+      </div>` : '';
+
+  return `
+    <div class="chat-scroll">
+      <div class="chat-prompt">
+        <div class="prompt-bubble">${s.prompt}</div>
+      </div>
+      ${directAnswerBlock}
+      ${questionBlock}
+      <div${s.indirectOnly ? ' style="display:none"' : ''}>
+        ${banner}
+        ${!s.indirectOnly ? `<div class="rec-card" id="card-${s.id}">
+          <div class="rec-body">${body}</div>
+        </div>` : ''}
+        ${slipContent ? `<div class="slip-receipt" id="slip-${s.id}">
+          <div class="slip-trigger-row" onclick="toggleSlip('${s.id}')">
+            <span class="slip-trigger-title">Supporting Evidence</span>
+            <span class="slip-trigger-meta">${slipMeta}</span>
+            <div class="slip-chevron"><svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 3L4.5 6L7.5 3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+          <div class="slip-content"><div class="slip-body">${slipContent}</div></div>
+        </div>` : ''}
+        ${(s.trust && s.trust.length) ? `
+        <div class="slip-receipt slip-conf" id="slip-conf-${s.id}">
+          <div class="slip-trigger-row" onclick="toggleSlip('conf-${s.id}')">
+            <span class="slip-trigger-title">Confidence Factors</span>
+            <span class="slip-trigger-meta">${s.trust.length} factors</span>
+            <div class="slip-chevron"><svg viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.5 3L4.5 6L7.5 3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+          <div class="slip-content">
+            <div class="slip-body">
+              <div class="trust-pillars">
+                ${s.trust.map(p=>`
+                  <div class="pillar ${p.pillCls}">
+                    <div class="pillar-top"><span class="pillar-label">${p.label}</span><span class="pillar-status ${p.stCls}">${p.stLbl}</span></div>
+                    <div class="pillar-val">${p.val}</div>
+                    <div class="pillar-sub">${p.sub}</div>
+                  </div>`).join('')}
+              </div>
+            </div>
+          </div>
+        </div>` : ''}
+      </div>
+      ${reasoningBlock}
+      <div class="feedback-row">
+        <span class="feedback-label">Was this helpful?</span>
+        <button class="feedback-btn" id="fb-up-${s.id}" onclick="toggleFeedback('${s.id}','up')" aria-label="Thumbs up">
+          <svg viewBox="0 0 24 24"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+        </button>
+        <button class="feedback-btn" id="fb-down-${s.id}" onclick="toggleFeedback('${s.id}','down')" aria-label="Thumbs down">
+          <svg viewBox="0 0 24 24"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
+        </button>
+      </div>
+      ${chips?`<div class="suggestions">${chips}</div>`:''}
+    </div>
+    <div class="chat-input-row">
+      <div class="chat-input-bar">
+        <div class="chat-input-ph">Ask a clinical question…</div>
+      </div>
+    </div>`;
+}
+
+// ── BUILD RIGHT ──
+function buildRight(){
+  const panel=document.getElementById('right');
+  SCENARIOS.forEach((s,i)=>{
+    const v=document.createElement('div');
+    v.className='mv'+(i===0?' active':'');
+    v.dataset.id=s.id;
+    const m=s.model;
+    const pct=Math.round(m.score*100);
+    v.innerHTML=`
+      <div class="right-hdr">
+        <div class="right-handle"></div>
+        <div class="right-title">Confidence of Recommendation Factors</div>
+        <div class="right-sub">An overview of all factors impacting your recommendation.</div>
+      </div>
+      <div class="right-body">
+        <div class="score-box">
+          <div class="score-lbl">Confidence Score</div>
+          <div class="score-row">
+            <div class="score-track"><div class="score-fill" style="width:${pct}%;background:${m.bc}"></div></div>
+            <div class="score-num ${m.sc}">${m.score.toFixed(2)}</div>
+          </div>
+          ${buildFormula(m)}
+        </div>
+        <div class="r-pillars">
+          ${m.pillars.map(p=>`
+            <div class="r-pillar">
+              <div class="r-pillar-top">
+                <div class="r-pillar-name">${p.name}</div>
+                <div class="r-chip"><div class="r-dot ${p.dot}"></div>${p.chip}</div>
+              </div>
+              <div class="r-pillar-detail">${p.detail}</div>
+            </div>`).join('')}
+        </div>
+        <div class="model-sec">
+          <div class="model-ttl">At a Glance</div>
+          ${m.rows.map(r=>`
+            <div class="model-row">
+              <div class="model-k">${r.k}</div>
+              <div class="model-v ${r.c}">${r.v}</div>
+            </div>`).join('')}
+        </div>
+        <div class="note-box">${m.note}</div>
+      </div>`;
+    panel.appendChild(v);
+  });
+}
+
+// ── EVENT DELEGATION for expandable sections ──
+document.getElementById('middle').addEventListener('click', e => {
+  const hdr = e.target.closest('.exp-hdr');
+  if(hdr) hdr.closest('.exp-section').classList.toggle('open');
+});
+
+// ── SELECT ──
+function select(id){
+  document.querySelectorAll('.sc-item').forEach(e=>e.classList.toggle('active',e.dataset.id===id));
+  document.querySelectorAll('.sv').forEach(e=>e.classList.toggle('active',e.dataset.id===id));
+  document.querySelectorAll('.mv').forEach(e=>e.classList.toggle('active',e.dataset.id===id));
+  // Scroll active chat view to top (works in both desktop and mobile)
+  const activeView=document.querySelector('.sv.active');
+  if(activeView){
+    const cs=activeView.querySelector('.chat-scroll');
+    if(cs) cs.scrollTop=0;
+  }
+  document.getElementById('middle').scrollTop=0;
+  document.getElementById('right').scrollTop=0;
+}
+
+buildLeft();
+buildMiddle();
+buildRight();
+initCueToggles();
+
+// ── NEW EVIDENCE TOOLTIP (position:fixed — immune to overflow clipping) ──
+(function(){
+  const tip = document.createElement('div');
+  tip.id = 'nev-tip';
+  tip.style.cssText = 'position:fixed;z-index:9999;background:#0F1D30;color:#fff;font-size:11px;font-family:var(--sans);padding:5px 10px;border-radius:6px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.3);opacity:0;transition:opacity .15s;transform:translateX(-50%)';
+  tip.textContent = 'New evidence — not yet reflected in current guidelines';
+  document.body.appendChild(tip);
+  document.addEventListener('mouseover', e => {
+    const ico = e.target.closest('.new-ev-icon');
+    if(!ico) return;
+    const r = ico.getBoundingClientRect();
+    tip.style.left = (r.left + r.width / 2) + 'px';
+    tip.style.top  = (r.top - 36) + 'px';
+    tip.style.opacity = '1';
+  });
+  document.addEventListener('mouseout', e => {
+    if(e.target.closest('.new-ev-icon')) tip.style.opacity = '0';
+  });
+})();
+</script>
+
+<!-- Grade Quality Overlay -->
+<div class="grade-overlay" id="grade-overlay" onclick="if(event.target===this)closeGradeOverlay()">
+  <div class="grade-panel">
+    <div class="grade-panel-hdr">
+      <div class="grade-panel-title">How Quality is Determined</div>
+      <button class="grade-close-btn" onclick="closeGradeOverlay()">×</button>
+    </div>
+    <div class="grade-source-note">Based on GRADE methodology · Guideline Central grading standards</div>
+    <div class="grade-section">
+      <div class="grade-section-title">Recommendation Strength</div>
+      <div class="grade-row"><span class="grade-badge gb-strong">Strong</span><span class="grade-desc">Benefits clearly outweigh the risks — most patients in this situation should follow the recommendation</span></div>
+      <div class="grade-row"><span class="grade-badge gb-cond">Conditional</span><span class="grade-desc">Benefits and risks are closely balanced — patient values, preferences, and circumstances should guide the decision</span></div>
+    </div>
+    <div class="grade-section">
+      <div class="grade-section-title">Evidence Quality Grades</div>
+      <div class="grade-row"><span class="grade-badge gb-a">Grade A</span><span class="grade-desc">High quality — Consistent evidence from well-designed RCTs, systematic reviews, or meta-analyses</span></div>
+      <div class="grade-row"><span class="grade-badge gb-b">Grade B</span><span class="grade-desc">Moderate quality — RCTs with some limitations, or strong consistent observational evidence</span></div>
+      <div class="grade-row"><span class="grade-badge gb-c">Grade C</span><span class="grade-desc">Low quality — Observational studies, case series, or RCTs with significant limitations</span></div>
+      <div class="grade-row"><span class="grade-badge gb-d">Grade D</span><span class="grade-desc">Very low quality — Expert opinion, clinical consensus, or evidence extrapolated from other populations</span></div>
+    </div>
+    <div class="grade-footer">Source: GRADE Working Group · <a href="https://www.guidelinecentral.com" target="_blank" style="color:var(--teal);text-decoration:none">Guideline Central</a></div>
+  </div>
+</div>
+<script>
+// A story chapter can open the matching simulated scenario directly.
+const storyScenario = new URLSearchParams(window.location.search).get('scenario');
+if (storyScenario && SCENARIOS.some(s => s.id === storyScenario)) select(storyScenario);
+</script>
+</div><script>const root=document.getElementById('prototype-root');addEventListener('message',event=>{if(event.source!==parent||event.origin!==location.origin||event.data?.type!=='goinvo-prototype-spread')return;const value=Number(event.data.value);if(!Number.isFinite(value))return;root.dataset.immediate=String(!!event.data.immediate);root.style.setProperty('--spread',String(Math.max(0,Math.min(1,value))));});</script></body>
+</html>

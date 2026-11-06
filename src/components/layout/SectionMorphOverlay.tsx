@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePageTransition } from '@/context/PageTransitionContext'
+import { ease } from '@/lib/motion'
 
 const MORPH_DURATION = 0.6
 const NAV_DELAY = 650
@@ -63,7 +64,7 @@ export function SectionMorphOverlay() {
             }}
             transition={{
               duration: MORPH_DURATION,
-              ease: [0.4, 0, 0.2, 1] as [number, number, number, number],
+              ease: ease.standard,
             }}
           >
             {/* Gradient that fades in to match the case study hero overlay */}
@@ -95,7 +96,7 @@ export function SectionMorphOverlay() {
             }}
             transition={{
               duration: MORPH_DURATION,
-              ease: [0.4, 0, 0.2, 1] as [number, number, number, number],
+              ease: ease.standard,
             }}
           />
         </>

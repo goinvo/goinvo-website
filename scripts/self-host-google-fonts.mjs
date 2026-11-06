@@ -15,7 +15,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const CSS_URL =
-  'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600&display=swap'
+  'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:ital,wght@0,400;0,600;1,400;1,600&display=swap'
 // Google picks the format by user agent; a current Chrome gets woff2 with unicode-range subsets.
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'

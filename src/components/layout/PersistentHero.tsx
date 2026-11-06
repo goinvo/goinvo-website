@@ -7,6 +7,7 @@ import { useHero, type HeroConfig, type HeroEditTarget } from '@/context/HeroCon
 import { EditInStudioLink } from '@/components/sanity/EditInStudioLink'
 import { cloudfrontImage } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { ease } from '@/lib/motion'
 
 /* ------------------------------------------------------------------ */
 /*  Slide variants — matching the work-page category switching         */
@@ -39,6 +40,8 @@ const containerVariants = {
 const localHeroImagePrefixes = [
   '/images/features/ebola-care-guideline/',
   '/images/services/',
+  // The homepage study's review artwork (a prototype still as a case-study header).
+  '/design-lab/',
 ]
 
 export function heroImageSrc(src: string) {
@@ -190,7 +193,7 @@ export function PersistentHero() {
           }
           animate="visible"
           exit="exit"
-          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ duration: 0.3, ease: ease.standard }}
           className="relative pt-[var(--spacing-header-height)]"
         >
           {/* Mobile stacked images — rendered outside animation container.
@@ -255,7 +258,7 @@ export function PersistentHero() {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+                transition={{ duration: 0.45, ease: ease.standard }}
                 onAnimationComplete={handleSlideComplete}
                 className="absolute inset-0"
               >
@@ -291,6 +294,7 @@ export function PersistentHero() {
           {!config.hideTextBox && (
             <div className="max-width relative">
               <div
+                data-hero-text
                 className="content-padding py-8 bg-white/80 lg:absolute lg:bottom-0 lg:left-0 lg:w-[385px]"
                 style={{ viewTransitionName: 'page-title' }}
               >
@@ -301,7 +305,7 @@ export function PersistentHero() {
                     initial="enter"
                     animate="visible"
                     exit="exit"
-                    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                    transition={{ duration: 0.25, ease: ease.standard }}
                   >
                     <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light m-0">
                       {config.title}

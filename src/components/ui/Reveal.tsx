@@ -2,9 +2,9 @@
 
 import { motion, type TargetAndTransition } from 'framer-motion'
 import { useScrollReveal } from '@/lib/useScrollReveal'
-import { useReducedMotion } from '@/lib/motion'
+import { useReducedMotion, ease } from '@/lib/motion'
 
-type RevealStyle = 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'clip-up' | 'clip-left'
+type RevealStyle = 'settle' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'clip-up' | 'clip-left'
 
 interface RevealProps {
   children: React.ReactNode
@@ -16,6 +16,11 @@ interface RevealProps {
 }
 
 const variants: Record<RevealStyle, { hidden: TargetAndTransition; visible: TargetAndTransition }> = {
+  // The quiet one (the homepage study): rises a little from almost full strength.
+  settle: {
+    hidden: { opacity: 0.72, y: 22 },
+    visible: { opacity: 1, y: 0 },
+  },
   'slide-up': {
     hidden: { opacity: 0, y: 40, scale: 0.98 },
     visible: { opacity: 1, y: 0, scale: 1 },
@@ -65,7 +70,7 @@ export function Reveal({
       className={className}
       initial={false}
       animate={shown ? v.visible : v.hidden}
-      transition={instant ? { duration: 0 } : { duration, delay, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={instant ? { duration: 0 } : { duration, delay, ease: style === 'settle' ? ease.outExpo : ease.gentle }}
     >
       {children}
     </motion.div>

@@ -1,0 +1,390 @@
+/* Story homepage (direction D). Every selector starts with .hs: a stylesheet
+   imported by one route is global and never unloads, so nothing here may reach
+   outside the page. */
+
+.hs {
+  --hs-night: #141211;
+  --hs-cream: #f3eee4;
+  --hs-paper: #fbfaf7;
+  --hs-ink: #1d1b1a;
+  --hs-ink-2: #3a3633;
+  --hs-muted: #5f5a55;
+  --hs-rule: #d9d3c6;
+  /* Orange that passes 4.5:1 as TEXT on cream and paper, and the brighter one
+     for text on night. #b84a0e is for fills behind white text only. */
+  --hs-accent: #9f3f0c;
+  --hs-accent-fill: #b84a0e;
+  --hs-accent-night: #e0703a;
+  --hs-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --hs-header: var(--spacing-header-height, 72px);
+
+  background: var(--hs-paper);
+  color: var(--hs-ink);
+  /* The site header is fixed and the layout does not pad for it. */
+  padding-top: var(--hs-header);
+}
+
+.hs .hs-serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
+.hs .hs-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ---------- Sticky stage ---------- */
+
+.hs .hs-stage {
+  position: sticky;
+  top: var(--hs-header);
+  height: calc(100svh - var(--hs-header));
+  overflow: hidden;
+}
+
+.hs .hs-skip {
+  position: absolute;
+  left: -9999px;
+}
+
+.hs .hs-skip:focus {
+  left: 16px;
+  top: calc(var(--hs-header) + 16px);
+  z-index: 30;
+  padding: 8px 16px;
+  background: var(--hs-ink);
+  color: #fff;
+  font-size: 14px;
+}
+
+/* Desktop stages vs the flowing layout phones and reduced-motion readers get. */
+.hs .hs-staged {
+  display: none;
+}
+
+@media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
+  .hs .hs-staged {
+    display: block;
+  }
+  .hs .hs-flowing {
+    display: none;
+  }
+}
+
+/* ---------- Line reveals (CSS, so they run before and without hydration) ---------- */
+
+@keyframes hs-wipe-in {
+  from { clip-path: inset(-0.25em 100% -0.25em 0); }
+  to { clip-path: inset(-0.25em 0 -0.25em 0); }
+}
+
+@keyframes hs-rise-in {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+.hs .hs-onload-wipe {
+  animation: hs-wipe-in 1000ms var(--hs-ease) both;
+  animation-delay: calc(var(--d, 0) * 1ms);
+}
+
+.hs .hs-onload-rise {
+  animation: hs-rise-in 900ms var(--hs-ease) both;
+  animation-delay: calc(var(--d, 0) * 1ms);
+}
+
+/* Scroll-triggered versions: Reveal sets data-shown. Content that started on
+   screen is shown from the server, so these only hold back below-fold content. */
+/* The clip goes on an INNER span, never on the element Reveal observes: a target
+   clipped to zero width was never reported as intersecting on a 390px phone, so
+   the "What we do" heading stayed invisible for good. */
+.hs .hs-wipe > .hs-wipe-inner {
+  display: block;
+  clip-path: inset(-0.25em 100% -0.25em 0);
+  transition: clip-path 1000ms var(--hs-ease);
+  transition-delay: calc(var(--d, 0) * 1ms);
+}
+
+.hs .hs-wipe[data-shown] > .hs-wipe-inner {
+  clip-path: inset(-0.25em 0 -0.25em 0);
+}
+
+.hs .hs-rise {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition: opacity 800ms var(--hs-ease), transform 800ms var(--hs-ease);
+  transition-delay: calc(var(--d, 0) * 1ms);
+}
+
+.hs .hs-rise[data-shown] {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Links and buttons ---------- */
+
+.hs .hs-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 24px;
+  background: var(--hs-accent-fill);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+  border-radius: 2px;
+  transition: transform 200ms var(--hs-ease), box-shadow 200ms var(--hs-ease), background 200ms;
+}
+
+.hs .hs-button:hover {
+  background: #a3410c;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px -10px rgba(184, 74, 14, 0.6);
+}
+
+.hs .hs-button:focus-visible,
+.hs .hs-link:focus-visible,
+.hs .hs-line-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
+.hs .hs-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  /* This sheet is unlayered, so it beats Tailwind's (layered) colour utilities:
+     a link takes its colour from --hs-link-color, which a parent sets, never from
+     a text-* class on the link itself. */
+  color: var(--hs-link-color, inherit);
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  padding-bottom: 3px;
+  transition: background-size 400ms var(--hs-ease);
+}
+
+.hs .hs-link:hover {
+  background-size: 0% 1px;
+  background-position: 100% 100%;
+}
+
+.hs .hs-arrow {
+  transition: transform 300ms var(--hs-ease);
+}
+
+.hs .hs-link:hover .hs-arrow,
+.hs .hs-button:hover .hs-arrow {
+  transform: translateX(5px);
+}
+
+/* ---------- Opening ---------- */
+
+.hs .hs-scroll-hint {
+  animation: hs-rise-in 800ms var(--hs-ease) 2600ms both;
+}
+
+.hs .hs-scroll-hint-dot {
+  animation: hs-hint 1800ms ease-in-out 3000ms infinite;
+}
+
+@keyframes hs-hint {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(8px); opacity: 0.35; }
+}
+
+/* ---------- People scenes ---------- */
+
+.hs .hs-scene-image {
+  box-shadow: 0 30px 80px -40px rgba(29, 27, 26, 0.55);
+}
+
+/* ---------- Services lines ---------- */
+
+.hs .hs-line-button {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 0 16px;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* The underline draws in from alternating sides the first time it is seen
+   (FELINES "what if" lines). */
+.hs .hs-draw::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--hs-ink);
+  transform: scaleX(0);
+  transform-origin: var(--hs-from, left);
+  transition: transform 1100ms var(--hs-ease);
+  transition-delay: calc(var(--d, 0) * 1ms);
+}
+
+.hs [data-shown] > .hs-draw::after,
+.hs .hs-draw[data-shown]::after {
+  transform: scaleX(1);
+}
+
+.hs .hs-line-button:hover .hs-line-text {
+  color: var(--hs-accent);
+}
+
+.hs .hs-plus {
+  transition: transform 300ms var(--hs-ease);
+}
+
+.hs .hs-line-button[aria-expanded='true'] .hs-plus {
+  transform: rotate(45deg);
+}
+
+/* ---------- Client marquee ---------- */
+
+.hs .hs-marquee {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.hs .hs-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: hs-marquee 60s linear infinite;
+}
+
+.hs .hs-marquee-track[data-reverse] {
+  animation-direction: reverse;
+  animation-duration: 75s;
+}
+
+.hs .hs-marquee:hover .hs-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes hs-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+/* ---------- Open source + studio imagery ---------- */
+
+.hs .hs-zoom img {
+  transition: transform 900ms var(--hs-ease);
+}
+
+.hs .hs-zoom:hover img {
+  transform: scale(1.04);
+}
+
+/* ---------- Chapter rail ---------- */
+
+.hs .hs-rail {
+  position: fixed;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .hs .hs-rail {
+    display: block;
+  }
+}
+
+.hs .hs-rail-dot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  height: 26px;
+  cursor: pointer;
+}
+
+.hs .hs-rail-label {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 250ms, transform 250ms var(--hs-ease);
+  white-space: nowrap;
+}
+
+.hs .hs-rail-dot:hover .hs-rail-label,
+.hs .hs-rail-dot:focus-visible .hs-rail-label,
+.hs .hs-rail-dot[aria-current='true'] .hs-rail-label {
+  opacity: 1;
+  transform: none;
+}
+
+.hs .hs-rail-mark {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  transition: height 300ms var(--hs-ease), opacity 300ms;
+}
+
+.hs .hs-rail-dot[aria-current='true'] .hs-rail-mark {
+  height: 18px;
+  opacity: 1;
+  background: var(--hs-accent-fill);
+}
+
+.hs .hs-progress {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--hs-header);
+  height: 2px;
+  z-index: 20;
+  transform-origin: 0 50%;
+  background: var(--hs-accent-fill);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hs .hs-onload-wipe,
+  .hs .hs-onload-rise,
+  .hs .hs-scroll-hint,
+  .hs .hs-scroll-hint-dot {
+    animation: none;
+  }
+  .hs .hs-wipe > .hs-wipe-inner,
+  .hs .hs-rise {
+    clip-path: none;
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .hs .hs-draw::after {
+    transform: scaleX(1);
+    transition: none;
+  }
+  .hs .hs-marquee-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: auto;
+  }
+  .hs .hs-marquee-track > [aria-hidden] {
+    display: none;
+  }
+}

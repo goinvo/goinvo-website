@@ -1,0 +1,94 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import { cn } from '@/lib/utils'
+
+const chapters = [
+  { id: 'human', label: 'Introduction' },
+  { id: 'work-result', label: 'Our solutions' },
+  { id: 'services', label: 'What we do' },
+  { id: 'proof', label: 'Experience and trust' },
+  { id: 'evidence', label: 'Work at scale' },
+  { id: 'contact', label: 'Contact' },
+]
+const control = 'flex h-12 min-w-12 cursor-pointer items-center justify-center bg-transparent text-black hover:bg-tertiary-lightest focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary disabled:cursor-default disabled:opacity-35'
+
+export function HumanPageControls({ low, ready, toggleMotion, largerText, setLargerText }: {
+  low: boolean; ready: boolean; toggleMotion: () => void; largerText: boolean; setLargerText: (value: boolean) => void
+}) {
+  const [reading, setReading] = useState({ percent: 0, chapter: 0, dark: false, positions: chapters.map((_, index) => index / (chapters.length - 1) * 100) })
+  const dialog = useRef<HTMLDialogElement>(null)
+  const menu = useRef<HTMLDetailsElement>(null)
+
+  useEffect(() => {
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      const max = document.documentElement.scrollHeight - innerHeight
+      let current = 0
+      chapters.forEach((chapter, index) => {
+        const el = document.getElementById(chapter.id)
+        if (el && el.getBoundingClientRect().top <= innerHeight * 0.38) current = index
+      })
+      if (max > 0 && scrollY >= max - 4) current = chapters.length - 1
+      const percent = max > 0 ? Math.round(Math.max(0, Math.min(100, scrollY / max * 100))) : 100
+      const dark = false
+      const positions = chapters.map(chapter => {
+        const el = document.getElementById(chapter.id)
+        return el && max > 0 ? Math.max(1, Math.min(99, (el.getBoundingClientRect().top + scrollY) / max * 100)) : 0
+      })
+      setReading(previous => previous.percent === percent && previous.chapter === current && previous.dark === dark && previous.positions.every((value, index) => Math.abs(value - positions[index]) < 0.05) ? previous : { percent, chapter: current, dark, positions })
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
+    measure()
+    addEventListener('scroll', schedule, { passive: true })
+    addEventListener('resize', schedule)
+    const observer = new ResizeObserver(schedule)
+    observer.observe(document.body)
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); removeEventListener('scroll', schedule); removeEventListener('resize', schedule) }
+  }, [low])
+
+  function go(index: number) {
+    const target = document.getElementById(chapters[index].id)
+    if (!target) return
+    if (menu.current) menu.current.open = false
+    const heading = chapters[index].id === 'work-result' ? document.getElementById('work-title') : target.querySelector<HTMLElement>('h1,h2')
+    heading?.setAttribute('tabindex', '-1')
+    heading?.focus({ preventScroll: true })
+    target.scrollIntoView({ behavior: low ? 'instant' : 'smooth', block: 'start' })
+    history.replaceState(null, '', `#${chapters[index].id}`)
+  }
+
+  if (!ready) return null
+
+  return (
+    <aside data-ui aria-label="Reading and accessibility tools" className="pointer-events-none fixed inset-0 z-[70] text-black">
+      <progress aria-label="Page reading progress" value={reading.percent} max={100} className="sr-only" />
+      <nav aria-label="Page timeline" style={{ color: reading.dark ? 'var(--color-white)' : 'var(--color-black)' }} className="group/rail pointer-events-auto absolute right-3 top-1/2 hidden h-[48vh] w-12 -translate-y-1/2 md:block">
+        <div aria-hidden="true" className="absolute bottom-0 left-1/2 top-0 w-[2px] -translate-x-1/2 bg-current opacity-20" />
+        <div aria-hidden="true" style={{ transform: `scaleY(${reading.percent / 100})` }} className="absolute bottom-0 left-1/2 top-0 w-[2px] origin-top -translate-x-1/2 bg-current" />
+        {chapters.map((chapter, index) => <button key={chapter.id} aria-label={`Go to ${chapter.label}`} aria-current={reading.chapter === index ? 'location' : undefined} onClick={() => go(index)} style={{ top: `${reading.positions[index]}%` }} className={cn('absolute left-0 flex h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center bg-transparent text-inherit focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-current')}><span aria-hidden="true" className={cn('rounded-full bg-current transition-transform duration-200 motion-reduce:transition-none', reading.chapter === index ? 'h-2 w-2 scale-125' : 'h-1 w-1')} /><span aria-hidden="true" className={cn('pointer-events-none absolute right-11 whitespace-nowrap border-l-4 border-secondary bg-white px-4 py-2 text-[18px] leading-snug text-black opacity-0 transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none', reading.chapter === index && 'font-semibold')}>{chapter.label}</span></button>)}
+        <span aria-hidden="true" className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs tabular-nums opacity-0 transition-opacity group-hover/rail:opacity-100 group-focus-within/rail:opacity-100">{reading.percent}%</span>
+      </nav>
+      {/* Sits above the site's chat widget, which owns the bottom-right corner. */}
+      <div className="pointer-events-auto absolute bottom-24 right-0 flex flex-col items-center gap-1 bg-white md:bottom-24 md:right-4 md:flex-row">
+        <details ref={menu} className="relative md:hidden">
+          <summary aria-label="Page sections" className={cn(control, 'list-none [&::-webkit-details-marker]:hidden')}><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M7 6h14M7 12h14M7 18h14M2 6h1M2 12h1M2 18h1" /></svg></summary>
+          <nav aria-label="Jump to section" className="absolute bottom-14 right-0 w-60 bg-white p-2 shadow-[0_4px_28px_#24434d26]">{/* taste-skill-ignore: a floating navigation menu. */}
+            <p className="mb-2 mt-1 px-4 text-sm">{reading.percent}% read</p>
+            {chapters.map((chapter, index) => <button key={chapter.id} onClick={() => go(index)} aria-current={reading.chapter === index ? 'location' : undefined} className={cn(control, 'w-full justify-between px-4 text-left text-base', reading.chapter === index && 'bg-tertiary-lightest')}><span>{chapter.label}</span>{reading.chapter === index && <span aria-hidden="true">•</span>}</button>)}
+          </nav>
+        </details>
+        <button className={control} aria-label="Accessibility settings" aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}>
+          <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="4.5" r="2" /><path d="M4 9h16M12 8v7m0-5-4 10m4-10 4 10" /></svg>
+        </button>
+      </div>
+      <dialog ref={dialog} aria-labelledby="human-access-title" className="pointer-events-auto fixed bottom-40 left-auto right-4 top-auto m-0 max-h-[75dvh] w-[320px] max-w-[calc(100vw-32px)] overflow-auto bg-white p-6 text-black shadow-[0_4px_32px_#24434d33] backdrop:bg-[#24434d20] md:right-6">{/* taste-skill-ignore: a real modal dialog. */}
+        <div className="mb-5 flex items-center justify-between gap-4"><h2 id="human-access-title" className="m-0 font-sans text-xl font-normal">Accessibility</h2><button className={control} aria-label="Close accessibility settings" onClick={() => dialog.current?.close()}>×</button></div>
+        <button type="button" role="switch" aria-checked={low} disabled={!ready} onClick={toggleMotion} className={cn(control, 'mb-3 w-full justify-between gap-4 px-3 text-base')}><span>Low motion</span><span aria-hidden="true" className={cn('flex h-6 w-10 items-center rounded-full p-1', low ? 'bg-secondary' : 'bg-gray-medium')}><span className={cn('h-4 w-4 rounded-full bg-white', low && 'translate-x-4')} /></span></button>
+        <label className={cn(control, 'w-full justify-between gap-4 px-3 text-base')}><span>Larger body text</span><input type="checkbox" checked={largerText} onChange={event => setLargerText(event.target.checked)} className="h-5 w-5 accent-secondary" /></label>
+      </dialog>
+    </aside>
+  )
+}
+

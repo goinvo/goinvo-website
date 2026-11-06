@@ -1,0 +1,157 @@
+/*
+ * The "human" design mode: the homepage study's approach (one editorial type
+ * scale, regular-weight serif headings, sentence-case labels, ink text and links,
+ * one cool grey), carried to the rest of the site. It applies only under the review
+ * switch, html[data-design="human"] (?design=human; see the root layout), so the
+ * classic site is untouched until the switch becomes the default.
+ *
+ * Sizes come from the type tokens in globals.css @theme (--text-*), never typed here.
+ *
+ * Layering: these rules live in the `content` layer, which sits AFTER utilities.
+ * They have to: many headings carry utilities such as `font-light`, and a mode has
+ * to win over them. The one exception is Services, whose own stylesheet is
+ * unlayered (and unlayered beats every layer), so its rules below are unlayered too.
+ */
+
+@layer content {
+  /* ---------- Shared heading classes ---------- */
+
+  html[data-design='human'] .header-xl {
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+    letter-spacing: var(--text-title--letter-spacing);
+    font-weight: 400;
+  }
+
+  html[data-design='human'] .header-lg {
+    font-size: var(--text-subhead);
+    line-height: 1.2;
+    letter-spacing: var(--text-subhead--letter-spacing);
+    font-weight: 400;
+  }
+
+  /* Small uppercase grey labels become sentence-case labels in ink. */
+  html[data-design='human'] :is(.header-md, [data-ds-label]) {
+    font-family: var(--font-sans);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--color-black);
+  }
+
+  /* ---------- A page's opening: no white box over the photo ---------- */
+  /* The title and lead sit below the image: a large serif title, then a sans lead. */
+
+  html[data-design='human'] [data-hero-text] {
+    position: static;
+    width: auto;
+    max-width: 1020px;
+    background: transparent;
+    padding-top: 2.75rem;
+    padding-bottom: 2.5rem;
+  }
+
+  html[data-design='human'] [data-hero-text] h1 {
+    font-size: var(--text-page-title);
+    line-height: var(--text-page-title--line-height);
+    letter-spacing: var(--text-page-title--letter-spacing);
+    font-weight: 400;
+  }
+
+  /* Some page titles carry their lead inside the h1 (a span after a <br>, from the
+     hero config): set it as the lead, not as a small piece of the tight title. */
+  html[data-design='human'] [data-hero-text] h1 > br {
+    display: none;
+  }
+
+  html[data-design='human'] [data-hero-text] h1 > span:not(.text-primary) {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: var(--text-lead);
+    line-height: var(--text-lead--line-height);
+    letter-spacing: var(--text-lead--letter-spacing);
+    max-width: 40ch;
+    margin-top: 1rem;
+  }
+
+  html[data-design='human'] [data-hero-text] p {
+    font-family: var(--font-sans);
+    font-size: var(--text-lead);
+    line-height: var(--text-lead--line-height);
+    letter-spacing: var(--text-lead--letter-spacing);
+    max-width: 40ch;
+    margin-top: 1rem;
+  }
+
+  /* ---------- Case studies ---------- */
+
+  html[data-design='human'] [data-case-study] h1.header-xl {
+    font-size: var(--text-page-title);
+    line-height: var(--text-page-title--line-height);
+    letter-spacing: var(--text-page-title--letter-spacing);
+    margin-top: 2.5rem;
+  }
+
+  html[data-design='human'] :is(.case-study-content, .gray-prose-content) :is(p, li) {
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    color: var(--color-black);
+  }
+
+  html[data-design='human'] :is(.case-study-content, .gray-prose-content) a:not([class*='button']):not([class*='btn']) {
+    color: var(--color-black);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+  }
+
+  html[data-design='human'] :is(.case-study-content, .gray-prose-content) a:not([class*='button']):not([class*='btn']):hover {
+    color: var(--color-secondary);
+  }
+
+  /* ---------- Work grid ---------- */
+
+  html[data-design='human'] [data-work-filters] {
+    background: var(--color-tertiary-lightest);
+  }
+
+  html[data-design='human'] [data-case-card] [data-card-title] {
+    font-family: var(--font-serif);
+    font-size: var(--text-subhead);
+    line-height: 1.15;
+    letter-spacing: var(--text-subhead--letter-spacing);
+    font-weight: 400;
+    margin-bottom: 0.5rem;
+  }
+
+  html[data-design='human'] [data-case-card] :is([data-card-client], [data-card-detail]) {
+    font-size: var(--text-label);
+    line-height: 1.5;
+  }
+}
+
+/* ---------- Services: one serif across the site (unlayered, see above) ---------- */
+/* services.css sets its own serif (EB Garamond) through a variable; point it at
+   the site's Jenson and use the regular weight like every other page. */
+
+html[data-design='human'] .gi-root {
+  --serif: var(--font-serif);
+}
+
+html[data-design='human'] .gi-root :is(h1, h2, h3) {
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+
+/* Services' eyebrows become the site's label: sentence case, ink. Its dark
+   sections keep their own (light) colour. */
+html[data-design='human'] .gi-root .gi-eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}

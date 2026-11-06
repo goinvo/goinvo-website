@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import { useHero, type HeroEditTarget } from '@/context/HeroContext'
 import { heroImageSrc } from '@/components/layout/PersistentHero'
@@ -37,6 +38,9 @@ export function SetCaseStudyHero({
   editTarget?: HeroEditTarget
 }) {
   const { setCurrentHero } = useHero()
+  // The address this page was mounted for. During its exit animation the page is
+  // still mounted (FrozenRouter) while the address is already the next page's.
+  const ownPath = useRef(usePathname()).current
 
   // Stable JSON so useEffect deps don't rerun every render from a fresh object
   const editTargetKey = editTarget
@@ -44,10 +48,10 @@ export function SetCaseStudyHero({
     : ''
 
   useEffect(() => {
-    setCurrentHero(variant === 'textOnly' ? '' : image, bgPosition, expandAfterSlide, editTarget)
+    setCurrentHero(variant === 'textOnly' ? '' : image, bgPosition, expandAfterSlide, editTarget, ownPath)
     // editTargetKey is a stable serialization of editTarget
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [image, bgPosition, expandAfterSlide, editTargetKey, variant, setCurrentHero])
+  }, [image, bgPosition, expandAfterSlide, editTargetKey, variant, setCurrentHero, ownPath])
 
   // A draft's click-to-edit placeholder is left to PersistentHero.
   if (editTarget || variant === 'textOnly') return null

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { ease } from '@/lib/motion'
 
 interface CardProps {
   href?: string
@@ -34,7 +35,7 @@ export function Card({
         className
       )}
       whileHover={href ? { y: -2 } : undefined}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.45, ease: ease.outExpo }}
     >
       {image && (
         <div className="relative aspect-[16/10] overflow-hidden">

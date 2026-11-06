@@ -1,3 +1,4 @@
+import { Label } from '@/components/ui/Label'
 import Image from 'next/image'
 import { PortableTextRenderer } from '@/components/portable-text/PortableTextRenderer'
 import { AuthorSection } from '@/components/ui/AuthorSection'
@@ -95,17 +96,17 @@ export function CaseStudyMetadata({ caseStudy, variant = 'body' }: { caseStudy: 
       <div className="mb-8">
         {hasTime && (
           <p className="text-gray !mt-0 !mb-1">
-            <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+            <Label as="span" className="text-gray">
               Time:
-            </span>{' '}
+            </Label>{' '}
             {caseStudy.time}
           </p>
         )}
         {hasTags && (
           <p className="text-gray !mt-0 !mb-0">
-            <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+            <Label as="span" className="text-gray">
               Tags:
-            </span>{' '}
+            </Label>{' '}
             {tagsText}
           </p>
         )}
@@ -117,13 +118,13 @@ export function CaseStudyMetadata({ caseStudy, variant = 'body' }: { caseStudy: 
     return (
       <div>
         <p className="text-gray mt-0 mb-8">
-          <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+          <Label as="span" className="text-gray">
             Time:
-          </span>{' '}
+          </Label>{' '}
           {caseStudy.time}{' '}
-          <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+          <Label as="span" className="text-gray">
             Tags:
-          </span>{' '}
+          </Label>{' '}
           {tagsText}
         </p>
       </div>
@@ -134,17 +135,17 @@ export function CaseStudyMetadata({ caseStudy, variant = 'body' }: { caseStudy: 
     <div>
       {hasTime && (
         <p className="text-gray mt-0 mb-8">
-          <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+          <Label as="span" className="text-gray">
             Time:
-          </span>{' '}
+          </Label>{' '}
           {caseStudy.time}
         </p>
       )}
       {hasTags && (
         <p className="text-gray mt-0 mb-8">
-          <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+          <Label as="span" className="text-gray">
             Tags:
-          </span>{' '}
+          </Label>{' '}
           {tagsText}
         </p>
       )}
@@ -202,7 +203,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
         <Reveal style="slide-up">
           <section className="bg-blue-light py-8 pb-16">
             <div className="max-width content-padding">
-              <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-8">Up next</h3>
+              <Label className="text-gray leading-[1.375rem] mb-8">Up next</Label>
               <div
                 className={cn(
                   'grid grid-cols-1 gap-8',

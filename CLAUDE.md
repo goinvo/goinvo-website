@@ -760,11 +760,82 @@ Protocol** to recover the rest.
   real visitors. Scroll reveals go through `src/lib/useScrollReveal.ts`, which keeps
   first-screen content visible from the server; don't hand-roll a new `initial` opacity 0.
 
+- `node scripts/verify-card-transitions.mjs` (dev server on :3111, or `BASE=`) — chaos suite for the
+  card → case-study transition (double click, Back/links mid-morph, Forward, rapid history, modifier
+  clicks, keyboard, reduced motion, the live work grid, plain header navigation). Run it after ANY
+  change to `PageTransitionContext`, `CardTransitionOverlay` or `TransitionLayout`.
+
+### The card transition is a state machine (built 2026-11-06)
+`src/context/PageTransitionContext.tsx` — pure `transitionReducer` (unit tests:
+`tests/page-transition-machine.test.ts`): `idle → collapsing → navigating → open → idle`, and
+`idle → closing → idle` for the reverse morph on Back. Every timed step carries its run's token; stale
+steps are no-ops. Same-page Back and any link clicked mid-morph CANCEL (the newer request wins). The run
+remembers `scrollY`; Back restores it before the hero shrinks into its card (it used to drop you at the
+top of /work). Focus goes to the case study's h1 on arrival and back to the opening link on return.
+Reduced motion: the machine runs with no delays and draws nothing. `data-transition-phase` exposes the
+phase for tests. Gotchas: a timer must never outlive its phase (the scrim's did, leaving a white sheet
+over the case study); during a standard page swap there is a moment with NO `<main>`, so any "page
+settled" check must hold for a few hundred ms on the expected path, not pass on the first true.
+
+**Prototype headers (2026-11-06).** `src/lib/prototypeHeaders.ts` maps a case-study slug to a
+prototype (Clinical, Prior Auth, Ipsos Facto). That case study's header is then a full-width band in
+the design's canvas colour with the design fitted inside it (`KeptCaseHeader`, pure CSS). A card
+opening it morphs two layers (band + design) into exactly the boxes `caseHeaderFrame` computes.
+Keep the CSS and the function in step: the chaos suite measures the hand-off gap (must be ≤1px). The
+registry is OFF in production. The stills and prototype frames are static files in
+`public/design-lab/human/assets/` (rebuilt by `scripts/build-human-prototype-frames.mjs`).
+`HeroContext` `SET_CURRENT_HERO` ignores a write whose `forPath` is not the current route: an
+exiting page (still mounted by `FrozenRouter`) once wrote its hero onto the page that replaced it.
+Plan and decisions: `docs/plans/persistent-card-layer.md`.
+
+### Styling architecture (rebuilt 2026-11-06)
+- **Cascade:** `@layer theme, base, components, utilities, content` (declared once in globals.css).
+  - Component classes (`header-xl`, `max-width`, buttons) go in `components`, so a utility on the
+    element wins.
+  - Rules that style content rendered INSIDE something (`.case-study-content p`, legacy feature
+    scopes, the `body:has()` hero reservation) go in `content`, after utilities, on purpose.
+  - Before this they all sat in `utilities` and won or lost by file order.
+- **Tokens** live in `@theme static`:
+  - type: `text-heading` / `page-title` / `title` / `quote` / `subhead` / `lead` / `choice` /
+    `body` / `label` / `caption` / `nav`;
+  - motion: `--ease-out-expo` / `emphasized` / `standard` / `gentle`.
+
+  Framer Motion takes the same curves from `ease.*` in `src/lib/motion.ts`, along with the one
+  `useReducedMotion`. `tests/motion-policy.test.ts` fails on a hand-typed curve or a Framer +
+  CSS-transition fight.
+- **Vocabulary:** `src/components/ui` (`Section`, `SectionHeading`, `TextLink`, `Label`, `Arrow`,
+  `Reveal`, `ReadAlong`, `type`). Use them; don't hand-roll headings, labels or links.
+- **Review switch:** `?design=human` (cookie; `?design=classic` turns it off; off in production)
+  sets `html[data-design="human"]` before first paint. The human mode is
+  `src/app/design-human.css`. Stylesheets imported by the root layout are site-wide by design;
+  `tests/page-css-scoping.test.ts` exempts exactly those.
+- **`node scripts/visual-snapshot.mjs capture|compare`** (`DESIGN=human` to capture with the switch
+  on): a pixel diff of 10 pages at 2 widths. Use it before and after any change meant to be
+  invisible, and capture the baseline twice to learn the noise floor. Known noise: the A/B
+  homepage, the About Google Slides embed, text anti-aliasing inside scroll reveals.
+- Plan and decisions: `docs/plans/design-system.md`.
+
 **When fixing a rendering/layout bug, run the detector against PRODUCTION first.** A checker
 that doesn't fail on the broken site isn't evidence of anything. Both checkers above earned
 their keep that way — and both produced large batches of FALSE positives first (a DOM
 ancestor-walk for contrast; counting deliberate `overflow: hidden` crops), so confirm a
 failure visually before treating it as real.
+
+## Homepage concept "the story" — /home-story (built 2026-11-03, not shipped)
+
+Direction D ("AI knows how software works. We know how people do.") told with FELINES'
+(plig-framework) scroll grammar: pinned stages, scroll-scrubbed beats, a cream fill that inverts
+the hero, words that brighten as you read, detail on demand. Unlisted + noindex; new files only
+(`src/components/home-story/*`, `src/app/(main)/home-story/page.tsx`) — the live A/B homepage is
+untouched. Copy is all already-published claims (`storyContent.ts`). Three silent failures it hit:
+- **Never hand `useScroll` progress straight to `useTransform` → opacity.** framer offloads that to
+  native scroll timelines, which got the range wrong (layers stuck at opacity 1 at 83% through,
+  while JS-driven clip-paths moved). `StickyStage` passes `useTransform(p, v => v)` instead.
+- **A negative IntersectionObserver margin shrinks the SIDES too.** `'-80px'` excluded x<80 on a
+  390px phone, so left-gutter content never revealed. Use `'-80px 0px'`. (`useScrollReveal`'s
+  default `'-60px'` has the same latent bug for narrow elements near a phone's edge.)
+- **Reduced motion may change values, never markup** — branching DOM on `useReducedMotion()`
+  causes a hydration mismatch (the server can't know the preference).
 
 ## Ported CSS: globals.css vs the 22 per-page stylesheets
 

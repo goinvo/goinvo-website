@@ -10,11 +10,13 @@ import { urlForImage } from '@/sanity/lib/image'
 import { usePageTransition } from '@/context/PageTransitionContext'
 import { useHero } from '@/context/HeroContext'
 import { trackCaseStudyClick } from '@/lib/analytics'
+import { prototypeHeaderFor } from '@/lib/prototypeHeaders'
+import { ease } from '@/lib/motion'
 
 interface CaseStudyCardProps {
   caseStudy: CaseStudy | Feature
   className?: string
-  variant?: 'default' | 'up-next'
+  variant?: 'default' | 'up-next' | 'featured'
 }
 
 export function CaseStudyCard({
@@ -53,6 +55,7 @@ export function CaseStudyCard({
     : null
 
   const caseStudySlug = caseStudy.slug.current
+  const showPageHero = (caseStudy as CaseStudy).heroLayout !== 'textOnly'
 
   const isFeature = caseStudy._type === 'feature'
   const section = isFeature ? 'vision' : 'work'
@@ -69,11 +72,26 @@ export function CaseStudyCard({
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (isExternal) return
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+
+      // A case study whose header is a prototype: the card grows into that
+      // full-width band, its photo fading into the design as it goes.
+      const prototype = section === 'work' ? prototypeHeaderFor(caseStudySlug) : null
+      if (ctx && prototype && cardRef.current) {
+        const imageEl = cardRef.current.querySelector('[data-card-image]')
+        if (!imageEl) return
+        const rect = imageEl.getBoundingClientRect()
+        e.preventDefault()
+        trackCaseStudyClick({ case_study_title: displayTitle, case_study_slug: caseStudySlug, click_location: 'work_grid' })
+        new window.Image().src = prototype.still
+        ctx.triggerCardTransition({ top: rect.top, left: rect.left, width: rect.width, height: rect.height, image: prototype.still, href, fromImage: imageUrl ?? undefined, keep: { aspect: prototype.aspect, band: prototype.band } })
+        return
+      }
 
       // No real hero asset: let the Link navigate normally so the
       // target page can render its own HeroEditPlaceholder. Pre-seeding
       // the hero with the placeholder URL would flash a broken image.
-      if (!ctx || !heroImageUrl || !cardRef.current) return
+      if (!ctx || !heroImageUrl || !cardRef.current || !showPageHero) return
 
       const imageEl = cardRef.current.querySelector('[data-card-image]')
       if (!imageEl) return
@@ -103,11 +121,11 @@ export function CaseStudyCard({
         href,
       })
     },
-    [caseStudySlug, ctx, displayTitle, heroImageUrl, href, isExternal, setCaseStudyHero]
+    [caseStudySlug, ctx, displayTitle, heroImageUrl, href, imageUrl, isExternal, section, setCaseStudyHero, showPageHero]
   )
 
   return (
-    <div ref={cardRef} className="h-full">
+    <div ref={cardRef} data-case-card className="h-full">
       <Link href={href} onClick={handleClick} className="no-underline h-full block">
         <motion.article
           className={cn(
@@ -116,9 +134,9 @@ export function CaseStudyCard({
             className
           )}
           whileHover={{ y: -2 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.45, ease: ease.outExpo }}
         >
-          <div data-card-image className="relative h-[260px] overflow-hidden bg-gray-medium [backface-visibility:hidden]">
+          <div data-card-image className={cn('relative overflow-hidden bg-gray-medium [backface-visibility:hidden]', variant === 'featured' ? 'h-[260px] md:h-[360px]' : 'h-[260px]')}>
             {imageUrl ? (
               <Image
                 src={imageUrl}
@@ -138,13 +156,13 @@ export function CaseStudyCard({
             )}
           </div>
           <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
-            <p className="font-semibold text-black">{displayTitle}</p>
+            <p data-card-title className="font-semibold text-black">{displayTitle}</p>
             {/* For vision features, "client" is just the literal "Feature" — skip it and show description instead */}
             {showClient && (
-              <p className="text-gray">{clientName}</p>
+              <p data-card-client className="text-gray">{clientName}</p>
             )}
             {detailText && (
-              <p className="text-gray">{detailText}</p>
+              <p data-card-detail className="text-gray">{detailText}</p>
             )}
           </div>
         </motion.article>

@@ -3,7 +3,7 @@
 import { useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useReducedMotion } from '@/lib/motion'
+import { useReducedMotion, ease } from '@/lib/motion'
 import {
   PageTransitionProvider,
   usePageTransition,
@@ -80,11 +80,11 @@ const pageVariants = {
 const pageTransition = {
   clipPath: {
     duration: 0.5,
-    ease: [0.32, 0.72, 0, 1] as [number, number, number, number],
+    ease: ease.emphasized,
   },
   default: {
     duration: 0.35,
-    ease: [0.4, 0, 0.2, 1] as [number, number, number, number],
+    ease: ease.standard,
   },
 }
 
@@ -108,7 +108,9 @@ function TransitionContent({
 }) {
   const ctx = usePageTransition()
   const prefersReducedMotion = useReducedMotion()
-  const isCard = !!ctx?.cardRect
+  // Only an OPENING card run folds pages away; a closing run (Back) lets the
+  // page it returns to come in normally under the shrinking hero.
+  const isCard = !!ctx?.cardRect && (ctx.phase === 'collapsing' || ctx.phase === 'navigating' || ctx.phase === 'open')
   const pageRef = useRef<HTMLElement>(null)
 
   // Scroll to top on navigation (unless card/morph transitions handle it)
@@ -143,8 +145,8 @@ function TransitionContent({
         exit="exit"
         transition={prefersReducedMotion ? instantTransition : pageTransition}
         onAnimationComplete={(definition) => {
-          if (definition === 'visible' && ctx?.cardRect) {
-            ctx.clearTransition()
+          if (definition === 'visible' && ctx?.phase === 'open') {
+            ctx.settle()
           }
         }}
       >
@@ -183,7 +185,7 @@ export function TransitionLayout({
       <TransitionContent pathname={pathname} mainId={mainId}>{children}</TransitionContent>
       <motion.div
         layout="position"
-        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+        transition={{ duration: 0.35, ease: ease.standard }}
       >
         <Footer />
       </motion.div>

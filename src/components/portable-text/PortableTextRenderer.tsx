@@ -31,6 +31,7 @@ import {
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
 import { parseDataTableSource } from '@/lib/dataTable'
 import { buildHtmlEmbedSrcDoc, hasHtmlEmbedCode } from '@/lib/htmlEmbed'
+import { ease } from '@/lib/motion'
 import {
   Width,
   Background,
@@ -64,7 +65,7 @@ function widthClass(size: string): string {
 /*  Scroll-triggered animation wrapper                                 */
 /* ------------------------------------------------------------------ */
 
-const EASE = [0.25, 0.1, 0.25, 1] as const
+const EASE = ease.gentle
 
 function ArticleReveal({
   children,

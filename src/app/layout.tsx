@@ -5,8 +5,16 @@ import { JsonLd } from '@/components/seo/JsonLd'
 // @font-face rules Google serves, from our origin, so no page waits on two extra origins.
 import './fonts.css'
 import './globals.css'
+import './design-human.css'
 
 const FONT_STYLESHEETS = [`https://use.typekit.net/${siteConfig.typekitId}.css`]
+
+// Review switch for the site-wide restyle ("human" design, from the homepage study).
+// `?design=human` turns it on and remembers it in a cookie; `?design=classic` turns it
+// off. It only sets data-design on <html> before first paint, so the server never
+// reads a cookie (pages stay static) and nothing flashes. Off in production.
+const DESIGN_SWITCH = `(function(){try{var q=new URLSearchParams(location.search).get('design');if(q==='human')document.cookie='goinvo-design=human;path=/;max-age=2592000;samesite=lax';else if(q==='classic')document.cookie='goinvo-design=;path=/;max-age=0';if(/(?:^|; )goinvo-design=human/.test(document.cookie))document.documentElement.setAttribute('data-design','human')}catch(e){}})();`
+const designSwitchEnabled = process.env.VERCEL_ENV !== 'production'
 
 export const metadata: Metadata = {
   title: {
@@ -62,8 +70,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {designSwitchEnabled && <script dangerouslySetInnerHTML={{ __html: DESIGN_SWITCH }} />}
         {/* Preconnect to the font + image origins on the critical render path so
             the browser opens those TLS connections during HTML parse instead of
             discovering them late — recovers ~300ms of FCP/LCP. */}

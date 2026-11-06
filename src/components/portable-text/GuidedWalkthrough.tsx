@@ -2,7 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import Image from 'next/image'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { ease, useReducedMotion } from '@/lib/motion'
 import { urlForImage } from '@/sanity/lib/image'
 import { cn } from '@/lib/utils'
 import { option } from '@/lib/sanityOptions'
@@ -109,7 +110,7 @@ export function GuidedWalkthrough({ value }: { value: GuidedWalkthroughValue }) 
             ) : (
               <figure className="!m-0">
                 <div data-walkthrough-image data-ui className="relative overflow-hidden bg-white" style={{ aspectRatio: `${dimensions.width * crop.width} / ${dimensions.height * crop.height}` }}>
-                  <motion.div initial={false} animate={{ left: `${-crop.x / crop.width * 100}%`, top: `${-crop.y / crop.height * 100}%`, width: `${10000 / crop.width}%` }} transition={{ duration: reducedMotion ? 0 : .4, ease: [.4, 0, .2, 1] }} className="absolute">
+                  <motion.div initial={false} animate={{ left: `${-crop.x / crop.width * 100}%`, top: `${-crop.y / crop.height * 100}%`, width: `${10000 / crop.width}%` }} transition={{ duration: reducedMotion ? 0 : .4, ease: ease.standard }} className="absolute">
                     <Image key={imageUrl} src={imageUrl} alt={scene.image.alt || scene.title} width={dimensions.width} height={dimensions.height} sizes="(max-width: 863px) 160vw, 1200px" className="block !m-0 w-full h-auto max-w-none" priority={active === 0} />
                     {canFocus && <span data-focus-region aria-hidden="true" className="absolute pointer-events-none border-[3px] border-primary" style={{ left: `${scene.focus!.x}%`, top: `${scene.focus!.y}%`, width: `${scene.focus!.width}%`, height: `${scene.focus!.height}%` }} />}
                   </motion.div>

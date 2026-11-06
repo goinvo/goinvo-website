@@ -3,6 +3,7 @@
 import { useState, useCallback, Children } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { ease } from '@/lib/motion'
 
 interface CarouselProps {
   menuItems?: string[]
@@ -98,7 +99,7 @@ export function Carousel({
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+            transition={{ duration: 0.35, ease: ease.standard }}
           >
             {slides[activeIndex]}
           </motion.div>

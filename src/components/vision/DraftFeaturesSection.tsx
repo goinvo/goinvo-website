@@ -1,3 +1,4 @@
+import { Label } from '@/components/ui/Label'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { ReactNode } from 'react'
@@ -107,9 +108,9 @@ export function DraftFeaturesSection({ features }: DraftFeaturesSectionProps) {
         }}
       />
       <div className="max-width content-padding py-8">
-        <h3 className="font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary m-0 mb-6">
+        <Label size="small" className="text-tertiary m-0 mb-6">
           Draft Features
-        </h3>
+        </Label>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature) => (
             <DraftFeatureCard key={feature._id} feature={feature} />

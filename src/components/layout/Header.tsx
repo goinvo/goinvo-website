@@ -71,6 +71,10 @@ export function Header() {
     hamburgerRef.current?.focus()
   }, [])
 
+  // The homepage study keeps its own contact section: there the button says
+  // "Let's talk" and goes to it. Everywhere else it is the usual Contact page.
+  const contact = pathname === '/design-lab/human' ? { href: '/design-lab/human#contact', label: 'Let’s talk' } : { href: '/contact', label: 'Contact' }
+
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/')
 
@@ -120,12 +124,12 @@ export function Header() {
 
       {/* Desktop Contact Button */}
       <Link
-        href="/contact"
+        href={contact.href}
         onClick={() => trackNavClick({ nav_item: 'Contact', nav_type: 'desktop', nav_location: 'header' })}
         className="hidden lg:flex items-center px-4 text-[15px] font-semibold leading-[1.375rem] uppercase tracking-[2px] no-underline h-full"
       >
         <span className="border border-primary bg-primary text-white px-4 py-[0.375rem] leading-[1.625rem] hover:bg-primary-dark hover:border-primary-dark transition-colors duration-75">
-          Contact
+          {contact.label}
         </span>
       </Link>
 
@@ -195,14 +199,14 @@ export function Header() {
                   ))}
                   <li>
                     <Link
-                      href="/contact"
+                      href={contact.href}
                       className={cn(
                         'block p-4 font-serif text-2xl font-light no-underline leading-[2.125rem]',
                         isActive('/contact') ? 'text-primary' : 'text-[#1d1b1a]'
                       )}
                       onClick={() => { trackNavClick({ nav_item: 'Contact', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
                     >
-                      Contact
+                      {contact.label}
                     </Link>
                   </li>
                 </ul>

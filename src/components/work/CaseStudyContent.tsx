@@ -9,6 +9,8 @@ import { Reveal } from '@/components/ui/Reveal'
 import { EmptyContentPlaceholder } from '@/components/sanity/EmptyContentPlaceholder'
 import { option } from '@/lib/sanityOptions'
 import type { CaseStudy } from '@/types'
+import { prototypeHeaderFor } from '@/lib/prototypeHeaders'
+import { KeptCaseHeader } from './KeptCaseHeader'
 import type { PortableTextBlock } from '@portabletext/types'
 
 interface Props {
@@ -16,6 +18,8 @@ interface Props {
   slug: string
   /** Whether Sanity Presentation/draft mode is active on this request. */
   isDraftMode?: boolean
+  /** A hero image that is not a Sanity asset (a review page's own artwork). */
+  heroImage?: string
 }
 
 interface BlockChild {
@@ -530,8 +534,11 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
   return changed ? { ...caseStudy, content: content as PortableTextBlock[] } : caseStudy
 }
 
-export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
+export function CaseStudyContent({ initialData, slug, isDraftMode, heroImage }: Props) {
   const caseStudy = useLiveData(initialData, caseStudyBySlugQuery, { slug })
+  // A case study whose header is a prototype (registry, by slug): the same header
+  // whether the reader arrived from the homepage preview or directly.
+  const kept = prototypeHeaderFor(slug)
 
   if (!caseStudy) return null
 
@@ -572,7 +579,7 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
 
   // Keep hero sources at high quality and let PersistentHero handle
   // viewport-specific cropping. Pre-cropping here softens UI screenshots.
-  const heroImageUrl = caseStudy.image?.asset
+  const heroImageUrl = heroImage ? heroImage : caseStudy.image?.asset
     ? urlForImage(caseStudy.image).width(2000).quality(95).url()
     : PLACEHOLDER_IMAGE_URL
 
@@ -582,12 +589,19 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
       : undefined
 
   return (
-    <div>
-      <SetCaseStudyHero image={heroImageUrl} editTarget={heroEditTarget} variant={caseStudy.heroLayout} />
+    <div data-case-study>
+      {kept ? (
+        <>
+          <SetCaseStudyHero image="" variant="textOnly" />
+          <KeptCaseHeader header={kept} />
+        </>
+      ) : (
+        <SetCaseStudyHero image={heroImageUrl} editTarget={heroEditTarget} variant={caseStudy.heroLayout} />
+      )}
 
       <Reveal style="slide-up" duration={0.5}>
         {/* Without a hero, nothing pushes the title below the fixed header. */}
-        <div className={`max-width max-width-md content-padding mx-auto${caseStudy.heroLayout === 'textOnly' ? ' pt-[var(--spacing-header-height)]' : ''}`}>
+        <div className={`max-width max-width-md content-padding mx-auto${caseStudy.heroLayout === 'textOnly' && !kept ? ' pt-[var(--spacing-header-height)]' : ''}`}>
           <h1
             className="header-xl mt-8 mb-2"
             style={{ viewTransitionName: 'page-title' }}

@@ -184,6 +184,9 @@ type HeroAction =
       bgPosition?: string
       expandAfterSlide?: boolean
       editTarget?: HeroEditTarget
+      /** The page asking. A page that is no longer current (one leaving through its
+       * exit animation) must not set the hero of the page that replaced it. */
+      forPath?: string
     }
   | {
       type: 'SET_CASE_STUDY_HERO'
@@ -294,6 +297,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
     }
 
     case 'SET_CURRENT_HERO': {
+      if (action.forPath && action.forPath !== state.pathname) return state
       const image = action.image
       const bgPosition = action.bgPosition ?? 'center'
       const expandAfterSlide = action.expandAfterSlide ?? false
@@ -375,6 +379,7 @@ interface HeroContextValue {
     bgPosition?: string,
     expandAfterSlide?: boolean,
     editTarget?: HeroEditTarget,
+    forPath?: string,
   ) => void
   setCaseStudyHero: (
     image: string,
@@ -429,6 +434,7 @@ export function HeroProvider({ children }: { children: React.ReactNode }) {
       bgPosition?: string,
       expandAfterSlide?: boolean,
       editTarget?: HeroEditTarget,
+      forPath?: string,
     ) => {
       dispatch({
         type: 'SET_CURRENT_HERO',
@@ -436,6 +442,7 @@ export function HeroProvider({ children }: { children: React.ReactNode }) {
         bgPosition,
         expandAfterSlide,
         editTarget,
+        forPath,
       })
     },
     [],

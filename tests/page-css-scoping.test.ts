@@ -29,13 +29,19 @@ import { fileURLToPath } from 'url'
 
 const APP_DIR = fileURLToPath(new URL('../src/app', import.meta.url))
 
+// Stylesheets the ROOT layout imports are global on purpose (globals.css, fonts.css,
+// the design-mode sheet): they apply on every page by design, not by accident of
+// one page importing them. Everything else under src/app must stay on its page.
+const ROOT_LAYOUT = readFileSync(join(APP_DIR, 'layout.tsx'), 'utf8')
+const SITE_WIDE = new Set([...ROOT_LAYOUT.matchAll(/import\s+'\.\/([\w.-]+\.css)'/g)].map((m) => m[1]))
+
 function cssFiles(dir: string): string[] {
   const found: string[] = []
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry)
     if (statSync(full).isDirectory()) {
       found.push(...cssFiles(full))
-    } else if (entry.endsWith('.css') && entry !== 'globals.css') {
+    } else if (entry.endsWith('.css') && !(dir === APP_DIR && SITE_WIDE.has(entry))) {
       found.push(full)
     }
   }

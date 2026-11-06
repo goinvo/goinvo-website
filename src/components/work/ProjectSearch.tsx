@@ -1,5 +1,6 @@
 'use client'
 
+import { Label } from '@/components/ui/Label'
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { CategoriesList } from '@/components/ui/CategoriesList'
@@ -155,9 +156,9 @@ export function ProjectSearch({
             }}
           />
           <div className="max-width content-padding py-8">
-            <h3 className="font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary m-0 mb-6">
+            <Label size="small" className="text-tertiary m-0 mb-6">
               Drafts ({draftCaseStudies.length})
-            </h3>
+            </Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {draftCaseStudies.map((study) => (
                 <div key={study._id} className="group relative">
@@ -184,7 +185,7 @@ export function ProjectSearch({
       )}
 
       {/* Categories band — gray background */}
-      <div className="bg-gray-light">
+      <div data-work-filters className="bg-gray-light">
         <div className="max-width content-padding pt-4 pb-8">
           <CategoriesList
             categories={filterCategories}

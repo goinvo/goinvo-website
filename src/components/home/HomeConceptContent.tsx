@@ -687,8 +687,8 @@ export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }
           </div>
           {studioPhotos.length >= 9 ? (
             <div className="grid grid-cols-3 gap-2">
-              {studioPhotos.map((member) => (
-                <div key={member.name} className="relative aspect-square overflow-hidden bg-[#ece7dc]">
+              {studioPhotos.map((member, index) => (
+                <div key={`${member.name}-${index}`} className="relative aspect-square overflow-hidden bg-[#ece7dc]">
                   <Image
                     src={member.image}
                     alt={member.name}

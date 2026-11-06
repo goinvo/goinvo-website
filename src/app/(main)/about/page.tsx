@@ -1,3 +1,4 @@
+import { Label } from '@/components/ui/Label'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -217,9 +218,9 @@ export default async function AboutPage() {
                 height={400}
                 className="w-full h-auto mb-4"
               />
-              <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-2">
+              <Label size="fixed" className="text-gray leading-[1.375rem] mb-2">
                 Open office hours
-              </h3>
+              </Label>
               <p className="text-gray text-md mb-0 flex-grow">
                 Receive design advice on your product&apos;s strategy, layout, and data
                 visualization. Alternatively, meet the tribe, or plot your career direction.
@@ -239,9 +240,9 @@ export default async function AboutPage() {
                 height={400}
                 className="w-full h-auto mb-4"
               />
-              <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-2">
+              <Label size="fixed" className="text-gray leading-[1.375rem] mb-2">
                 Join the team
-              </h3>
+              </Label>
               <p className="text-gray text-md mb-0 flex-grow">
                 If you&apos;re an independent thinker and passionate maker hunting for meaningful
                 work, give us a holler.
@@ -281,9 +282,9 @@ export default async function AboutPage() {
       <Reveal style="slide-up">
         <div className="bg-gray-light py-8 lg:py-12">
           <div className="max-width content-padding">
-            <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] text-center mb-4">
+            <Label size="fixed" className="text-gray leading-[1.375rem] text-center mb-4">
               Code of Ethics
-            </h3>
+            </Label>
             <ul className="ul grid grid-cols-1 md:grid-cols-2 gap-x-8">
               {ethics.map((ethic) => (
                 <li key={ethic.title} className="mb-8">
@@ -316,9 +317,9 @@ export default async function AboutPage() {
         <div className="max-width content-padding">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="lg:pr-4">
-              <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] text-center mb-4">
+              <Label size="fixed" className="text-gray leading-[1.375rem] text-center mb-4">
                 Our Story
-              </h3>
+              </Label>
               <p className="text-gray">
                 With early roots designing for Apple, Microsoft, Oracle, and Obama&apos;s
                 2008 campaign, GoInvo is now focused exclusively on healthcare. We&apos;ve
@@ -358,9 +359,9 @@ export default async function AboutPage() {
       {/* Up Next */}
       <div className="bg-blue-light py-4 lg:py-16">
         <div className="max-width content-padding">
-          <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-4">
+          <Label className="text-gray leading-[1.375rem] mb-4">
             Up next
-          </h3>
+          </Label>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {upNext.map((item) => {
               const inner = (

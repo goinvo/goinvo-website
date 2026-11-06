@@ -8,12 +8,14 @@ import { LoadingIframe } from '@/components/ui/LoadingIframe'
 export function ContactFormEmbed({
   showHeader = true,
   background = 'white',
+  variant = 'default',
 }: {
   showHeader?: boolean
   background?: SectionBackground
+  variant?: 'default' | 'inline'
 }) {
   const card = (
-    <div className="bg-white shadow-card overflow-hidden">
+    <div className={cn('bg-white overflow-hidden', variant === 'default' && 'shadow-card')}>
       {showHeader && (
         <div className="p-6 pb-0">
           <h2 className="font-serif text-2xl font-light mb-1">Get in touch</h2>
@@ -25,7 +27,7 @@ export function ContactFormEmbed({
           </p>
         </div>
       )}
-      <div className="p-6 overflow-hidden">
+      <div className={cn('overflow-hidden', variant === 'default' && 'p-6')}>
         <LoadingIframe
           id={`JotFormIFrame-${siteConfig.jotformId}`}
           title="Contact"
