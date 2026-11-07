@@ -119,7 +119,7 @@ export function HomeSearch() {
         <p className={cn('m-0 max-w-[40ch]', type.lead)}>Tell us what you’re up against, in your own words. We’ll find the work of ours that comes closest.</p>
       </div>
 
-      <form ref={form} role="search" className="mt-12 scroll-mt-24 md:mt-16" onSubmit={event => { event.preventDefault(); run(input) }}>
+      <form ref={form} role="search" className="relative z-10 mt-12 scroll-mt-24 md:mt-16" onSubmit={event => { event.preventDefault(); run(input) }}>
         <label htmlFor="ask-input" className="sr-only">Describe what you’re working on</label>
         <div className="flex items-end gap-6 border-b-2 border-current focus-within:border-secondary">
           <input
@@ -259,21 +259,21 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-/** Nothing fits: the old search's illustration, fading out at the bottom, with the words
- * beside it, then searches that do have answers (stored, so they come back at once), set
- * as the page sets a reader's concerns: quoted, in the serif. */
+/** Nothing fits: the old search's illustration behind the words, rising above them and
+ * fading in at the top and out at the bottom, then searches that do have answers (stored,
+ * so they come back at once), set as the page sets a reader's concerns: quoted, in the serif. */
 function NoResults({ note, run }: { note?: string | null; run: (query: string) => void }) {
   return (
     <div data-search-empty className="mt-16 md:mt-20">
-      {/* Phone: the art edge to edge, the words in its fade below. Wide screen: the words on
-          the left, bottom-aligned with the art, which sits against the right edge (its sides
-          are empty) at most about a third of the screen tall, so the question above stays in
-          view. Never cropped: it scales. */}
-      <div className="flex flex-col md:flex-row-reverse md:items-end md:gap-12">
-        <div className="relative -mx-12 aspect-[3168/1536] md:mx-0 md:-mr-[6vw] md:h-[min(40svh,30vw)] md:shrink-0">
-          <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" fill sizes="(min-width:768px) 60vw, 100vw" className="object-contain [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" />
+      {/* Phone: the art edge to edge, the words in its fade below. Wide screen: the art is a
+          backdrop to the right (its sides are empty, so the words on the left stay clear),
+          bottom-aligned with the words and rising behind the space above them toward the
+          question. Never cropped: it scales. The words and the form sit above it. */}
+      <div className="relative">
+        <div className="pointer-events-none relative -mx-12 aspect-[3168/1536] md:absolute md:bottom-0 md:right-[-4vw] md:mx-0 md:h-[min(52svh,36vw)]">
+          <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" fill sizes="(min-width:768px) 70vw, 100vw" className="object-contain [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,transparent,black_28%,black_72%,transparent)]" />
         </div>
-        <div className="relative -mt-[5vw] min-w-0 flex-1 md:mt-0">
+        <div data-search-empty-words className="relative z-10 -mt-[5vw] md:mt-0 md:pt-[min(30svh,20vw)]">
           <p className={cn('m-0', type.heading)}>No results</p>
           <p className={cn('mb-0 mt-5 max-w-[34ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
         </div>
