@@ -5,6 +5,7 @@ import { PriorHistory } from './PriorHistory'
 import { PriorClinical } from './PriorClinical'
 import { PriorNotes } from './PriorNotes'
 import { FactoScreen } from './FactoScreen'
+import { FactoBento } from './FactoBento'
 import { FlowNavigation } from './FlowNavigation'
 import { FlowTitle } from './FlowTitle'
 import { FlowFinancials } from './FlowFinancials'
@@ -22,6 +23,11 @@ export function PriorFrame() {
 
 export function FactoFrame() {
   return <div data-prototype-canvas data-prototype="facto" className="relative h-[1273px] w-[1920px] overflow-visible font-[family-name:'Noto_Sans']"><div className="absolute left-0 top-[-107px] h-[1380px] w-[1920px]"><FactoScreen /></div></div>
+}
+
+/** Ipsos Facto's "Key moments": the important parts of several screens, side by side. */
+export function FactoBentoFrame() {
+  return <div data-prototype-canvas data-prototype="facto-bento" className="relative h-[849px] w-[1280px] overflow-visible"><FactoBento /></div>
 }
 
 export function FlowFrame() {

@@ -168,6 +168,19 @@ try {
       await page.waitForFunction(() => document.querySelector('#challenge-prior').checked)
       check(await page.$eval('#work-title', el => el.textContent === 'Prior Authorization'), `${width}: native keyboard radio navigation changes the example`)
     }
+    // Views: Ipsos Facto offers a second view, "Key moments", picked under its challenge.
+    // It is a bento of real parts cut from several screens, with placeholder names only.
+    await choose(page, width, 'facto'); await source(page, cases[2])
+    check(await page.evaluate(() => scrollY === 0), `${width}: the view picker is reachable without scrolling the story`)
+    if (width >= 768) await page.click('label[for="view-facto-bento"]')
+    else await page.select('#view-select', 'facto-bento')
+    const bentoFrame = await source(page, { id: 'facto-bento' })
+    check(await page.evaluate(() => new URLSearchParams(location.search).get('view') === 'facto-bento' && scrollY === 0), `${width}: choosing a view keeps the place and goes in the address`)
+    check(await page.$$eval('#work li strong', els => els.map(el => el.textContent).join('|') === 'Work in steps.|Compare every source at once.|Open the exact passage.'), `${width}: the view's own annotations replace the full screen's`)
+    const bento = await bentoFrame.evaluate(() => ({ tiles: document.querySelectorAll('.prototype-part[data-fragment]').length, text: document.body.innerText, broken: [...document.images].filter(image => !image.naturalWidth).length }))
+    check(bento.tiles === 5 && bento.broken === 0 && /Brand X/.test(bento.text) && !/Nestl|Nike|Ferrero|Nutella|Mintel|Heather/i.test(bento.text), `${width}: five real parts, every image loaded, placeholder names only`)
+    await choose(page, width, 'prior'); await source(page, cases[1])
+    check(await page.$('[data-view-picker]') === null && !new URLSearchParams(await page.evaluate(() => location.search)).has('view'), `${width}: views belong to the scene that has them`)
     await page.evaluate(() => document.querySelector('#services').scrollIntoView()); await pause(700)
     check(await page.$$eval('[data-explore-link]', els => els.length === 1 && els[0].textContent.includes('Who we’ve done it for')), `${width}: the bottom prompt follows the reader to the next section`)
     check(await page.$$eval('#services h3', els => els.length === 3), `${width}: three service-and-concern pairings`)
@@ -233,7 +246,9 @@ try {
     const phases = []
     const until = Date.now() + 30000
     while (Date.now() < until) {
-      const now = await page.evaluate(() => `${document.querySelector('[data-transition-phase]')?.dataset.transitionPhase}|${location.pathname}|${!!document.querySelector('[data-card-morph]')}`)
+      // A navigation can replace the page between two polls (a dev server compiling the route): read again.
+      const now = await page.evaluate(() => `${document.querySelector('[data-transition-phase]')?.dataset.transitionPhase}|${location.pathname}|${!!document.querySelector('[data-card-morph]')}`).catch(() => null)
+      if (!now) { await pause(50); continue }
       const [phase, where, morphing] = now.split('|')
       if (phases.at(-1) !== phase) phases.push(phase)
       if (phase === 'idle' && where === '/work/prior-auth' && morphing === 'false') break

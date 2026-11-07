@@ -6,15 +6,16 @@ import { JsonLd } from '@/components/seo/JsonLd'
 import './fonts.css'
 import './globals.css'
 import './design-human.css'
+import './fonts-hand.css'
+import './design-hand.css'
+import { designSwitchEnabled, DESIGN_SWITCH_SCRIPT } from '@/lib/designSwitch'
+import { ReviewSwitches, HandFilters } from '@/components/review/ReviewSwitches'
 
 const FONT_STYLESHEETS = [`https://use.typekit.net/${siteConfig.typekitId}.css`]
 
-// Review switch for the site-wide restyle ("human" design, from the homepage study).
-// `?design=human` turns it on and remembers it in a cookie; `?design=classic` turns it
-// off. It only sets data-design on <html> before first paint, so the server never
-// reads a cookie (pages stay static) and nothing flashes. Off in production.
-const DESIGN_SWITCH = `(function(){try{var q=new URLSearchParams(location.search).get('design');if(q==='human')document.cookie='goinvo-design=human;path=/;max-age=2592000;samesite=lax';else if(q==='classic')document.cookie='goinvo-design=;path=/;max-age=0';if(/(?:^|; )goinvo-design=human/.test(document.cookie))document.documentElement.setAttribute('data-design','human')}catch(e){}})();`
-const designSwitchEnabled = process.env.VERCEL_ENV !== 'production'
+// Review switches (the "human" design, the hand-drawn option): see src/lib/designSwitch.ts.
+// They set attributes on <html> before first paint, so the server never reads a cookie
+// (pages stay static) and nothing flashes. Off in production.
 
 export const metadata: Metadata = {
   title: {
@@ -72,7 +73,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {designSwitchEnabled && <script dangerouslySetInnerHTML={{ __html: DESIGN_SWITCH }} />}
+        {designSwitchEnabled && <script dangerouslySetInnerHTML={{ __html: DESIGN_SWITCH_SCRIPT }} />}
         {/* Preconnect to the font + image origins on the critical render path so
             the browser opens those TLS connections during HTML parse instead of
             discovering them late — recovers ~300ms of FCP/LCP. */}
@@ -175,6 +176,7 @@ export default function RootLayout({
           (e.g. ColorZilla's cz-shortcut-listen). */}
       <body className="font-sans text-black antialiased" suppressHydrationWarning>
         {children}
+        {designSwitchEnabled && <><HandFilters /><ReviewSwitches /></>}
       </body>
     </html>
   )

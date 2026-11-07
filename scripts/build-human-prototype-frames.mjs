@@ -47,6 +47,11 @@ body{margin:0!important;background:transparent!important;overflow:hidden}
 [data-prototype=facto] [data-node-id='1147:92790']{--dx:-80px;--dy:100px;--angle:-2deg}
 [data-prototype=facto] [data-node-id='1147:105419']{--dx:120px;--dy:-20px;--angle:4deg}
 [data-prototype=facto] :is([data-node-id='1147:92790'],[data-node-id='1147:105419']){background-color:color-mix(in srgb,#243647 calc(var(--spread)*100%),rgb(115 115 115 / .17))}
+[data-prototype=facto-bento]>div>[data-fragment=workflow]{--dx:-70px;--dy:0px;--angle:-2deg}
+[data-prototype=facto-bento]>div>[data-fragment=compare]{--dx:40px;--dy:-60px;--angle:1deg}
+[data-prototype=facto-bento]>div>[data-fragment=passage]{--dx:-30px;--dy:70px;--angle:-1.5deg}
+[data-prototype=facto-bento]>div>[data-fragment=citation]{--dx:85px;--dy:10px;--angle:2deg}
+[data-prototype=facto-bento]>div>[data-fragment=details]{--dx:80px;--dy:80px;--angle:-1deg}
 [data-prototype=facto] [data-node-id='1147:92683']{filter:blur(calc(var(--spread)*10px));opacity:calc(1 - var(--spread)*.55);transition:translate .45s cubic-bezier(.22,1,.36,1),rotate .45s cubic-bezier(.22,1,.36,1),filter .45s,opacity .45s}
 `
 const flowVars = JSON.parse(await fs.readFile('.audit/figma-flow-variables.json', 'utf8'))
@@ -54,7 +59,7 @@ const escape = name => 'prototype-' + name.replace(/[^a-zA-Z0-9-]/g, '-')
 const variableCss = `[data-prototype=flow]{${Object.entries(flowVars).filter(([, value]) => !value.startsWith('Font(')).map(([name, value]) => `--${escape(name)}:${/^\d+$/.test(value) ? value + 'px' : value};`).join('')}}`
 await fs.writeFile(path.join(out, 'figma-frames.css'), css.css + fontCss + variableCss)
 const bridge = `<script>const root=document.getElementById('prototype-root');addEventListener('message',event=>{if(event.source!==parent||event.origin!==location.origin||event.data?.type!=='goinvo-prototype-spread')return;const value=Number(event.data.value);if(!Number.isFinite(value))return;root.dataset.immediate=String(!!event.data.immediate);root.style.setProperty('--spread',String(Math.max(0,Math.min(1,value))));});</script>`
-for (const [id, name, width, height] of [['prior', 'PriorFrame', 1240, 811], ['facto', 'FactoFrame', 1920, 1273], ['flow', 'FlowFrame', 1920, 1080]]) {
+for (const [id, name, width, height] of [['prior', 'PriorFrame', 1240, 811], ['facto', 'FactoFrame', 1920, 1273], ['facto-bento', 'FactoBentoFrame', 1280, 849], ['flow', 'FlowFrame', 1920, 1080]]) {
   const markup = renderToString(createElement(frames[name]))
   await fs.writeFile(path.join(out, `${id}.html`), `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive"><title>${id} — source reconstruction</title><link rel="stylesheet" href="/design-lab/human/assets/figma-frames.css"></head><body style="width:${width+360}px;height:${height+360}px"><div id="prototype-root" data-immediate="true">${markup}</div>${bridge}</body></html>`)
 }

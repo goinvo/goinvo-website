@@ -15,7 +15,7 @@ export const textLinkClass = cn('group inline-flex min-h-12 items-center gap-4 t
 export function TextLink({ children, arrow = 'right', nudge = false, className, ...rest }: ComponentProps<'a'> & { children: ReactNode; arrow?: 'right' | 'down' | false; nudge?: boolean }) {
   return (
     <a className={cn(textLinkClass, className)} {...rest}>
-      <span className="group-hover:underline group-focus-visible:underline">{children}</span>
+      <span data-link-label className="group-hover:underline group-focus-visible:underline">{children}</span>
       {arrow && (nudge
         ? <span className="transition-transform duration-300 group-hover:translate-x-2 group-focus-visible:translate-x-2 motion-reduce:transition-none"><Arrow direction={arrow} /></span>
         : <Arrow direction={arrow} />)}

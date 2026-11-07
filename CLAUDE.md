@@ -788,6 +788,17 @@ registry is OFF in production. The stills and prototype frames are static files 
 exiting page (still mounted by `FrozenRouter`) once wrote its hero onto the page that replaced it.
 Plan and decisions: `docs/plans/persistent-card-layer.md`.
 
+**Prototype views (2026-11-07).** A homepage-study scene may list `views` (`prototypeContent.ts`,
+`sceneView()`); the first is its full screen, the others bring their own prototype + annotations
+and are picked under the chosen challenge (`?view=`). They sit on the audience line on purpose:
+the opening is sized to the screen and cannot grow. Ipsos Facto's second view is **Key moments**
+(`FactoBento`): real parts cut from several Figma screens at full size, so they stay readable.
+Every client, workspace and file name in it is an obvious placeholder (Brand X, sample files);
+`verify-human-home-story.mjs` fails on a real one. Building the frames needs `.audit/human-preview/image.tsx`
+and `.audit/figma-flow-variables.json` (copy them from another checkout); the rebuilt
+`figma-frames.css` was pixel-diffed identical for the existing frames. Stills (`<id>-assembled.png`)
+are screenshots of the built page with a transparent background.
+
 ### Styling architecture (rebuilt 2026-11-06)
 - **Cascade:** `@layer theme, base, components, utilities, content` (declared once in globals.css).
   - Component classes (`header-xl`, `max-width`, buttons) go in `components`, so a utility on the
@@ -808,7 +819,22 @@ Plan and decisions: `docs/plans/persistent-card-layer.md`.
 - **Review switch:** `?design=human` (cookie; `?design=classic` turns it off; off in production)
   sets `html[data-design="human"]` before first paint. The human mode is
   `src/app/design-human.css`. Stylesheets imported by the root layout are site-wide by design;
-  `tests/page-css-scoping.test.ts` exempts exactly those.
+  `tests/page-css-scoping.test.ts` exempts exactly those. All switches live in
+  `src/lib/designSwitch.ts`; the server never reads their cookies (pages stay static).
+  - **Hand-drawn option:** `?hand=accents|full|off`, `?hand-font=caveat|patrick|kalam`
+    (`src/app/design-hand.css`, fonts self-hosted in `fonts-hand.css`). Fonts are matched to the
+    x-height of what they replace with `font-size-adjust` (Open Sans 0.54, Jenson 0.40). Marks
+    attach to `data-link-label`, `data-drawn-line`, `data-rule`, `data-hand-note`, `data-hand-circle`.
+  - **Compare panel** (`ReviewSwitches`, bottom-left) appears once any option is in use or with
+    `?review=1`; it flips the same cookies live.
+  - **A page whose new design is a different structure** renders both versions while the switch
+    is enabled (`data-design-only="classic|human"`, hidden by CSS); production renders only
+    classic. Services does this (`ServicesHuman`, content shared in `services/content.ts`); its
+    Calendly mounts via `WhenShown` so the hidden copy never loads. Classic Services was checked
+    pixel-identical to the previous build.
+  - **GOTCHA:** dev serves Services in EB Garamond, production in Jenson: services.css's
+    `@import` of the Google font is dropped by the production CSS bundle. Block that font before
+    pixel-diffing dev against a deployment.
 - **`node scripts/visual-snapshot.mjs capture|compare`** (`DESIGN=human` to capture with the switch
   on): a pixel diff of 10 pages at 2 widths. Use it before and after any change meant to be
   invisible, and capture the baseline twice to learn the noise floor. Known noise: the A/B

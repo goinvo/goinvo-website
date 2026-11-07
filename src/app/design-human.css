@@ -14,6 +14,16 @@
  */
 
 @layer content {
+  /* ---------- Pages with a second version ---------- */
+  /* A page whose new design is a different structure (Services) renders both while
+     the switch is enabled, and this shows the one chosen. In production only the
+     classic version is rendered. */
+
+  html:not([data-design='human']) [data-design-only='human'],
+  html[data-design='human'] [data-design-only='classic'] {
+    display: none;
+  }
+
   /* ---------- Shared heading classes ---------- */
 
   html[data-design='human'] .header-xl {

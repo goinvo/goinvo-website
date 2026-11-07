@@ -1,0 +1,177 @@
+/*
+ * The hand-drawn review option (?hand=accents|full; see src/lib/designSwitch.ts).
+ * Off unless <html> carries data-hand, which only the review switch sets (never in
+ * production).
+ *
+ *   accents  notes, labels and annotations in a handwriting font; layout links, drawn
+ *            lines and rules drawn with a pen; an arrow drawn by hand; the prototype's
+ *            connector lines roughened (#hand-rough, rendered by ReviewSwitches)
+ *   full     the headings and big figures in handwriting too
+ *
+ * The three fonts (?hand-font=caveat|patrick|kalam) are set with font-size-adjust to the
+ * x-height of the font they replace (measured: Open Sans 0.54, Adobe Jenson 0.40; the
+ * handwriting runs 0.36 to 0.51), so they compare at the same apparent size and no
+ * layout's text grows or shrinks. The pen marks are SVG masks over currentColor, so they take the
+ * colour of the text they belong to.
+ *
+ * Layering: the `content` layer, after utilities, like design-human.css.
+ */
+
+@layer content {
+  html[data-hand] {
+    --font-hand: 'Caveat', cursive;
+    --hand-note-weight: 600;
+    --hand-heading-weight: 600;
+    --hand-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 10' preserveAspectRatio='none'%3E%3Cpath d='M2 6.6C28 4.4 61 7.4 97 5.4S163 3.4 198 5.6' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --hand-rule: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 6' preserveAspectRatio='none'%3E%3Cpath d='M1 3.6C110 2.4 250 4.3 410 3.2S740 2.1 999 3.7' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --hand-circle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60' preserveAspectRatio='none'%3E%3Cpath d='M36 9.5C92 1.5 174 4 192 23C206 43 140 57 80 54.5C30 52 4 42 6.5 28C9 15 40 5.5 82 6.5' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+
+  html[data-hand][data-hand-font='patrick'] {
+    --font-hand: 'Patrick Hand', cursive;
+    --hand-note-weight: 400;
+    --hand-heading-weight: 400;
+  }
+
+  html[data-hand][data-hand-font='kalam'] {
+    --font-hand: 'Kalam', cursive;
+    --hand-note-weight: 400;
+    --hand-heading-weight: 400;
+  }
+
+  /* Paired marks: the hand-drawn version shows only in the hand-drawn option. */
+  html:not([data-hand]) [data-hand-only] {
+    display: none;
+  }
+
+  html[data-hand] [data-hand-hide] {
+    display: none;
+  }
+
+  /* ---------- Accents: notes, labels, annotations ---------- */
+
+  html[data-hand] main :is([data-ds-label], .header-md, .gi-eyebrow, [data-hand-note], [data-annotation-title], p.text-label, figcaption) {
+    font-family: var(--font-hand);
+    font-size-adjust: 0.54;
+    font-synthesis-weight: none;
+    font-weight: var(--hand-note-weight);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* ---------- Pen marks ---------- */
+
+  /* A layout link's underline is drawn left to right as the pointer arrives. */
+  html[data-hand] [data-link-label] {
+    position: relative;
+    text-decoration: none;
+  }
+
+  html[data-hand] [data-link-label]::after {
+    content: '';
+    position: absolute;
+    left: -2%;
+    bottom: -0.3em;
+    width: 104%;
+    height: 0.34em;
+    background: currentColor;
+    mask: var(--hand-line) 0 0 / 100% 100% no-repeat;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s var(--ease-out-expo);
+    pointer-events: none;
+  }
+
+  html[data-hand] :is(.group:hover, .group:focus-visible) > [data-link-label]::after {
+    transform: scaleX(1);
+  }
+
+  /* The line a reading gesture draws under a title. */
+  html[data-hand] [data-drawn-line] {
+    height: 0.2em;
+    min-height: 6px;
+    bottom: -0.06em;
+    background: currentColor;
+    mask: var(--hand-line) 0 0 / 100% 100% no-repeat;
+  }
+
+  /* Emphasis in a headline is underlined by hand. */
+  html[data-hand] main :is(h1, h2) em {
+    position: relative;
+  }
+
+  html[data-hand] main :is(h1, h2) em::after {
+    content: '';
+    position: absolute;
+    left: -1%;
+    bottom: -0.04em;
+    width: 102%;
+    height: 0.16em;
+    background: var(--color-secondary);
+    mask: var(--hand-line) 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+
+  /* Something worth circling. */
+  html[data-hand] [data-hand-circle] {
+    position: relative;
+  }
+
+  html[data-hand] [data-hand-circle]::after {
+    content: '';
+    position: absolute;
+    inset: -0.5em -0.7em;
+    background: var(--color-secondary);
+    mask: var(--hand-circle) 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+
+  /* Rules between rows are drawn, not ruled. */
+  html[data-hand] :is([data-rule], [data-evidence-row]) {
+    position: relative;
+    border-top-color: transparent;
+  }
+
+  html[data-hand] :is([data-rule], [data-evidence-row])::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -3px;
+    height: 6px;
+    background: currentColor;
+    opacity: 0.4;
+    mask: var(--hand-rule) 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+
+  /* The prototype's connector lines wobble like pen lines. */
+  html[data-hand] [data-prototype-grid] > svg {
+    filter: url(#hand-rough);
+  }
+
+  /* ---------- Full: headings and big figures in handwriting too ---------- */
+
+  html[data-hand='full'] main :is(h1, h2, h3, .font-serif, blockquote p) {
+    font-family: var(--font-hand);
+    font-size-adjust: 0.4;
+    font-synthesis-weight: none;
+    font-weight: var(--hand-heading-weight);
+    letter-spacing: 0;
+  }
+
+  /* Heading measures are set in ch, the width of a "0", which is far narrower in
+     handwriting: a 16ch title became a column of single words. Let the column set
+     the measure and balance the lines instead. */
+  html[data-hand='full'] main :is(h1, h2) {
+    line-height: 1.08;
+    max-width: none;
+    text-wrap: balance;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html[data-hand] [data-link-label]::after {
+      transition: none;
+    }
+  }
+}

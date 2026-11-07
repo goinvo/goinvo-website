@@ -83,6 +83,23 @@ site stays identical until approval.
   - The Contact form card.
   - The site header: it is already the same on every page.
 
+## Services, rebuilt (2026-11-07, behind the switch)
+
+Services is the one page whose new design is a different structure, not a restyle: a white
+opening with the page title, the figures as display numbers, offerings as rows with a drawn
+title line, the reasons on grey, the engagement tiers as a ruled three-column table (no dark
+featured card; "Most common" is a label), the sectors as the homepage's image rows, the quote on
+grey and the booking section with the same Calendly. Same words and prices as classic
+(`content.ts`). Open question for the owner: the homepage names three offerings ("Find the
+product direction", "Make complexity usable", "Design through delivery") that link to Services,
+which names three others. The two should agree before step 5.
+
+## The hand-drawn option (2026-11-07, for comparison)
+
+`?hand=accents` sets notes, labels and annotations in handwriting and draws underlines, rules,
+circles and arrows with a pen; `?hand=full` sets headings and big figures in handwriting too.
+Three fonts to compare (Caveat, Patrick Hand, Kalam). It is an option to look at, not a decision.
+
 ## Still to do
 
 - **Step 5:** make `human` the default (needs approval), then delete the classic branches. The

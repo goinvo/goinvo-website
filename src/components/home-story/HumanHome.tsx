@@ -16,7 +16,8 @@ import { InlineLink, TextLink, focusRing } from '@/components/ui/TextLink'
 import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { Reveal } from '@/components/ui/Reveal'
-import { detailInsight, prototypeScenes } from './prototypeContent'
+import { DrawnLine } from '@/components/ui/DrawnLine'
+import { detailInsight, prototypeScenes, sceneView } from './prototypeContent'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { ease } from '@/lib/motion'
 
@@ -34,12 +35,6 @@ function jumpTo(id: string, low: boolean) {
   heading?.focus({ preventScroll: true })
   section?.scrollIntoView({ behavior: low ? 'instant' : 'smooth' })
   history.replaceState(null, '', `#${id}`)
-}
-
-/** The line is drawn by the reading gesture, rather than added as decoration. */
-function DrawnLine({ children, progress, low, start = 0, end = 1 }: { children: ReactNode; progress: MotionValue<number>; low: boolean; start?: number; end?: number }) {
-  const scaleX = useTransform(progress, [start, end], [0, 1])
-  return <span className="relative inline-block pb-[0.1em]">{children}<motion.span aria-hidden="true" style={{ scaleX: low ? 1 : scaleX }} className="pointer-events-none absolute bottom-0 left-0 h-[0.055em] min-h-[2px] w-full origin-left bg-current" /></span>
 }
 
 function emphasizeAnnotation(text: string, phrase: string) {
@@ -72,23 +67,35 @@ const sublines = [
 type Subline = typeof sublines[number]
 const sublineFor = (key: string | null): Subline => sublines.find(item => item.key === key) ?? sublines[0]
 
-function Opening({ ready, selected, choose, progress, live, openingRef, top, spacerRef, gap, headline, subline }: { headline: Headline; subline: Subline; low: boolean; ready: boolean; selected: PrototypeId; choose: (id: PrototypeId) => void; progress: MotionValue<number>; live: boolean; openingRef: RefObject<HTMLDivElement | null>; top?: MotionValue<number>; spacerRef: RefObject<HTMLDivElement | null>; gap?: MotionValue<number> }) {
+function Opening({ ready, selected, choose, view, chooseView, progress, live, openingRef, top, spacerRef, gap, headline, subline }: { headline: Headline; subline: Subline; low: boolean; ready: boolean; selected: PrototypeId; choose: (id: PrototypeId) => void; view: string | null; chooseView: (id: PrototypeId) => void; progress: MotionValue<number>; live: boolean; openingRef: RefObject<HTMLDivElement | null>; top?: MotionValue<number>; spacerRef: RefObject<HTMLDivElement | null>; gap?: MotionValue<number> }) {
   const opacity = useTransform(progress, value => 1 - Math.min(1, value / 0.4))
+  const scene = prototypeScenes.find(item => item.id === selected)
+  const current = scene ? sceneView(scene, view).viewId : null
   return <motion.div ref={openingRef} data-opening-copy style={{ opacity: live ? opacity : 1, paddingTop: top }} className="relative z-20 pb-8 pl-5 pr-5 pt-28 md:pl-[6vw] md:pr-[6vw] md:pt-24 min-[1100px]:absolute min-[1100px]:left-0 min-[1100px]:top-0 min-[1100px]:w-[31%] min-[1100px]:pr-8 [@media(min-width:1100px)_and_(max-height:800px)]:pb-6 [@media(min-width:1100px)_and_(max-height:800px)]:pt-[88px]">
     <h1 id="human-title" data-headline={headline.key} className={cn('relative m-0 font-serif text-[clamp(2.8rem,14.75vw,3.6rem)] font-normal leading-[0.94] tracking-[-0.05em] md:text-[clamp(3.6rem,7.5vw,9rem)]', headline.fit)}>{headline.node}</h1>
     <p className={cn('mb-0 mt-8', type.subhead, '[@media(min-width:1100px)_and_(max-height:800px)]:mt-4 [@media(min-width:1100px)_and_(max-height:800px)]:text-[20px]')}>{subline.node}</p>
     {gap && <motion.div ref={spacerRef} aria-hidden="true" style={{ height: gap }} />}
     <div className="mt-12 [@media(min-width:1100px)_and_(max-height:800px)]:mt-5">
-      <p id="challenge-label" className={cn('mb-4 mt-0', type.lead, '[@media(min-width:1100px)_and_(max-height:800px)]:mb-2')}>What sounds familiar?</p>
+      <p id="challenge-label" data-hand-note className={cn('mb-4 mt-0', type.lead, '[@media(min-width:1100px)_and_(max-height:800px)]:mb-2')}>What sounds familiar?</p>
       <fieldset aria-labelledby="challenge-label" className="m-0 hidden min-w-0 border-0 p-0 md:block">
         <div className="grid grid-cols-3 gap-x-8 gap-y-4 min-[1100px]:grid-cols-1 [@media(min-width:1100px)_and_(max-height:800px)]:gap-y-3">
-          {prototypeScenes.map(item => <label key={item.id} htmlFor={`challenge-${item.id}`} className={cn('relative block min-h-14 cursor-pointer py-3 [@media(min-width:1100px)_and_(max-height:800px)]:py-2', selected === item.id && 'text-primary')}>
+          {prototypeScenes.map(item => <div key={item.id} className="relative"><label htmlFor={`challenge-${item.id}`} className={cn('relative block min-h-14 cursor-pointer py-3 [@media(min-width:1100px)_and_(max-height:800px)]:py-2', selected === item.id && 'text-primary')}>
             <input id={`challenge-${item.id}`} name="work-challenge" type="radio" value={item.id} checked={selected === item.id} disabled={!ready} onChange={() => choose(item.id)} aria-label={`${item.situation} — ${item.audience}`} className="peer sr-only" />
             {/* One dot, handed between choices by layoutId so it slides to the new one. */}
             <span data-situation className={cn('relative block peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4', type.choice)}>{selected === item.id && <motion.span layoutId="challenge-dot" data-challenge-dot aria-hidden="true" transition={{ duration: 0.45, ease: easing }} className="absolute -left-5 top-[0.625em] size-2.5 -translate-y-1/2 rounded-full bg-primary" />}{item.situation}</span>
-            <span className={cn('mt-1 block', type.caption)}>{item.audience}</span>
+            <span className={cn('mt-1 block', type.caption, selected === item.id && item.views && 'invisible')}>{item.audience}</span>
             <span aria-hidden="true" className={cn('absolute bottom-0 left-0 h-[2px] w-full origin-left bg-current transition-transform duration-300 motion-reduce:transition-none', selected === item.id ? 'scale-x-100' : 'scale-x-0')} />
-          </label>)}
+          </label>
+          {/* A prototype with more than one view lists them under its challenge, once chosen,
+              on the audience line: the opening is sized to the screen and cannot grow. */}
+          {selected === item.id && item.views && <fieldset data-view-picker aria-label={`Views of ${item.title}`} className="absolute bottom-3 left-0 m-0 flex min-w-0 gap-5 border-0 p-0 [@media(min-width:1100px)_and_(max-height:800px)]:bottom-2">
+            {item.views.map(option => <label key={option.id} htmlFor={`view-${option.id}`} className={cn('relative -my-[2.5px] flex min-h-6 cursor-pointer items-center gap-2', type.caption, current === option.id ? 'font-semibold text-primary' : 'text-black')}>
+              <input id={`view-${option.id}`} name="work-view" type="radio" value={option.id} checked={current === option.id} disabled={!ready} onChange={() => chooseView(option.id)} className="peer sr-only" />
+              <span aria-hidden="true">–</span>
+              <span className={cn('peer-focus-visible:outline-2 peer-focus-visible:outline-offset-4', current === option.id && 'underline decoration-1 underline-offset-4')}>{option.label}</span>
+            </label>)}
+          </fieldset>}
+          </div>)}
         </div>
       </fieldset>
       <div className="relative min-h-12 border-b-2 border-current py-4 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 md:hidden">
@@ -96,6 +103,10 @@ function Opening({ ready, selected, choose, progress, live, openingRef, top, spa
         <select id="challenge-select" aria-labelledby="challenge-label" disabled={!ready} value={selected} onChange={event => choose(event.target.value as PrototypeId)} className="absolute inset-0 min-h-12 w-full cursor-pointer opacity-0">{prototypeScenes.map(item => <option key={item.id} value={item.id}>{item.situation}</option>)}</select>
       </div>
       <p className="mb-0 mt-2 text-sm md:hidden">{prototypeScenes.find(item => item.id === selected)?.audience}</p>
+      {scene?.views && <div data-view-picker className="relative mt-3 min-h-12 border-b border-current py-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 md:hidden">
+        <span aria-hidden="true" className={cn('block pr-8', type.label)}>– {scene.views.find(option => option.id === current)?.label}</span><span aria-hidden="true" className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2">⌄</span>
+        <select id="view-select" aria-label={`View of ${scene.title}`} disabled={!ready} value={current ?? undefined} onChange={event => chooseView(event.target.value as PrototypeId)} className="absolute inset-0 min-h-12 w-full cursor-pointer opacity-0">{scene.views.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
+      </div>}
       <noscript><nav aria-label="Case studies" className="mt-4 flex flex-col">{prototypeScenes.map(item => <a key={item.id} href={item.href} className={link}>{item.title}</a>)}</nav></noscript>
     </div>
   </motion.div>
@@ -170,7 +181,7 @@ const promptRoom = 72
  * the min-[1100px] w-[31%] / ml-[31%] / w-[69%] classes (Tailwind needs literals). */
 const openingShare = 31
 
-function Work({ low, ready, selected, choose, headline, subline }: { low: boolean; ready: boolean; selected: PrototypeId; choose: (id: PrototypeId) => void; headline: Headline; subline: Subline }) {
+function Work({ low, ready, selected, choose, view, chooseView, headline, subline }: { low: boolean; ready: boolean; selected: PrototypeId; choose: (id: PrototypeId) => void; view: string | null; chooseView: (id: PrototypeId) => void; headline: Headline; subline: Subline }) {
   const section = useRef<HTMLElement>(null)
   const panel = useRef<HTMLDivElement>(null)
   const [viewport, setViewport] = useState({ width: 1440, wide: false, measured: false })
@@ -218,6 +229,7 @@ function Work({ low, ready, selected, choose, headline, subline }: { low: boolea
     setHovered(true)
   }
   function select(id: PrototypeId) { setHovered(false); inspection.set(0); choose(id) }
+  function selectView(id: PrototypeId) { setHovered(false); inspection.set(0); chooseView(id) }
   const transition = usePageTransition()
   const router = useRouter()
   // Fetch the three case studies ahead, so the morph never waits on the network.
@@ -233,7 +245,7 @@ function Work({ low, ready, selected, choose, headline, subline }: { low: boolea
   // still into the case study's own image, then opens the page underneath.
   function openCase(event: ReactMouseEvent<HTMLAnchorElement>) {
     const box = zone.current?.getBoundingClientRect()
-    const header = prototypeHeaderById(item.id)
+    const header = prototypeHeaderById(item.sceneId)
     if (!transition || !box || !header || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
     event.preventDefault()
     setHovered(false)
@@ -259,7 +271,8 @@ function Work({ low, ready, selected, choose, headline, subline }: { low: boolea
     setShowExplore(value < 0.8)
     setInsightShown(value > 0.4)
   })
-  const item = prototypeScenes.find(item => item.id === selected) || prototypeScenes[0]
+  // The chosen scene, seen through its chosen view (a scene with no views is its own).
+  const item = sceneView(prototypeScenes.find(item => item.id === selected) || prototypeScenes[0], view)
   // The opening screen, measured. The two columns share a top line (headline and
   // prototype name) and a bottom line (last choice and the preview), and together
   // sit centred between the nav bar and the prompt at the bottom. Whichever column
@@ -307,7 +320,7 @@ function Work({ low, ready, selected, choose, headline, subline }: { low: boolea
       // moves the column the reader is clicking in; only the preview's top glides.
       const natural = (id: PrototypeId) => preview.offsetWidth * prototypeSizes[id].height / prototypeSizes[id].width
       const space = room - title.offsetHeight
-      const tallest = Math.min(space, Math.max(...prototypeScenes.map(scene => natural(scene.id))))
+      const tallest = Math.min(space, Math.max(...prototypeScenes.flatMap(scene => scene.views ? scene.views.map(option => natural(option.id)) : [natural(scene.id)])))
       const current = Math.min(space, natural(item.id))
       const height = Math.max(left, title.offsetHeight + tallest)
       const top = navHeight + (room - height) / 2
@@ -329,7 +342,7 @@ function Work({ low, ready, selected, choose, headline, subline }: { low: boolea
   const panelStyle = !viewport.measured ? undefined : live ? { marginLeft, width } : { marginLeft: viewport.wide ? `${openingShare}%` : '0%', width: viewport.wide ? `${100 - openingShare}%` : '100%' }
   return <section ref={section} id="human" data-scene="component-assembly" data-story-live={live} aria-labelledby="human-title" className={cn('scene relative bg-white', live ? 'is-live h-[185svh]' : 'is-rest min-[1100px]:min-h-svh')}>
     {live && <span id="work-result" aria-hidden="true" className="absolute left-0 top-[80svh]" />}
-    <Opening headline={headline} subline={subline} low={low} ready={ready} selected={selected} choose={select} progress={progress} live={live} openingRef={opening} top={aligned ? restTop : undefined} spacerRef={leftSpacer} gap={aligned ? leftGap : undefined} />
+    <Opening headline={headline} subline={subline} low={low} ready={ready} selected={selected} choose={select} view={view} chooseView={selectView} progress={progress} live={live} openingRef={opening} top={aligned ? restTop : undefined} spacerRef={leftSpacer} gap={aligned ? leftGap : undefined} />
     <motion.div ref={panel} id="work" role="region" aria-labelledby="work-title" style={{ ...panelStyle, ...(aligned ? { paddingTop: panelTop, paddingBottom: panelBottom } : {}) }} className={cn('relative ml-0 flex w-full flex-col px-5 pb-24 pt-8 md:px-[4vw] min-[1100px]:ml-[31%] min-[1100px]:w-[69%] min-[1100px]:pt-24', low || !viewport.wide ? 'min-h-svh' : 'h-svh min-h-[680px]', live && 'sticky top-0')}>
       {!live && <span id="work-result" aria-hidden="true" className={cn('absolute left-0', low ? 'top-0' : 'top-[80%]')} />}
       <div ref={heading} style={aligned && headingFloor ? { minHeight: headingFloor } : undefined} className="relative z-20">
@@ -406,7 +419,7 @@ function ServiceRow({ offering, low }: { offering: typeof humanOfferings[number]
   const y = useTransform(scrollYProgress, [0, 0.85], [28, 0])
   const concernY = useTransform(scrollYProgress, [0, 1], [14, -8])
   return <div ref={row} data-service-motion className="py-8 md:py-12">
-    <motion.p style={{ y: low ? 0 : concernY }} className={cn('mb-6 mt-0 max-w-[30ch] text-gray', type.lead)}>“{offering.concern}”</motion.p>
+    <motion.p data-hand-note style={{ y: low ? 0 : concernY }} className={cn('mb-6 mt-0 max-w-[30ch] text-gray', type.lead)}>“{offering.concern}”</motion.p>
     <motion.div style={{ x: low ? 0 : x, y: low ? 0 : y }} className="pr-4 md:pr-0">
       <h3 className={cn('m-0 max-w-[19ch]', type.title)}><DrawnLine progress={scrollYProgress} low={low} start={0.15} end={0.9}>{offering.title}</DrawnLine></h3>
       <p className={cn('mb-2 mt-5 max-w-[50ch]', type.body)}>{offering.description}</p>
@@ -509,10 +522,19 @@ export function HumanHome({ work }: { work?: string }) {
     const wanted = params.get('work') ?? work
     return prototypeScenes.some(scene => scene.id === wanted) ? wanted as PrototypeId : 'clinical'
   })
+  const [view, setView] = useState<string | null>(() => params.get('view'))
   function choose(id: PrototypeId) {
     setSelected(id)
+    setView(null)
     const url = new URL(window.location.href)
     url.searchParams.set('work', id)
+    url.searchParams.delete('view')
+    window.history.replaceState(window.history.state, '', url)
+  }
+  function chooseView(id: PrototypeId) {
+    setView(id)
+    const url = new URL(window.location.href)
+    url.searchParams.set('view', id)
     window.history.replaceState(window.history.state, '', url)
   }
   const choice = useRef<'low' | 'full' | null>(null)
@@ -544,7 +566,7 @@ export function HumanHome({ work }: { work?: string }) {
   return (
     <MotionConfig reducedMotion={low ? 'always' : 'never'}>
       <div data-human-home data-motion={low ? 'low' : 'full'} style={{ color: ink, background: paper }} className={cn("relative mx-auto min-h-svh w-[calc(100%_-_56px)] pb-24 font-sans selection:bg-secondary selection:text-white md:w-full", largerText && "[&_p.text-base]:text-[20px] [&_p.text-base]:leading-relaxed [&_[data-story-task]]:text-[20px]")}>
-        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} headline={headlineFor(params.get('headline'))} subline={sublineFor(params.get('subline'))} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
+        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headlineFor(params.get('headline'))} subline={sublineFor(params.get('subline'))} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
         <Contact selected={selected} />
         <NextPrompt low={low} />
         <HumanPageControls low={low} ready={ready} toggleMotion={toggleMotion} largerText={largerText} setLargerText={value => { setLargerText(value); try { localStorage.setItem('goinvo-human-large-text', String(value)) } catch { /* Optional storage. */ } }} />

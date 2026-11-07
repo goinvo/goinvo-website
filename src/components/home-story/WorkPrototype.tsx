@@ -5,11 +5,12 @@ import { useMotionValue, useMotionValueEvent, type MotionValue } from 'framer-mo
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 
-export type PrototypeId = 'clinical' | 'prior' | 'facto' | 'flow'
+export type PrototypeId = 'clinical' | 'prior' | 'facto' | 'facto-bento' | 'flow'
 export const prototypeSizes = {
   clinical: { width: 1280, height: 860 },
   prior: { width: 1240, height: 811 },
   facto: { width: 1920, height: 1273 },
+  'facto-bento': { width: 1280, height: 849 },
   flow: { width: 1920, height: 1080 },
 }
 
