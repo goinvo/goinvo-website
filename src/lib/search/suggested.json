@@ -1,0 +1,490 @@
+{
+  "generatedAt": "2026-11-07T17:26:09.452Z",
+  "queries": [
+    {
+      "label": "Healthcare",
+      "query": "healthcare software",
+      "use": "example"
+    },
+    {
+      "label": "Government",
+      "query": "public sector service design",
+      "use": "example"
+    },
+    {
+      "label": "Enterprise",
+      "query": "enterprise analytics platform",
+      "use": "example"
+    },
+    {
+      "label": "AI",
+      "query": "AI LLM NLP healthcare",
+      "use": "example"
+    },
+    {
+      "label": "Clinicians don’t trust our AI’s suggestions",
+      "query": "Clinicians don’t trust our AI’s suggestions",
+      "use": "empty"
+    },
+    {
+      "label": "Applying for public benefits is too hard",
+      "query": "Applying for public benefits is too hard",
+      "use": "empty"
+    },
+    {
+      "label": "We can’t find answers in decades of research",
+      "query": "We can’t find answers in decades of research",
+      "use": "empty"
+    },
+    {
+      "label": "Patients can’t make sense of their health data",
+      "query": "Patients can’t make sense of their health data",
+      "use": "empty"
+    }
+  ],
+  "answers": {
+    "healthcare software": {
+      "results": [
+        {
+          "slug": "a-design-diagnostic-for-clinical-software",
+          "href": "/vision/a-design-diagnostic-for-clinical-software#how-design-failure-shows-up-in-clinical-software",
+          "title": "A Design Diagnostic for Clinical Software",
+          "caption": "The design failures that cause clinical software abandonment, patient harm, and reputational damage are almost always visible before launch. GoInvo's design diagnostic surfaces them and puts the evidence in front of the people who decide whether to ship.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/8ba8839d53918b97363eea96348147f547527134-1600x900.png?rect=200,0,1200,900&w=640&h=480",
+          "kind": "vision",
+          "anchorTitle": "How Design Failure Shows Up in Clinical Software",
+          "blurb": "Published research on design failures in clinical software and how to surface them before launch. Addresses the systematic design problems that lead to software abandonment and patient harm.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "3m-coderyte",
+          "href": "/work/3m-coderyte",
+          "title": "Natural Language Processing (NLP) Software for 3M",
+          "caption": "A 180° turn for a $150M business. How our skunkworks for an ambitious start-up led to a $150M exit.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/d9106a7c913e94bb9ad6e7939600e40dcdda772f-2000x965.jpg?rect=357,0,1287,965&w=640&h=480",
+          "kind": "work",
+          "blurb": "Natural language processing software built for 3M that achieved a $150M exit. Demonstrates enterprise healthcare software design for a major business outcome.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "maya-ehr",
+          "href": "/work/maya-ehr#overview",
+          "title": "Care Over Clicks: Refocusing Nursing on What Matters",
+          "caption": "Building an EHR tailored to the needs of home-care agencies.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/ac8e592e267b16eb11115a7b91c8a62af57ea681-2000x673.jpg?rect=552,0,897,673&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Overview",
+          "blurb": "EHR software purpose-built for home-care agencies, shifting design focus from administrative burden to clinical priorities. Shows how healthcare software can be tailored to specific care delivery models.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "partners-insight",
+          "href": "/work/partners-insight",
+          "title": "Faster Research Approvals Across a Hospital Network",
+          "caption": "A full redesign of the Partners Healthcare research administration platform, Insight.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/4ee04baf69a3582d02b9a7e4c52ccc24d6f18d97-2000x1215.jpg?rect=190,0,1620,1215&w=640&h=480",
+          "kind": "work",
+          "blurb": "Full redesign of a research administration platform across a hospital network to accelerate approval workflows. Enterprise healthcare software addressing operational efficiency.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "prior-auth",
+          "href": "/work/prior-auth",
+          "title": "Taking the Wait Out of Cancer Treatment Approvals",
+          "caption": "Software design for efficient, more intelligent protocol review, saving time and burden for insurers, providers, and hospitals.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/36589e3d856b6bee5d30c1e2580937c59da6ebb8-2000x811.jpg?rect=460,0,1081,811&w=640&h=480",
+          "kind": "work",
+          "blurb": "Software for intelligent protocol review in cancer treatment approvals, reducing wait times and administrative burden. Healthcare software combining AI with human workflows for insurers and providers.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "ahrq-cds",
+          "href": "/work/ahrq-cds",
+          "title": "CDS Repository for Standards of Care ",
+          "caption": "Design a national repository for providers, developers, and researchers to disseminate and use implementable clinical decision support tools.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/8cf099cb35d2c467fa45b15cc602a292bfa74458-2000x678.jpg?rect=548,0,904,678&w=640&h=480",
+          "kind": "work",
+          "blurb": "National repository platform enabling providers and developers to disseminate and implement clinical decision support tools. Government-backed healthcare software infrastructure.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        }
+      ],
+      "aiGenerated": true,
+      "insight": "Looking for healthcare software design work — both delivered solutions and design frameworks.",
+      "persona": "product_manager",
+      "gapNote": null
+    },
+    "public sector service design": {
+      "results": [
+        {
+          "slug": "public-sector",
+          "href": "/work/public-sector#core-principles-for-public-sector-design",
+          "title": "Designing for the Public Sector",
+          "caption": "How design helps the public sector address challenges and increase resident engagement and accessibility.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/b0f7cbf6728f7341050a78b6522a7248c0fb7034-2000x883.jpg?rect=412,0,1177,883&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Core principles for public sector design",
+          "blurb": "Case study on designing for Federal, State and Local Government to address public sector challenges and increase resident engagement and accessibility. Includes core principles for public sector design.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "mass-snap",
+          "href": "/work/mass-snap#solution",
+          "title": "Closing the SNAP Gap",
+          "caption": "A 50% increase in digital applications means more people are getting the food they need.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/316459b151013c32c42f662a10c2ad0eed5d8a97-2000x578.jpg?rect=615,0,771,578&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Solution",
+          "blurb": "Government service design for MA Department of Transitional Assistance that increased digital applications by 50%, helping more residents access food assistance.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "eligibility-engine",
+          "href": "/vision/eligibility-engine#challenges-of-accessing-services-in-massachusetts",
+          "title": "Transforming Service Access in Massachusetts",
+          "caption": "A centralized MA resident database for better service accessibility.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/a8ce17deff33bb07098fb5fb6251059220fc956f-2000x750.jpg?rect=500,0,1000,750&w=640&h=480",
+          "kind": "vision",
+          "anchorTitle": "Challenges of Accessing Services in Massachusetts",
+          "blurb": "Published concept exploring a centralized database to improve service accessibility for Massachusetts residents, addressing how people navigate multiple government services.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        }
+      ],
+      "aiGenerated": true,
+      "insight": "Looking for design work that improves how public sector agencies deliver services to residents.",
+      "persona": "government_official",
+      "gapNote": null
+    },
+    "enterprise analytics platform": {
+      "results": [
+        {
+          "slug": "ipsos-facto",
+          "href": "/work/ipsos-facto#solution",
+          "title": "The Future of Research Intelligence",
+          "caption": "Designing an AI-powered platform that transforms siloed data into actionable insights using deep research and advanced models.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/468d2be03e205663e9d3c093fc740c8fc4b39923-2000x1200.jpg?rect=200,0,1600,1200&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Solution",
+          "blurb": "AI-powered platform transforming siloed data into actionable insights for enterprise research intelligence. Addresses the core challenge of consolidating complex data across an organization.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "from-15-disconnected-tools-to-one",
+          "href": "/work/from-15-disconnected-tools-to-one#designing-the-operational-backbone",
+          "title": "From 15 Disconnected Tools to One",
+          "caption": "Designing a unified research operations platform that replaced 15 disconnected tools across Ipsos's global workflow — reducing friction, standardizing data, and giving teams a single source of truth.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/6865137d2c717ecd35d2ae707e7f17101925b44b-2100x640.jpg?rect=1247,0,853,640&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Designing the Operational Backbone",
+          "blurb": "Unified research operations platform replacing 15 disconnected tools, standardizing data and creating a single source of truth across global workflows. Directly tackles enterprise platform consolidation and analytics integration.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "prior-auth",
+          "href": "/work/prior-auth#what-we-made",
+          "title": "Taking the Wait Out of Cancer Treatment Approvals",
+          "caption": "Software design for efficient, more intelligent protocol review, saving time and burden for insurers, providers, and hospitals.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/36589e3d856b6bee5d30c1e2580937c59da6ebb8-2000x811.jpg?rect=460,0,1081,811&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "What We Made",
+          "blurb": "Enterprise software for protocol review and intelligent approval workflows in healthcare, reducing time and burden through more efficient data handling. Demonstrates healthcare analytics applied to high-stakes operational decisions.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        },
+        {
+          "slug": "partners-insight",
+          "href": "/work/partners-insight#what-we-found-and-what-we-made",
+          "title": "Faster Research Approvals Across a Hospital Network",
+          "caption": "A full redesign of the Partners Healthcare research administration platform, Insight.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/4ee04baf69a3582d02b9a7e4c52ccc24d6f18d97-2000x1215.jpg?rect=190,0,1620,1215&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "What We Found and What We Made",
+          "blurb": "Full redesign of Partners Healthcare's research administration platform for faster approvals across a hospital network. Enterprise-scale health IT platform addressing workflow and data management at institutional scale.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        }
+      ],
+      "aiGenerated": true,
+      "insight": "Visitor is seeking enterprise-grade analytics or operations platform design, likely for data consolidation and insights at organizational scale.",
+      "persona": "product_manager",
+      "gapNote": null
+    },
+    "ai llm nlp healthcare": {
+      "results": [
+        {
+          "slug": "3m-coderyte",
+          "href": "/work/3m-coderyte#solution",
+          "title": "Natural Language Processing (NLP) Software for 3M",
+          "caption": "A 180° turn for a $150M business. How our skunkworks for an ambitious start-up led to a $150M exit.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/d9106a7c913e94bb9ad6e7939600e40dcdda772f-2000x965.jpg?rect=357,0,1287,965&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Solution",
+          "blurb": "Natural Language Processing software that transformed a $150M business through design of an NLP system for enterprise healthcare. Delivered case study with full problem, solution, and results documentation.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "guidelines",
+          "href": "/work/guidelines#the-trust-model-came-before-the-interface",
+          "title": "Evidence-based AI answer engine for Clinicians",
+          "caption": "GoInvo helped Guidelines.com turn twenty years of clinical expertise into a clear AI product strategy and interactive prototypes in four weeks, with clinical trust designed into every answer.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/0909c29094e67501f3f4662a823c5953fdc37fb7-3484x3054.png?rect=0,221,3484,2613&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "The trust model came before the interface.",
+          "blurb": "AI answer engine for clinicians that converts clinical evidence into trustworthy AI product strategy and interactive prototypes. Demonstrates how to design clinical AI systems with trust built into every recommendation.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "healthcare-ai",
+          "href": "/vision/healthcare-ai#patient-tool-concepts",
+          "title": "The AI Healthcare Future We Need",
+          "caption": "Exploring the AI Healthcare future - opportunities and unexpected outcomes.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/9841855d058529fdf44a80520b3a2e6a2f960b1f-2000x589.jpg?rect=608,0,785,589&w=640&h=480",
+          "kind": "vision",
+          "anchorTitle": "Patient Tool Concepts",
+          "blurb": "Published research exploring AI healthcare opportunities and unintended outcomes, including patient tool concepts and ripple effects of AI adoption in clinical settings.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "human-centered-design-for-ai",
+          "href": "/vision/human-centered-design-for-ai#four-design-principles-for-trustworthy-ai-co-pilots",
+          "title": "The Human-Centered Design Behind AI Clinicians Can Trust",
+          "caption": "Designing AI that people can understand, trust, and use through human-centered design.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/d3bf52884f914d8f6a7b0f539cc7a26cb9261d15-2000x967.jpg?rect=356,0,1289,967&w=640&h=480",
+          "kind": "vision",
+          "anchorTitle": "Four design principles for trustworthy AI co-pilots",
+          "blurb": "Framework for designing AI clinicians can understand and trust through human-centered design principles. Addresses the design foundations needed for autonomous AI systems in healthcare.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "augmented-clinical-decision-support",
+          "href": "/vision/augmented-clinical-decision-support#real-time-clinical-guidance-for-mobile-health-workers",
+          "title": "Augmented Clinical Decision Support",
+          "caption": "Real-time, augmented decision support and guidance for mobile health workers, to better training and repeatable health outcomes.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/e343c51d02e465736a64604a9a77f9bfb99c00c9-2000x1125.jpg?rect=250,0,1500,1125&w=640&h=480",
+          "kind": "vision",
+          "anchorTitle": "Real-time clinical guidance for mobile health workers",
+          "blurb": "Published concept for real-time AI-augmented decision support and guidance for mobile health workers. Explores clinical AI application in resource-limited settings with process maps for pregnancy, head injury, and cancer care.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        },
+        {
+          "slug": "ai-design-certification",
+          "href": "/vision/ai-design-certification",
+          "title": "Human-Assisted AI Design Certification for Healthcare",
+          "caption": "A framework for certifying the design quality of AI-powered health products.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/661ddf7aaae81c45108d0f8962f5644df3cf82cd-2000x667.jpg?rect=556,0,889,667&w=640&h=480",
+          "kind": "vision",
+          "blurb": "Framework for certifying design quality of AI-powered health products. Published research on standards for evaluating healthcare AI systems.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        }
+      ],
+      "aiGenerated": true,
+      "insight": "Visitor is researching how to design, implement, or evaluate AI/LLM/NLP systems in healthcare contexts.",
+      "persona": "product_manager",
+      "gapNote": null
+    },
+    "clinicians don't trust our ai's suggestions": {
+      "results": [
+        {
+          "slug": "human-centered-design-for-ai",
+          "href": "/vision/human-centered-design-for-ai#why-trust-is-the-real-rate-limiting-step",
+          "title": "The Human-Centered Design Behind AI Clinicians Can Trust",
+          "caption": "Designing AI that people can understand, trust, and use through human-centered design.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/d3bf52884f914d8f6a7b0f539cc7a26cb9261d15-2000x967.jpg?rect=356,0,1289,967&w=640&h=480",
+          "kind": "vision",
+          "anchorTitle": "Why trust is the real rate-limiting step",
+          "blurb": "Explores why trust is the rate-limiting step in AI adoption and presents four design principles for building trustworthy AI co-pilots that clinicians can understand and rely on.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "guidelines",
+          "href": "/work/guidelines#the-trust-model-came-before-the-interface",
+          "title": "Evidence-based AI answer engine for Clinicians",
+          "caption": "GoInvo helped Guidelines.com turn twenty years of clinical expertise into a clear AI product strategy and interactive prototypes in four weeks, with clinical trust designed into every answer.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/0909c29094e67501f3f4662a823c5953fdc37fb7-3484x3054.png?rect=0,221,3484,2613&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "The trust model came before the interface.",
+          "blurb": "Case study on designing an AI answer engine where clinical trust was built into the product strategy before the interface—demonstrating how evidence systems and source transparency earn clinician confidence.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "a-design-diagnostic-for-clinical-software",
+          "href": "/vision/a-design-diagnostic-for-clinical-software#the-ai-trust-problem",
+          "title": "A Design Diagnostic for Clinical Software",
+          "caption": "The design failures that cause clinical software abandonment, patient harm, and reputational damage are almost always visible before launch. GoInvo's design diagnostic surfaces them and puts the evidence in front of the people who decide whether to ship.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/8ba8839d53918b97363eea96348147f547527134-1600x900.png?rect=200,0,1200,900&w=640&h=480",
+          "kind": "vision",
+          "anchorTitle": "The AI Trust Problem",
+          "blurb": "Published diagnostic framework that surfaces design failures in clinical software before launch, with explicit attention to the AI trust problem and why credibility is a design challenge.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        }
+      ],
+      "aiGenerated": true,
+      "insight": "You need to understand how to design AI recommendations that clinicians will actually trust and adopt.",
+      "persona": "product_manager",
+      "gapNote": null
+    },
+    "applying for public benefits is too hard": {
+      "results": [
+        {
+          "slug": "mass-snap",
+          "href": "/work/mass-snap#solution",
+          "title": "Closing the SNAP Gap",
+          "caption": "A 50% increase in digital applications means more people are getting the food they need.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/316459b151013c32c42f662a10c2ad0eed5d8a97-2000x578.jpg?rect=615,0,771,578&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Solution",
+          "blurb": "Redesigned the digital application process for SNAP benefits in Massachusetts, resulting in a 50% increase in digital applications so more people could access the food they need. Directly addresses the challenge of simplifying public benefits access.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "eligibility-engine",
+          "href": "/vision/eligibility-engine#challenges-of-accessing-services-in-massachusetts",
+          "title": "Transforming Service Access in Massachusetts",
+          "caption": "A centralized MA resident database for better service accessibility.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/a8ce17deff33bb07098fb5fb6251059220fc956f-2000x750.jpg?rect=500,0,1000,750&w=640&h=480",
+          "kind": "vision",
+          "anchorTitle": "Challenges of Accessing Services in Massachusetts",
+          "blurb": "Published concept for a centralized Massachusetts resident database designed to improve accessibility to state services by reducing fragmentation and complexity in eligibility determination across multiple programs.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "public-sector",
+          "href": "/work/public-sector#core-principles-for-public-sector-design",
+          "title": "Designing for the Public Sector",
+          "caption": "How design helps the public sector address challenges and increase resident engagement and accessibility.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/b0f7cbf6728f7341050a78b6522a7248c0fb7034-2000x883.jpg?rect=412,0,1177,883&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Core principles for public sector design",
+          "blurb": "Framework for applying design to public sector challenges to increase resident engagement and accessibility. Covers core principles relevant to streamlining how citizens interact with government services.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        }
+      ],
+      "aiGenerated": true,
+      "insight": "Visitor is seeking design solutions that simplify public benefits application and enrollment processes.",
+      "persona": "government_official",
+      "gapNote": null
+    },
+    "we can't find answers in decades of research": {
+      "results": [
+        {
+          "slug": "ipsos-facto",
+          "href": "/work/ipsos-facto#solution",
+          "title": "The Future of Research Intelligence",
+          "caption": "Designing an AI-powered platform that transforms siloed data into actionable insights using deep research and advanced models.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/468d2be03e205663e9d3c093fc740c8fc4b39923-2000x1200.jpg?rect=200,0,1600,1200&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Solution",
+          "blurb": "Designed an AI-powered platform that transforms siloed data into actionable insights using deep research and advanced models. Addresses the core challenge of extracting answers from fragmented research data.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "from-15-disconnected-tools-to-one",
+          "href": "/work/from-15-disconnected-tools-to-one#the-outcomes",
+          "title": "From 15 Disconnected Tools to One",
+          "caption": "Designing a unified research operations platform that replaced 15 disconnected tools across Ipsos's global workflow — reducing friction, standardizing data, and giving teams a single source of truth.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/6865137d2c717ecd35d2ae707e7f17101925b44b-2100x640.jpg?rect=1247,0,853,640&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "The outcomes",
+          "blurb": "Unified 15 disconnected research tools into a single platform, standardizing data and creating a single source of truth across global research operations. Solves fragmentation that obscures research findings.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "ahrq-cds",
+          "href": "/work/ahrq-cds#solution",
+          "title": "CDS Repository for Standards of Care ",
+          "caption": "Design a national repository for providers, developers, and researchers to disseminate and use implementable clinical decision support tools.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/8cf099cb35d2c467fa45b15cc602a292bfa74458-2000x678.jpg?rect=548,0,904,678&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Solution",
+          "blurb": "Designed a national repository for providers, developers, and researchers to disseminate and use implementable clinical decision support tools, making research-backed standards accessible and actionable.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        }
+      ],
+      "aiGenerated": true,
+      "insight": "Visitor is seeking solutions to locate, access, or synthesize research findings that are currently lost or inaccessible within large datasets or fragmented systems.",
+      "persona": "healthcare_executive",
+      "gapNote": null
+    },
+    "patients can't make sense of their health data": {
+      "results": [
+        {
+          "slug": "fastercures-health-data-basics",
+          "href": "/work/fastercures-health-data-basics#problem",
+          "title": "Health Data Basics",
+          "caption": "Open source designs, and assets to educate patients on health data.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/96b7f367e94ada75ff1f423556a64546ccdb2cd0-2000x753.jpg?rect=498,0,1004,753&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Problem",
+          "blurb": "Open source designs and educational assets to help patients understand health data. Directly addresses patient comprehension of their own health information.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "hgraph",
+          "href": "/work/hgraph#problem",
+          "title": "hGraph",
+          "caption": "Your health in one picture.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/64a51e030cb218242d821b051fcf18d13ddc312f-2000x804.jpg?rect=464,0,1072,804&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Problem",
+          "blurb": "A visual system designed to represent health in a single, coherent picture. Tackles the challenge of making complex health data legible and meaningful to patients.",
+          "blurbSource": "ai",
+          "fit": "direct"
+        },
+        {
+          "slug": "commonhealth-smart-health-cards",
+          "href": "/work/commonhealth-smart-health-cards#problem",
+          "title": "Vaccination Cards for the Nation ",
+          "caption": "Helping patients to access and use their health data and vaccination credentials through CommonHealth, an open source health record.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/481d08fcd73e57ae77e5696f0cc63fcf18035db6-2000x1069.jpg?rect=288,0,1425,1069&w=640&h=480",
+          "kind": "work",
+          "anchorTitle": "Problem",
+          "blurb": "Helps patients access and use their health data through an open source health record interface. Focuses on making vaccination credentials and health information usable by patients.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        },
+        {
+          "slug": "who-uses-my-health-data",
+          "href": "/vision/who-uses-my-health-data#patients-need-insight-control-and-ownership",
+          "title": "Who Uses My Health Data?",
+          "caption": "The health data trade has quietly grown with little patient or doctor knowledge.",
+          "image": "https://cdn.sanity.io/images/a1wsimxr/production/e38dd78e9e2d5e912d6e539de2538181524dd392-2000x753.jpg?rect=498,0,1004,753&w=640&h=480",
+          "kind": "vision",
+          "anchorTitle": "Patients need Insight, Control, and Ownership",
+          "blurb": "Explores patient insight and control over health data in a healthcare system where data flows quietly without patient awareness. Related research on why patient data literacy and ownership matter.",
+          "blurbSource": "ai",
+          "fit": "adjacent"
+        }
+      ],
+      "aiGenerated": true,
+      "insight": "Visitor is seeking design solutions that help patients interpret and understand their own health data.",
+      "persona": "product_manager",
+      "gapNote": null
+    }
+  }
+}

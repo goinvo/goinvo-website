@@ -70,7 +70,7 @@ try {
     })
     const wide = width >= 1100
     check(initial.overflow <= 1, `${width}: no horizontal overflow`)
-    check(initial.sections.join(',') === 'human,services,proof,evidence', `${width}: overview, trust and large-organization evidence follow the single preview`)
+    check(initial.sections.join(',') === 'human,ask,services,proof,evidence', `${width}: the search, overview, trust and large-organization evidence follow the single preview`)
     check(initial.italics.every(item => item.difference <= 1 && item.family && item.size), `${width}: any italic in the opening line matches its x-height`)
     check(initial.live === String(wide), `${width}: short shared canvas on desktop; ordinary phone/tablet flow`)
     if (wide) {
@@ -181,6 +181,26 @@ try {
     check(bento.tiles === 5 && bento.broken === 0 && /Brand X/.test(bento.text) && !/Nestl|Nike|Ferrero|Nutella|Mintel|Heather/i.test(bento.text), `${width}: five real parts, every image loaded, placeholder names only`)
     await choose(page, width, 'prior'); await source(page, cases[1])
     check(await page.$('[data-view-picker]') === null && !new URLSearchParams(await page.evaluate(() => location.search)).has('view'), `${width}: views belong to the scene that has them`)
+    // The AI search: once per run (each query is a model call). An example returns our
+    // work; a query nothing fits says so, with the 404 illustration, and lists nothing.
+    if (width === 1440) {
+      await page.evaluate(() => document.querySelector('#ask').scrollIntoView()); await pause(400)
+      await page.evaluate(() => [...document.querySelectorAll('#ask form button')].find(button => button.textContent === 'Government').click())
+      await page.waitForFunction(() => document.querySelector('[data-search-results="main"]:not(.opacity-60)') || /snag|Nothing we/.test(document.querySelector('#ask').innerText), { timeout: 60000 })
+      const found = await page.evaluate(() => ({ titles: [...document.querySelectorAll('[data-search-results="main"] h3')].length, live: document.querySelector('#ask [aria-live]').textContent, links: [...document.querySelectorAll('[data-search-results="main"] a')].every(a => a.getAttribute('href')?.startsWith('/')) }))
+      check(found.titles > 0 && /results? for/.test(found.live) && found.links, `${width}: an example search returns our own work and announces it ${JSON.stringify(found)}`)
+      await page.$eval('#ask-input', input => { input.value = '' }); await page.click('#ask-input', { clickCount: 3 }); await page.type('#ask-input', 'knitting patterns for zebras'); await page.keyboard.press('Enter')
+      await page.waitForSelector('[data-search-empty] img', { timeout: 60000 })
+      check(await page.evaluate(() => !document.querySelector('[data-search-results]') && /No strong matches/.test(document.querySelector('#ask [aria-live]').textContent) && decodeURIComponent(document.querySelector('[data-search-empty] img').getAttribute('src')).includes('404-ai') && document.querySelector('[data-search-empty]').innerText.includes('No results')), `${width}: a search nothing fits says so honestly, with the no-results illustration`)
+      const art = await page.$eval('[data-search-empty] img', img => { const r = img.getBoundingClientRect(); return { left: Math.round(r.left), right: Math.round(innerWidth - r.right), mask: getComputedStyle(img).maskImage } })
+      check(art.left <= 1 && art.right <= 1 && art.mask.includes('gradient'), `${width}: the illustration spans the page and fades out ${JSON.stringify(art)}`)
+      // Every suggestion has a stored answer: it comes back at once, without a model call.
+      const suggestions = await page.$$eval('[data-search-empty] li button', buttons => buttons.map(button => button.textContent))
+      const askedAt = Date.now()
+      await page.evaluate(() => document.querySelector('[data-search-empty] li button').click())
+      await page.waitForFunction(() => document.querySelector('[data-search-results="main"]:not(.opacity-60)'), { timeout: 20000 })
+      check(suggestions.length === 4 && Date.now() - askedAt < 5000, `${width}: the four suggestions answer at once from stored results (${Date.now() - askedAt} ms)`)
+    }
     await page.evaluate(() => document.querySelector('#services').scrollIntoView()); await pause(700)
     check(await page.$$eval('[data-explore-link]', els => els.length === 1 && els[0].textContent.includes('Who we’ve done it for')), `${width}: the bottom prompt follows the reader to the next section`)
     check(await page.$$eval('#services h3', els => els.length === 3), `${width}: three service-and-concern pairings`)

@@ -806,6 +806,10 @@ no-match/keyword states, two-phase render, KV rate limit + cache, 21 tests in `t
 The route answers only where the review switch is on (previews) or with `HOME_AI_SEARCH=1`: a model call
 per query must not be open in production by accident. Needs `ANTHROPIC_API_KEY`; model
 `claude-haiku-4-5` unless `AI_SEARCH_MODEL` is set (re-run the persona checks before changing it).
+The examples beside the box and the suggestions on the "No results" screen (the old search's frowny
+`404-ai.png`, full width, fading out) have STORED answers in `src/lib/search/suggested.json`: instant, no
+model call. Rebuild with `BASE=<preview> node scripts/build-search-suggestions.mjs` (refuses an answer that
+is keyword-only or empty); `tests/search-suggestions.test.ts` fails on a suggestion without one.
 
 ### Styling architecture (rebuilt 2026-11-06)
 - **Cascade:** `@layer theme, base, components, utilities, content` (declared once in globals.css).

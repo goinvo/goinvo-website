@@ -10,6 +10,7 @@ import { Arrow } from '@/components/ui/Arrow'
 import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { TextLink, focusRing, textLinkClass } from '@/components/ui/TextLink'
+import { EMPTY_STATE_QUERIES, EXAMPLE_QUERIES } from '@/lib/search/suggested'
 
 /**
  * "Not on the list? Describe yours." The opening offers three situations; this lets
@@ -24,12 +25,8 @@ import { TextLink, focusRing, textLinkClass } from '@/components/ui/TextLink'
  * One live region, always mounted, announces results.
  */
 
-const EXAMPLES = [
-  { label: 'Healthcare', query: 'healthcare software' },
-  { label: 'Government', query: 'public sector service design' },
-  { label: 'Enterprise', query: 'enterprise analytics platform' },
-  { label: 'AI', query: 'AI LLM NLP healthcare' },
-]
+/** The illustration the old search showed when nothing fit: still looking, a frown in the lens. */
+const NO_RESULTS_ART = '/images/404/404-ai.png'
 
 interface SearchResult {
   slug: string
@@ -138,7 +135,7 @@ export function HomeSearch() {
         <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
           <p className={cn('m-0 flex flex-wrap items-baseline gap-x-5', type.label)}>
             <span data-hand-note className="text-gray">Or try</span>
-            {EXAMPLES.map(example => <button key={example.label} type="button" onClick={() => run(example.query)} className={cn('min-h-12 cursor-pointer border-0 bg-transparent p-0 text-inherit underline decoration-1 underline-offset-4 hover:text-secondary', focusRing)}>{example.label}</button>)}
+            {EXAMPLE_QUERIES.map(example => <button key={example.label} type="button" onClick={() => run(example.query)} className={cn('min-h-12 cursor-pointer border-0 bg-transparent p-0 text-inherit underline decoration-1 underline-offset-4 hover:text-secondary', focusRing)}>{example.label}</button>)}
           </p>
           <p id="ask-note" className={cn('m-0 text-gray', type.caption)}>Experimental. It answers from our published work only.</p>
         </div>
@@ -154,7 +151,7 @@ export function HomeSearch() {
 
         {!loading && failed && <Message title="The search hit a snag.">Try again in a moment, or browse the work instead.</Message>}
 
-        {!loading && response && response.results.length === 0 && <Message searching title="Nothing we’ve published fits that closely.">{response.gapNote ? `${response.gapNote} ` : ''}Try other words, or browse the work.</Message>}
+        {!loading && response && response.results.length === 0 && <NoResults note={response.gapNote} run={run} />}
 
         {!loading && response && response.results.length > 0 && <>
           <Results
@@ -218,20 +215,36 @@ function Skeleton() {
   )
 }
 
-/** `searching` adds the 404 page's illustration (still looking, magnifying glass in
- * hand) for a search nothing fits. She faces left, toward the words. */
-function Message({ title, children, searching = false }: { title: string; children: ReactNode; searching?: boolean }) {
-  const words = <div className="max-w-[44ch]">
-    <p className={cn('m-0', type.title)}>{title}</p>
-    <p className={cn('mb-4 mt-4', type.body)}>{children}</p>
-    <TextLink href="/work">Browse all the work</TextLink>
-  </div>
-  if (!searching) return <div className="mt-16 md:mt-20">{words}</div>
+function Message({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div data-search-empty className="mt-16 grid items-center gap-10 md:mt-20 md:grid-cols-[1fr_1.3fr] md:gap-16">
-      {words}
-      {/* The 404 page crops the same few pixels at the top and right edge. */}
-      <Image src={cloudfrontImage('/images/404/404-website.png')} alt="" width={3168} height={1536} sizes="(min-width:768px) 55vw, 90vw" className="h-auto w-full [clip-path:inset(1.6%_1%_0_0)]" />
+    <div className="mt-16 max-w-[44ch] md:mt-20">
+      <p className={cn('m-0', type.title)}>{title}</p>
+      <p className={cn('mb-4 mt-4', type.body)}>{children}</p>
+      <TextLink href="/work">Browse all the work</TextLink>
+    </div>
+  )
+}
+
+/** Nothing fits: the illustration across the whole page, fading out at the bottom,
+ * and in the fade the words and a few searches that do have answers (stored, so they
+ * come back at once). */
+function NoResults({ note, run }: { note?: string | null; run: (query: string) => void }) {
+  return (
+    <div data-search-empty className="mt-16 md:mt-20">
+      {/* Edge to edge: out of the section's padding, and on a phone out of the page's margin too. */}
+      <div className="-mx-12 md:-mx-[6vw]">
+        <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" width={3168} height={1536} sizes="100vw" className="h-auto w-full [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,black_45%,transparent_92%)]" />
+      </div>
+      <div className="relative -mt-[16vw] md:-mt-[12vw]">
+        <p className={cn('m-0', type.heading)}>No results</p>
+        <p className={cn('mb-0 mt-5 max-w-[52ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'} Try one of these:</p>
+        <ul className="m-0 mt-8 grid list-none gap-x-12 gap-y-2 p-0 md:grid-cols-2">
+          {EMPTY_STATE_QUERIES.map(item => <li key={item.query}>
+            <button type="button" onClick={() => run(item.query)} className={cn(textLinkClass, 'cursor-pointer border-0 bg-transparent p-0 text-left', type.lead)}><span data-link-label className="group-hover:underline group-focus-visible:underline">{item.label}</span><Arrow /></button>
+          </li>)}
+        </ul>
+        <TextLink href="/work" className={cn('mt-6', type.label)}>Or browse all the work</TextLink>
+      </div>
     </div>
   )
 }

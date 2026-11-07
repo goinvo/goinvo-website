@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { designSwitchEnabled } from '@/lib/designSwitch'
+import { storedAnswer } from '@/lib/search/suggested'
 import { createHash } from 'node:crypto'
 import { getSearchIndex, resolveAnchor, type SearchIndexItem } from '@/lib/search/index'
 import { recall } from '@/lib/search/lexical'
@@ -124,16 +125,23 @@ export async function POST(request: NextRequest) {
   }
   let query = ''
   let instant = false
+  let fresh = false
   try {
-    const body = JSON.parse(raw) as { query?: unknown; instant?: unknown }
+    const body = JSON.parse(raw) as { query?: unknown; instant?: unknown; fresh?: unknown }
     query = typeof body.query === 'string' ? body.query.trim() : ''
     instant = body.instant === true
+    fresh = body.fresh === true
   } catch {
     return NextResponse.json({ error: 'invalid JSON' }, { status: 400 })
   }
   if (query.length < 2 || query.length > 200) {
     return NextResponse.json({ error: 'query must be 2–200 characters' }, { status: 400 })
   }
+
+  // The searches we suggest have their answers stored (suggested.ts): at once, no
+  // model call. `fresh` skips it, for scripts/build-search-suggestions.mjs to rebuild them.
+  const stored = fresh ? null : storedAnswer(query)
+  if (stored) return NextResponse.json({ ...stored, cached: 'stored' })
 
   const index = await getSearchIndex()
   const shortlist = recall(query, index, 20)
@@ -155,7 +163,7 @@ export async function POST(request: NextRequest) {
   // Cached AI responses make repeat + sector-preset queries instant and free.
   // Keys are environment-scoped so preview/dev entries never serve production.
   const cacheKey = searchCacheKey(createHash('sha256').update(query.toLowerCase()).digest('hex').slice(0, 24))
-  const cached = (await kv(['GET', cacheKey])) as string | null
+  const cached = fresh ? null : ((await kv(['GET', cacheKey])) as string | null)
   if (cached) {
     try {
       return NextResponse.json({ ...(JSON.parse(cached) as object), cached: true })
