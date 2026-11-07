@@ -259,23 +259,23 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-/** Nothing fits: the old search's illustration behind the words, rising above them and
- * fading in at the top and out at the bottom, then searches that do have answers (stored,
- * so they come back at once), set as the page sets a reader's concerns: quoted, in the serif. */
+/** Nothing fits: the old search's illustration, large enough to own the moment, with the
+ * words set small against it, then searches that do have answers (stored, so they come back
+ * at once), set as the page sets a reader's concerns: quoted, in the serif. */
 function NoResults({ note, run }: { note?: string | null; run: (query: string) => void }) {
   return (
-    <div data-search-empty className="mt-16 md:mt-20">
-      {/* Phone: the art edge to edge, the words in its fade below. Wide screen: the art is a
-          backdrop to the right (its sides are empty, so the words on the left stay clear),
-          bottom-aligned with the words and rising behind the space above them toward the
-          question. Never cropped: it scales. The words and the form sit above it. */}
-      <div className="relative">
-        <div className="pointer-events-none relative -mx-12 aspect-[3168/1536] md:absolute md:bottom-0 md:right-[-4vw] md:mx-0 md:h-[min(52svh,36vw)]">
-          <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" fill sizes="(min-width:768px) 70vw, 100vw" className="object-contain [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,transparent,black_28%,black_72%,transparent)]" />
+    <div data-search-empty className="mt-12 md:mt-8">
+      {/* Roughly 70 / 20 / 10: the girl carries the block, the words come second, the
+          suggestions after. The art is cropped to her (the file's empty top and right are
+          cut away, never her) and runs off the page's right edge; it fades in at the top and
+          out at the bottom. The words sit bottom-left, over the art's empty side. */}
+      <div className="relative md:flex md:min-h-[min(64svh,46vw)] md:flex-col md:justify-end">
+        <div data-search-empty-art className="pointer-events-none relative -mx-12 aspect-[2788/1382] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_74%,transparent)] md:absolute md:inset-y-0 md:right-[-6vw] md:mx-0">
+          <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" width={3168} height={1536} sizes="(min-width:768px) 90vw, 115vw" className="absolute bottom-0 left-0 h-auto w-[113.64%] max-w-none" />
         </div>
-        <div data-search-empty-words className="relative z-10 -mt-[5vw] md:mt-0 md:pt-[min(30svh,20vw)]">
+        <div data-search-empty-words className="relative z-10 -mt-[6vw] md:mt-0">
           <p className={cn('m-0', type.heading)}>No results</p>
-          <p className={cn('mb-0 mt-5 max-w-[34ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
+          <p className={cn('mb-0 mt-4 max-w-[24ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
         </div>
       </div>
       <div>
