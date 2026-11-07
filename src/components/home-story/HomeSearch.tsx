@@ -60,7 +60,7 @@ export function HomeSearch() {
   const [response, setResponse] = useState<SearchResponse | null>(null)
   const [failed, setFailed] = useState(false)
   const abort = useRef<AbortController | null>(null)
-  const results = useRef<HTMLDivElement | null>(null)
+  const form = useRef<HTMLFormElement | null>(null)
 
   async function run(query: string) {
     const trimmed = query.trim()
@@ -74,7 +74,8 @@ export function HomeSearch() {
     setFailed(false)
     setResponse(null)
     setProvisional(null)
-    requestAnimationFrame(() => results.current?.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' }))
+    // The question stays in view at the top, with the answer (or "No results") under it.
+    requestAnimationFrame(() => form.current?.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' }))
 
     const post = (body: object) => fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal })
     // First paint: the keyword pass, shown only until the AI answer lands.
@@ -118,7 +119,7 @@ export function HomeSearch() {
         <p className={cn('m-0 max-w-[40ch]', type.lead)}>Tell us what you’re up against, in your own words. We’ll find the work of ours that comes closest.</p>
       </div>
 
-      <form role="search" className="mt-12 md:mt-16" onSubmit={event => { event.preventDefault(); run(input) }}>
+      <form ref={form} role="search" className="mt-12 scroll-mt-24 md:mt-16" onSubmit={event => { event.preventDefault(); run(input) }}>
         <label htmlFor="ask-input" className="sr-only">Describe what you’re working on</label>
         <div className="flex items-end gap-6 border-b-2 border-current focus-within:border-secondary">
           <input
@@ -144,7 +145,7 @@ export function HomeSearch() {
       {/* Always mounted: only its text changes, so screen readers announce it reliably. */}
       <div aria-live="polite" className="sr-only">{status}</div>
 
-      <div ref={results} className="scroll-mt-28">
+      <div>
         {loading && (provisional && provisional.length > 0
           ? <Results label="First matches" note="Narrowing these down and writing why each fits…" items={provisional.slice(0, 6)} faded />
           : <Skeleton />)}
@@ -265,8 +266,11 @@ function NoResults({ note, run }: { note?: string | null; run: (query: string) =
   return (
     <div data-search-empty className="mt-16 md:mt-20">
       {/* Edge to edge: out of the section's padding, and on a phone out of the page's margin too. */}
-      <div className="-mx-12 md:-mx-[6vw]">
-        <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" width={3168} height={1536} sizes="100vw" className="h-auto w-full [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" />
+      {/* At most about a third of the screen tall, so the question above and the words below
+          stay in view with it. The art is never cropped: it scales down, and on a wide screen
+          sits against the right edge (its sides are empty), leaving the left for the words. */}
+      <div className="relative -mx-12 h-[min(36svh,48vw)] md:-mx-[6vw]">
+        <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" fill sizes="100vw" className="object-contain object-center md:object-right [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" />
       </div>
       <div className="relative -mt-[5vw] md:-mt-[4vw]">
         <p className={cn('m-0', type.heading)}>No results</p>
