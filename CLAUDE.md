@@ -799,6 +799,14 @@ and `.audit/figma-flow-variables.json` (copy them from another checkout); the re
 `figma-frames.css` was pixel-diffed identical for the existing frames. Stills (`<id>-assembled.png`)
 are screenshots of the built page with a transparent background.
 
+**AI search on the homepage study (2026-11-07).** "Not on the list? Describe yours." (`HomeSearch`, section
+`#ask`, right after the challenge story) is the old homepage band's AI search, restyled: `src/lib/search/*`
++ `POST /api/search` came over from branch `ai-search-home` unchanged (grounding guard, honest
+no-match/keyword states, two-phase render, KV rate limit + cache, 21 tests in `tests/ai-search.test.ts`).
+The route answers only where the review switch is on (previews) or with `HOME_AI_SEARCH=1`: a model call
+per query must not be open in production by accident. Needs `ANTHROPIC_API_KEY`; model
+`claude-haiku-4-5` unless `AI_SEARCH_MODEL` is set (re-run the persona checks before changing it).
+
 ### Styling architecture (rebuilt 2026-11-06)
 - **Cascade:** `@layer theme, base, components, utilities, content` (declared once in globals.css).
   - Component classes (`header-xl`, `max-width`, buttons) go in `components`, so a utility on the

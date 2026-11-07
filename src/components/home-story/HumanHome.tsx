@@ -19,6 +19,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { DrawnLine } from '@/components/ui/DrawnLine'
 import { detailInsight, prototypeScenes, sceneView } from './prototypeContent'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
+import { HomeSearch } from './HomeSearch'
 import { ease } from '@/lib/motion'
 
 const ink = 'var(--color-black)'
@@ -377,7 +378,8 @@ function Work({ low, ready, selected, choose, view, chooseView, headline, sublin
  * keep going, pointing at the next section. */
 const nextSteps = [
   { after: 'human', target: 'work-result', text: 'See how we think' },
-  { after: 'work-result', target: 'services', text: 'What we could do for you' },
+  { after: 'work-result', target: 'ask', text: 'Not on the list? Describe yours' },
+  { after: 'ask', target: 'services', text: 'What we could do for you' },
   { after: 'services', target: 'proof', text: 'Who we’ve done it for' },
   { after: 'proof', target: 'evidence', text: 'How it holds up at scale' },
   { after: 'evidence', target: 'contact', text: 'Tell us what you’re working on' },
@@ -566,7 +568,7 @@ export function HumanHome({ work }: { work?: string }) {
   return (
     <MotionConfig reducedMotion={low ? 'always' : 'never'}>
       <div data-human-home data-motion={low ? 'low' : 'full'} style={{ color: ink, background: paper }} className={cn("relative mx-auto min-h-svh w-[calc(100%_-_56px)] pb-24 font-sans selection:bg-secondary selection:text-white md:w-full", largerText && "[&_p.text-base]:text-[20px] [&_p.text-base]:leading-relaxed [&_[data-story-task]]:text-[20px]")}>
-        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headlineFor(params.get('headline'))} subline={sublineFor(params.get('subline'))} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
+        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headlineFor(params.get('headline'))} subline={sublineFor(params.get('subline'))} /><HomeSearch /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
         <Contact selected={selected} />
         <NextPrompt low={low} />
         <HumanPageControls low={low} ready={ready} toggleMotion={toggleMotion} largerText={largerText} setLargerText={value => { setLargerText(value); try { localStorage.setItem('goinvo-human-large-text', String(value)) } catch { /* Optional storage. */ } }} />

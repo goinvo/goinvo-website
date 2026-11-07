@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 const chapters = [
   { id: 'human', label: 'Introduction' },
   { id: 'work-result', label: 'Our solutions' },
+  { id: 'ask', label: 'Ask about our work' },
   { id: 'services', label: 'What we do' },
   { id: 'proof', label: 'Experience and trust' },
   { id: 'evidence', label: 'Work at scale' },
