@@ -259,22 +259,26 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-/** Nothing fits: the illustration across the whole page, fading out at the bottom,
- * and in the fade the words, then searches that do have answers (stored, so they come
- * back at once), set as the page sets a reader's concerns: quoted, in the serif. */
+/** Nothing fits: the old search's illustration, fading out at the bottom, with the words
+ * beside it, then searches that do have answers (stored, so they come back at once), set
+ * as the page sets a reader's concerns: quoted, in the serif. */
 function NoResults({ note, run }: { note?: string | null; run: (query: string) => void }) {
   return (
     <div data-search-empty className="mt-16 md:mt-20">
-      {/* Edge to edge: out of the section's padding, and on a phone out of the page's margin too. */}
-      {/* At most about a third of the screen tall, so the question above and the words below
-          stay in view with it. The art is never cropped: it scales down, and on a wide screen
-          sits against the right edge (its sides are empty), leaving the left for the words. */}
-      <div className="relative -mx-12 h-[min(36svh,48vw)] md:-mx-[6vw]">
-        <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" fill sizes="100vw" className="object-contain object-center md:object-right [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" />
+      {/* Phone: the art edge to edge, the words in its fade below. Wide screen: the words on
+          the left, bottom-aligned with the art, which sits against the right edge (its sides
+          are empty) at most about a third of the screen tall, so the question above stays in
+          view. Never cropped: it scales. */}
+      <div className="flex flex-col md:flex-row-reverse md:items-end md:gap-12">
+        <div className="relative -mx-12 aspect-[3168/1536] md:mx-0 md:-mr-[6vw] md:h-[min(40svh,30vw)] md:shrink-0">
+          <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" fill sizes="(min-width:768px) 60vw, 100vw" className="object-contain [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" />
+        </div>
+        <div className="relative -mt-[5vw] min-w-0 flex-1 md:mt-0">
+          <p className={cn('m-0', type.heading)}>No results</p>
+          <p className={cn('mb-0 mt-5 max-w-[34ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
+        </div>
       </div>
-      <div className="relative -mt-[5vw] md:-mt-[4vw]">
-        <p className={cn('m-0', type.heading)}>No results</p>
-        <p className={cn('mb-0 mt-5 max-w-[48ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
+      <div>
         <p data-hand-note className={cn('mb-0 mt-14 text-gray', type.label)}>Try one of these</p>
         <ul className="m-0 mt-4 grid list-none gap-x-16 p-0 md:grid-cols-2">
           {EMPTY_STATE_QUERIES.map(item => <li key={item.query}>
