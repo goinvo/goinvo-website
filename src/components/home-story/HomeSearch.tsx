@@ -233,9 +233,9 @@ function NoResults({ note, run }: { note?: string | null; run: (query: string) =
     <div data-search-empty className="mt-16 md:mt-20">
       {/* Edge to edge: out of the section's padding, and on a phone out of the page's margin too. */}
       <div className="-mx-12 md:-mx-[6vw]">
-        <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" width={3168} height={1536} sizes="100vw" className="h-auto w-full [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,black_45%,transparent_92%)]" />
+        <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" width={3168} height={1536} sizes="100vw" className="h-auto w-full [clip-path:inset(1.6%_1%_0_0)] [mask-image:linear-gradient(to_bottom,black_40%,transparent_80%)]" />
       </div>
-      <div className="relative -mt-[16vw] md:-mt-[12vw]">
+      <div className="relative -mt-[10vw] md:-mt-[8vw]">
         <p className={cn('m-0', type.heading)}>No results</p>
         <p className={cn('mb-0 mt-5 max-w-[52ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'} Try one of these:</p>
         <ul className="m-0 mt-8 grid list-none gap-x-12 gap-y-2 p-0 md:grid-cols-2">
