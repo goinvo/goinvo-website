@@ -168,47 +168,80 @@ export function HomeSearch() {
   )
 }
 
+/** A heading row in the page's section grid: the label on the left, the AI's line beside it. */
 function Results({ label, statement, note, items, faded = false, quiet = false }: { label: string; statement?: string; note?: string; items: SearchResult[]; faded?: boolean; quiet?: boolean }) {
   return (
-    <div data-search-results={quiet ? 'also' : 'main'} className={cn('mt-16 md:mt-20', faded && 'opacity-60 transition-opacity duration-300 motion-reduce:transition-none')}>
-      <p className={cn('m-0', type.label, !quiet && 'text-secondary')}>{label}</p>
-      {statement && <p className={cn('mb-0 mt-4 max-w-[52ch]', type.lead)}>{statement}</p>}
-      {note && <p className={cn('mb-0 mt-3 max-w-[60ch] text-gray', type.body)}>{note}</p>}
-      <ul className="m-0 mt-10 grid list-none gap-x-10 gap-y-14 p-0 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map(item => <li key={item.slug}><ResultCard item={item} /></li>)}
-      </ul>
+    <div data-search-results={quiet ? 'also' : 'main'} className={cn('mt-16 md:mt-24', faded && 'opacity-60 transition-opacity duration-300 motion-reduce:transition-none')}>
+      <div className="grid items-baseline gap-3 md:grid-cols-[0.8fr_1.2fr] md:gap-16">
+        <p data-hand-note className={cn('m-0', type.label, !quiet && 'text-secondary')}>{label}</p>
+        {(statement || note) && <div>
+          {statement && <p className={cn('m-0 max-w-[48ch]', type.lead)}>{statement}</p>}
+          {note && <p className={cn('m-0 max-w-[60ch] text-gray', type.body)}>{note}</p>}
+        </div>}
+      </div>
+      {quiet
+        ? <ul className="m-0 mt-6 grid list-none gap-x-16 p-0 md:grid-cols-2">{items.map(item => <li key={item.slug}><RelatedRow item={item} /></li>)}</ul>
+        : <ol className="m-0 mt-8 list-none p-0">{items.map((item, index) => <li key={item.slug}><ResultRow item={item} index={index} /></li>)}</ol>}
     </div>
   )
 }
 
-function ResultCard({ item }: { item: SearchResult }) {
-  const body = <>
-    <div className="relative aspect-[4/3] overflow-hidden bg-tertiary-lightest">
-      {item.image && <Image src={item.image} alt="" fill sizes="(min-width:1024px) 30vw, (min-width:640px) 45vw, 90vw" className="object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.03] motion-reduce:transition-none" />}
-    </div>
-    <div data-rule className="mt-5 border-t border-black/15 pt-4">
-      <p className={cn('m-0 text-gray', type.caption)}>{item.kind === 'vision' ? 'Vision' : 'Case study'}{item.fit === 'adjacent' && ' · Related'}</p>
-      <h3 className={cn('mb-0 mt-2', type.quote)}><span data-link-label className="group-hover:underline group-focus-visible:underline">{item.title}</span></h3>
-      <p className={cn('mb-0 mt-3', type.body)}>{item.blurb || item.caption}</p>
-      {item.anchorTitle && <p className={cn('mb-0 mt-3 text-gray', type.caption)}>Opens at “{item.anchorTitle}”</p>}
-    </div>
-  </>
-  const className = cn('group block text-inherit no-underline', focusRing)
-  if (item.href.startsWith('http')) return <a href={item.href} target="_blank" rel="noopener noreferrer" className={className}>{body}</a>
-  // A link to a section uses a full navigation: the browser's own scroll to the
-  // fragment lands reliably, where a client navigation loses it to the page's reveals.
-  if (item.href.includes('#')) return <a href={item.href} className={className}>{body}</a>
-  return <Link href={item.href} className={className}>{body}</Link>
+/** Our own page, by the kind of link it needs. A link to a section uses a full
+ * navigation: the browser's own scroll to the fragment lands reliably, where a
+ * client navigation loses it to the page's reveals. */
+function ResultLink({ item, className, children }: { item: SearchResult; className: string; children: ReactNode }) {
+  const classes = cn('group text-inherit no-underline', focusRing, className)
+  if (item.href.startsWith('http')) return <a href={item.href} target="_blank" rel="noopener noreferrer" className={classes}>{children}</a>
+  if (item.href.includes('#')) return <a href={item.href} className={classes}>{children}</a>
+  return <Link href={item.href} className={classes}>{children}</Link>
+}
+
+const kindOf = (item: SearchResult) => `${item.kind === 'vision' ? 'Vision' : 'Case study'}${item.fit === 'adjacent' ? ' · Related, not exact' : ''}`
+const nudge = 'transition-transform duration-300 group-hover:translate-x-2 group-focus-visible:translate-x-2 motion-reduce:transition-none'
+
+/** One result as an index entry: number, title, why it fits, where it opens; the picture beside. */
+function ResultRow({ item, index }: { item: SearchResult; index: number }) {
+  return (
+    <ResultLink item={item} className="grid gap-6 border-t border-black/15 py-8 md:grid-cols-[4rem_minmax(0,1fr)_minmax(0,17rem)] md:gap-10 md:py-10">
+      <span aria-hidden="true" className="hidden font-serif text-[clamp(28px,2.4vw,40px)] leading-none text-gray tabular-nums md:block">{String(index + 1).padStart(2, '0')}</span>
+      <div className="min-w-0">
+        <p className={cn('m-0 text-gray', type.caption)}>{kindOf(item)}</p>
+        <h3 className={cn('mb-0 mt-2 max-w-[26ch] transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.title)}><span data-link-label>{item.title}</span></h3>
+        <p className={cn('mb-0 mt-4 max-w-[60ch]', type.body)}>{item.blurb || item.caption}</p>
+        <p className={cn('mb-0 mt-5 flex items-center gap-3', type.label)}>
+          <span>{item.anchorTitle ? `Opens at “${item.anchorTitle}”` : item.kind === 'vision' ? 'Read it' : 'Read the case study'}</span>
+          <span className={nudge}><Arrow /></span>
+        </p>
+      </div>
+      <div className="relative order-first aspect-[4/3] overflow-hidden bg-tertiary-lightest md:order-none">
+        {item.image && <Image src={item.image} alt="" fill sizes="(min-width:768px) 17rem, 90vw" className="object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04] motion-reduce:transition-none" />}
+      </div>
+    </ResultLink>
+  )
+}
+
+/** Quieter: a title and an arrow, two to a row. */
+function RelatedRow({ item }: { item: SearchResult }) {
+  return (
+    <ResultLink item={item} className="flex items-start justify-between gap-6 border-t border-black/15 py-5">
+      <span>
+        <span className={cn('block text-gray', type.caption)}>{kindOf(item)}</span>
+        <span className={cn('mt-1 block transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.quote)}>{item.title}</span>
+      </span>
+      <span className={cn('mt-6 shrink-0', nudge)}><Arrow /></span>
+    </ResultLink>
+  )
 }
 
 function Skeleton() {
   return (
-    <div aria-hidden="true" className="mt-16 md:mt-20">
+    <div aria-hidden="true" className="mt-16 md:mt-24">
       <p className={cn('m-0 text-secondary', type.label)}>Searching our work…</p>
-      <div className="mt-10 grid gap-x-10 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-        {[0, 1, 2].map(index => <div key={index} className="animate-pulse motion-reduce:animate-none">
-          <div className="aspect-[4/3] bg-tertiary-lightest" />
-          <div className="mt-5 space-y-3 border-t border-black/10 pt-4"><div className="h-6 w-3/4 bg-tertiary-lightest" /><div className="h-4 w-full bg-tertiary-lightest" /><div className="h-4 w-2/3 bg-tertiary-lightest" /></div>
+      <div className="mt-8">
+        {[0, 1, 2].map(index => <div key={index} className="grid animate-pulse gap-6 border-t border-black/10 py-8 motion-reduce:animate-none md:grid-cols-[4rem_minmax(0,1fr)_minmax(0,17rem)] md:gap-10 md:py-10">
+          <div className="hidden h-8 w-10 bg-tertiary-lightest md:block" />
+          <div className="space-y-4"><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-9 w-3/4 bg-tertiary-lightest" /><div className="h-4 w-full bg-tertiary-lightest" /><div className="h-4 w-2/3 bg-tertiary-lightest" /></div>
+          <div className="order-first aspect-[4/3] bg-tertiary-lightest md:order-none" />
         </div>)}
       </div>
     </div>
@@ -226,8 +259,8 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** Nothing fits: the illustration across the whole page, fading out at the bottom,
- * and in the fade the words and a few searches that do have answers (stored, so they
- * come back at once). */
+ * and in the fade the words, then searches that do have answers (stored, so they come
+ * back at once), set as the page sets a reader's concerns: quoted, in the serif. */
 function NoResults({ note, run }: { note?: string | null; run: (query: string) => void }) {
   return (
     <div data-search-empty className="mt-16 md:mt-20">
@@ -237,13 +270,17 @@ function NoResults({ note, run }: { note?: string | null; run: (query: string) =
       </div>
       <div className="relative -mt-[5vw] md:-mt-[4vw]">
         <p className={cn('m-0', type.heading)}>No results</p>
-        <p className={cn('mb-0 mt-5 max-w-[52ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'} Try one of these:</p>
-        <ul className="m-0 mt-8 grid list-none gap-x-12 gap-y-2 p-0 md:grid-cols-2">
+        <p className={cn('mb-0 mt-5 max-w-[48ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
+        <p data-hand-note className={cn('mb-0 mt-14 text-gray', type.label)}>Try one of these</p>
+        <ul className="m-0 mt-4 grid list-none gap-x-16 p-0 md:grid-cols-2">
           {EMPTY_STATE_QUERIES.map(item => <li key={item.query}>
-            <button type="button" onClick={() => run(item.query)} className={cn(textLinkClass, 'cursor-pointer border-0 bg-transparent p-0 text-left', type.lead)}><span data-link-label className="group-hover:underline group-focus-visible:underline">{item.label}</span><Arrow /></button>
+            <button type="button" data-rule onClick={() => run(item.query)} className={cn('group flex w-full cursor-pointer items-start justify-between gap-6 border-x-0 border-b-0 border-t border-solid border-black/15 bg-transparent px-0 py-6 text-left text-inherit', focusRing)}>
+              <span className={cn('transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.quote)}>“{item.label}”</span>
+              <span className={cn('mt-2 shrink-0', nudge)}><Arrow /></span>
+            </button>
           </li>)}
         </ul>
-        <TextLink href="/work" className={cn('mt-6', type.label)}>Or browse all the work</TextLink>
+        <TextLink href="/work" className="mt-6">Or browse all the work</TextLink>
       </div>
     </div>
   )
