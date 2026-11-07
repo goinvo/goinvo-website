@@ -269,8 +269,8 @@ function NoResults({ note, run }: { note?: string | null; run: (query: string) =
           suggestions after. The art is cropped to her (the file's empty top and right are
           cut away, never her) and runs off the page's right edge; it fades in at the top and
           out at the bottom. The words sit bottom-left, over the art's empty side. */}
-      <div className="relative md:flex md:min-h-[min(64svh,46vw)] md:flex-col md:justify-end">
-        <div data-search-empty-art className="pointer-events-none relative -mx-12 aspect-[2788/1382] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_74%,transparent)] md:absolute md:inset-y-0 md:right-[-6vw] md:mx-0">
+      <div className="relative md:flex md:min-h-[min(60svh,46vw)] md:flex-col md:justify-end">
+        <div data-search-empty-art className="pointer-events-none relative -mx-12 aspect-[2788/1444] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_74%,transparent)] md:absolute md:inset-y-0 md:right-[-6vw] md:mx-0">
           <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" width={3168} height={1536} sizes="(min-width:768px) 90vw, 115vw" className="absolute bottom-0 left-0 h-auto w-[113.64%] max-w-none" />
         </div>
         <div data-search-empty-words className="relative z-10 -mt-[6vw] md:mt-0">
