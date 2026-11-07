@@ -40,16 +40,17 @@ function read(): State {
 export function ReviewSwitches() {
   const pathname = usePathname()
   const [state, setState] = useState<State | null>(null)
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     const now = read()
     const asked = new URLSearchParams(location.search).get('review') === '1'
     if (asked || now.design === 'human' || now.hand !== 'off') setState(now)
-    // Starts folded on a phone, where the open panel would cover the page being judged.
+    // Starts folded to one small button: open, it covered the homepage's challenge
+    // choices at 1440 × 900. It remembers being opened for the rest of the visit.
     let saved: string | null = null
     try { saved = sessionStorage.getItem('goinvo-review-panel') } catch { /* Optional storage. */ }
-    setOpen(saved ? saved === 'open' : innerWidth >= 768)
+    setOpen(saved === 'open')
   }, [])
 
   if (!state || pathname.startsWith('/studio')) return null
