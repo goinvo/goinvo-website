@@ -3,7 +3,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { cloudfrontImage, cn } from '@/lib/utils'
 import { useReducedMotion } from '@/lib/motion'
 import { type } from '@/components/ui/type'
 import { Arrow } from '@/components/ui/Arrow'
@@ -154,7 +154,7 @@ export function HomeSearch() {
 
         {!loading && failed && <Message title="The search hit a snag.">Try again in a moment, or browse the work instead.</Message>}
 
-        {!loading && response && response.results.length === 0 && <Message title="Nothing we’ve published fits that closely.">{response.gapNote ? `${response.gapNote} ` : ''}Try other words, or browse the work.</Message>}
+        {!loading && response && response.results.length === 0 && <Message searching title="Nothing we’ve published fits that closely.">{response.gapNote ? `${response.gapNote} ` : ''}Try other words, or browse the work.</Message>}
 
         {!loading && response && response.results.length > 0 && <>
           <Results
@@ -218,12 +218,20 @@ function Skeleton() {
   )
 }
 
-function Message({ title, children }: { title: string; children: ReactNode }) {
+/** `searching` adds the 404 page's illustration (still looking, magnifying glass in
+ * hand) for a search nothing fits. She faces left, toward the words. */
+function Message({ title, children, searching = false }: { title: string; children: ReactNode; searching?: boolean }) {
+  const words = <div className="max-w-[44ch]">
+    <p className={cn('m-0', type.title)}>{title}</p>
+    <p className={cn('mb-4 mt-4', type.body)}>{children}</p>
+    <TextLink href="/work">Browse all the work</TextLink>
+  </div>
+  if (!searching) return <div className="mt-16 md:mt-20">{words}</div>
   return (
-    <div className="mt-16 max-w-[44ch] md:mt-20">
-      <p className={cn('m-0', type.title)}>{title}</p>
-      <p className={cn('mb-4 mt-4', type.body)}>{children}</p>
-      <TextLink href="/work">Browse all the work</TextLink>
+    <div data-search-empty className="mt-16 grid items-center gap-10 md:mt-20 md:grid-cols-[1fr_1.3fr] md:gap-16">
+      {words}
+      {/* The 404 page crops the same few pixels at the top and right edge. */}
+      <Image src={cloudfrontImage('/images/404/404-website.png')} alt="" width={3168} height={1536} sizes="(min-width:768px) 55vw, 90vw" className="h-auto w-full [clip-path:inset(1.6%_1%_0_0)]" />
     </div>
   )
 }
