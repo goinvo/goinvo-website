@@ -11,6 +11,7 @@ import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { TextLink, focusRing, textLinkClass } from '@/components/ui/TextLink'
 import { EMPTY_STATE_QUERIES, EXAMPLE_QUERIES } from '@/lib/search/suggested'
+import { focusPosition, pictureFit, type PictureFocus } from '@/lib/search/picture'
 
 /**
  * "Not on the list? Describe yours." The opening offers three situations; this lets
@@ -34,6 +35,8 @@ interface SearchResult {
   title: string
   caption: string
   image?: string
+  imageAspect?: number
+  imageFocus?: PictureFocus
   kind?: 'work' | 'vision'
   blurb?: string
   blurbSource?: 'ai' | 'caption'
@@ -200,7 +203,7 @@ function Results({ label, statement, note, items, faded = false, quiet = false }
       </div>
       {/* The picture is a second way into the same page, so it stays out of the tab order and the accessibility tree. */}
       <ResultLink item={lead} hidden className="md:col-start-1 md:row-span-2 md:row-start-1">
-        <ResultPicture item={lead} sizes="(min-width:768px) 62vw, 100vw" className="-mx-12 aspect-[16/10] md:-ml-[6vw] md:mr-0" feature />
+        <ResultPicture item={lead} frame={FEATURE_FRAME} sizes="(min-width:768px) 62vw, 100vw" className="-mx-12 md:-ml-[6vw] md:mr-0" feature />
       </ResultLink>
       <article data-search-feature className="md:col-start-2 md:row-start-2 md:self-end md:pb-2">
         <ResultLink item={lead} className="block">
@@ -233,10 +236,20 @@ const nudge = 'transition-transform duration-300 group-hover:translate-x-2 group
 const lift = 'transition-transform duration-700 ease-out-expo group-hover:scale-[1.03] motion-reduce:transition-none'
 const opensAt = (item: SearchResult) => item.anchorTitle ? `Opens at “${item.anchorTitle}”` : item.kind === 'vision' ? 'Read it' : 'Read the case study'
 
-function ResultPicture({ item, sizes, className, feature = false }: { item: SearchResult; sizes: string; className?: string; feature?: boolean }) {
+/** Frames, width over height. Cards are wide because the project images are: most are
+ * banners near 2:1. */
+const FEATURE_FRAME = 16 / 10
+const CARD_FRAME = 2
+
+/** Fills its frame when that costs little of the image (around the editor's focal point);
+ * otherwise shows the whole image over a soft, blurred copy of itself, so a picture that is
+ * mostly lettering is never cut mid-word. */
+function ResultPicture({ item, frame, sizes, className, feature = false }: { item: SearchResult; frame: number; sizes: string; className?: string; feature?: boolean }) {
+  const fit = pictureFit(item.imageAspect, frame)
   return (
-    <div data-search-picture={feature ? 'feature' : 'card'} className={cn('relative overflow-hidden bg-tertiary-lightest', className)}>
-      {item.image && <Image src={item.image} alt="" fill sizes={sizes} className={cn('object-cover', lift)} />}
+    <div data-search-picture={feature ? 'feature' : 'card'} data-picture-fit={fit} style={{ aspectRatio: frame }} className={cn('relative overflow-hidden bg-tertiary-lightest', className)}>
+      {item.image && fit === 'whole' && <Image src={item.image} alt="" fill sizes={sizes} className="scale-125 object-cover opacity-30 blur-2xl" />}
+      {item.image && <Image src={item.image} alt="" fill sizes={sizes} style={fit === 'fill' ? { objectPosition: focusPosition(item.imageFocus) } : undefined} className={cn(fit === 'whole' ? 'object-contain' : 'object-cover', lift)} />}
     </div>
   )
 }
@@ -245,7 +258,7 @@ function ResultPicture({ item, sizes, className, feature = false }: { item: Sear
 function CardResult({ item, index }: { item: SearchResult; index: number }) {
   return (
     <ResultLink item={item} className="block">
-      <ResultPicture item={item} sizes="(min-width:1024px) 30vw, (min-width:768px) 45vw, 90vw" className="aspect-[16/10]" />
+      <ResultPicture item={item} frame={CARD_FRAME} sizes="(min-width:1024px) 30vw, (min-width:768px) 45vw, 90vw" />
       <p className={cn('mb-0 mt-5 text-gray', type.caption)}>{String(index + 1).padStart(2, '0')} · {kindOf(item)}</p>
       <h3 className={cn('mb-0 mt-2 transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.quote)}><span data-link-label>{item.title}</span></h3>
       <p className={cn('mb-0 mt-3 line-clamp-4', type.body)}>{item.blurb || item.caption}</p>
@@ -273,11 +286,11 @@ function Skeleton() {
     <div aria-hidden="true" className="mt-10 md:mt-12">
       <div className="grid animate-pulse gap-y-6 motion-reduce:animate-none md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-x-12">
         <p className={cn('m-0 text-secondary md:col-start-2 md:row-start-1', type.label)}>Searching our work…</p>
-        <div className="-mx-12 aspect-[16/10] bg-tertiary-lightest md:col-start-1 md:row-span-2 md:row-start-1 md:-ml-[6vw] md:mr-0" />
+        <div style={{ aspectRatio: FEATURE_FRAME }} className="-mx-12 bg-tertiary-lightest md:col-start-1 md:row-span-2 md:row-start-1 md:-ml-[6vw] md:mr-0" />
         <div className="space-y-4 md:col-start-2 md:row-start-2 md:self-end"><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-10 w-5/6 bg-tertiary-lightest" /><div className="h-4 w-full bg-tertiary-lightest" /><div className="h-4 w-2/3 bg-tertiary-lightest" /></div>
       </div>
       <div className="mt-10 grid animate-pulse gap-x-10 gap-y-14 motion-reduce:animate-none md:mt-16 md:grid-cols-2">
-        {[0, 1].map(index => <div key={index} className="space-y-4"><div className="aspect-[16/10] bg-tertiary-lightest" /><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-7 w-3/4 bg-tertiary-lightest" /></div>)}
+        {[0, 1].map(index => <div key={index} className="space-y-4"><div style={{ aspectRatio: CARD_FRAME }} className="bg-tertiary-lightest" /><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-7 w-3/4 bg-tertiary-lightest" /></div>)}
       </div>
     </div>
   )

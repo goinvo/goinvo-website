@@ -3,6 +3,7 @@ import { client } from '@/sanity/lib/client'
 import { urlForImage } from '@/sanity/lib/image'
 import { headingAnchorId } from '@/lib/headingAnchor'
 import type { SanityImage } from '@/types'
+import { imageShape, type PictureFocus } from './picture'
 
 /**
  * Project index for the AI search band: every publicly listed case study and
@@ -17,6 +18,9 @@ export interface SearchIndexItem {
   client?: string
   categories: string[]
   image?: string
+  /** The image's width over height as served, and the editor's focal point (picture.ts). */
+  imageAspect?: number
+  imageFocus?: PictureFocus
   kind: 'work' | 'vision'
   /** Curated retrieval vocabulary (see PROJECT_KEYWORDS) — searched, never displayed. */
   keywords?: string[]
@@ -153,12 +157,15 @@ const searchIndexQuery = groq`{
   }
 }`
 
-function imageUrl(image?: SanityImage): string | undefined {
-  if (!image) return undefined
+/** The image at its own shape (the editor's crop applied, nothing more), wide enough
+ * for the lead result, which spans most of the page. The card decides how to frame it. */
+function picture(image?: SanityImage): Pick<SearchIndexItem, 'image' | 'imageAspect' | 'imageFocus'> {
+  if (!image) return {}
   try {
-    return urlForImage(image).width(640).height(480).url()
+    const { aspect, focus } = imageShape(image)
+    return { image: urlForImage(image).width(1600).fit('max').url(), imageAspect: aspect, imageFocus: focus }
   } catch {
-    return undefined
+    return {}
   }
 }
 
@@ -186,7 +193,7 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       caption: cs.caption ?? cs.heading ?? '',
       client: cs.client,
       categories: cleanCategories(cs.categories),
-      image: imageUrl(cs.image),
+      ...picture(cs.image),
       kind: 'work' as const,
       keywords: PROJECT_KEYWORDS[cs.slug],
       sections: normalizeSections(cs.sectionBlocks),
@@ -201,7 +208,7 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       title: f.title,
       caption: f.description ?? '',
       categories: cleanCategories(f.categories),
-      image: imageUrl(f.image),
+      ...picture(f.image),
       kind: 'vision' as const,
       keywords: PROJECT_KEYWORDS[f.slug],
       // External features scroll nowhere we control — no anchors for those.

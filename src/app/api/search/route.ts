@@ -3,6 +3,7 @@ import { designSwitchEnabled } from '@/lib/designSwitch'
 import { storedAnswer } from '@/lib/search/suggested'
 import { createHash } from 'node:crypto'
 import { getSearchIndex, resolveAnchor, type SearchIndexItem } from '@/lib/search/index'
+import type { PictureFocus } from '@/lib/search/picture'
 import { recall } from '@/lib/search/lexical'
 import { selectAndDescribe } from '@/lib/search/aiSearch'
 import { groundedBlurb, searchCacheKey, type BlurbSource } from '@/lib/search/grounding'
@@ -36,6 +37,8 @@ interface SearchResponseItem {
   title: string
   caption: string
   image?: string
+  imageAspect?: number
+  imageFocus?: PictureFocus
   kind: 'work' | 'vision'
   blurb?: string
   blurbSource?: BlurbSource
@@ -96,7 +99,27 @@ function toResponseItem(item: SearchIndexItem): SearchResponseItem {
     title: item.title,
     caption: item.caption,
     image: item.image,
+    imageAspect: item.imageAspect,
+    imageFocus: item.imageFocus,
     kind: item.kind,
+  }
+}
+
+/** Stored and cached answers keep the pictures they were written with; give them today's
+ * (an editor may have changed an image, and older answers carry no shape). Fail-open. */
+async function withCurrentPictures<T extends object>(payload: T): Promise<T> {
+  try {
+    const bySlug = new Map((await getSearchIndex()).map((item) => [item.slug, item]))
+    const refresh = (list: unknown) => Array.isArray(list)
+      ? list.map((result: SearchResponseItem) => {
+          const item = bySlug.get(result.slug)
+          return item ? { ...result, image: item.image, imageAspect: item.imageAspect, imageFocus: item.imageFocus } : result
+        })
+      : list
+    const record = payload as Record<string, unknown>
+    return { ...payload, results: refresh(record.results), ...(record.alsoRelated ? { alsoRelated: refresh(record.alsoRelated) } : {}) }
+  } catch {
+    return payload
   }
 }
 
@@ -152,7 +175,7 @@ export async function POST(request: NextRequest) {
   // model call. `fresh` skips it, for scripts/build-search-suggestions.mjs to rebuild them.
   if (simulate === 'error' && !instant) return NextResponse.json({ error: 'simulated failure' }, { status: 500 })
   const stored = fresh || simulate ? null : storedAnswer(query)
-  if (stored) return NextResponse.json({ ...stored, cached: 'stored' })
+  if (stored) return NextResponse.json({ ...(await withCurrentPictures(stored)), cached: 'stored' })
 
   const index = await getSearchIndex()
   const shortlist = recall(query, index, 20)
@@ -177,7 +200,7 @@ export async function POST(request: NextRequest) {
   const cached = fresh || simulate ? null : ((await kv(['GET', cacheKey])) as string | null)
   if (cached) {
     try {
-      return NextResponse.json({ ...(JSON.parse(cached) as object), cached: true })
+      return NextResponse.json({ ...(await withCurrentPictures(JSON.parse(cached) as object)), cached: true })
     } catch {
       /* fall through to fresh compute */
     }
