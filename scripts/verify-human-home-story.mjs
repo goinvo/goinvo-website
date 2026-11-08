@@ -200,7 +200,7 @@ try {
       await page.evaluate(() => document.querySelector('[data-search-empty] li button').click())
       await page.waitForFunction(() => document.querySelector('[data-search-results="main"]:not(.opacity-60)'), { timeout: 20000 })
       check(suggestions.length === 4 && Date.now() - askedAt < 5000, `${width}: the four suggestions answer at once from stored results (${Date.now() - askedAt} ms)`)
-      check(await page.$eval('#ask-note', note => /AI/.test(note.textContent)), `${width}: the disclaimer says the search uses AI`)
+      check(await page.$eval('#ask-note', note => /\bAI\b/.test(note.textContent)), `${width}: the disclaimer says the search uses AI`)
       // When Claude is down or out of credit the search still answers, and says why the answers are plainer.
       for (const [state, expect] of [['ai-unavailable', /Keyword matches[\s\S]*AI isn’t answering/], ['rate-limited', /Keyword matches[\s\S]*searched a lot/], ['error', /hit a snag/]]) {
         const sim = await context.newPage(); await sim.setViewport({ width, height })
