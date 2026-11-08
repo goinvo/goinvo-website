@@ -806,10 +806,16 @@ no-match/keyword states, two-phase render, KV rate limit + cache, 21 tests in `t
 The route answers only where the review switch is on (previews) or with `HOME_AI_SEARCH=1`: a model call
 per query must not be open in production by accident. Needs `ANTHROPIC_API_KEY`; model
 `claude-haiku-4-5` unless `AI_SEARCH_MODEL` is set (re-run the persona checks before changing it).
-The examples beside the box and the suggestions on the "No results" screen (the old search's frowny
-`404-ai.png`, full width, fading out) have STORED answers in `src/lib/search/suggested.json`: instant, no
-model call. Rebuild with `BASE=<preview> node scripts/build-search-suggestions.mjs` (refuses an answer that
-is keyword-only or empty); `tests/search-suggestions.test.ts` fails on a suggestion without one.
+The examples beside the box and the suggestions on the "No results" and "Search failed" screens (the old
+search's frowny `404-ai.png`, cropped to her, ~70% of the width, off the right edge) have STORED answers in
+`src/lib/search/suggested.json`: instant, no model call, so they answer even during an outage. Rebuild with
+`BASE=<preview> node scripts/build-search-suggestions.mjs` (refuses an answer that is keyword-only or
+empty); `tests/search-suggestions.test.ts` fails on a suggestion without one.
+Out of credit / any Claude API error → keyword matches with a plain note (`reason: 'ai-unavailable'`), never
+an error wall. To SEE the failure states on a preview: `?search-state=ai-unavailable|rate-limited|error`
+on the page (honoured only where the design switch is on; skips stored + cached answers). Layout: the best
+match is a feature (picture off the left edge, the label + AI's read beside its top, whole match on the
+first screen), the rest are picture cards. The verifier checks all of it at 1440.
 
 ### Styling architecture (rebuilt 2026-11-06)
 - **Cascade:** `@layer theme, base, components, utilities, content` (declared once in globals.css).
