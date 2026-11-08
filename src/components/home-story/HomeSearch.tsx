@@ -152,9 +152,9 @@ export function HomeSearch() {
           ? <Results label="First matches" note="Narrowing these down and writing why each fits…" items={provisional.slice(0, 6)} faded />
           : <Skeleton />)}
 
-        {!loading && failed && <Message title="The search hit a snag.">Try again in a moment, or browse the work instead.</Message>}
+        {!loading && failed && <EmptyState kind="error" title="The search hit a snag." note="Something went wrong on our side. Try again, or start from one of these: they answer even now." run={run} retry={() => run(submitted)} />}
 
-        {!loading && response && response.results.length === 0 && <NoResults note={response.gapNote} run={run} />}
+        {!loading && response && response.results.length === 0 && <EmptyState kind="none" title="No results" note={response.gapNote || 'Nothing we’ve published fits that closely.'} run={run} />}
 
         {!loading && response && response.results.length > 0 && <>
           <Results
@@ -178,20 +178,30 @@ function fallbackNote(reason: SearchResponse['reason'], query: string) {
     : `Our AI isn’t answering right now, so these are plain keyword matches for “${query}”, without the reasons why. Try again in a while.`
 }
 
-/** A heading row in the page's section grid: the label on the left, the AI's line beside it. */
+/** The answer, weighted roughly 70 / 20 / 10: the best match as a feature (its picture
+ * runs off the left edge and takes most of the width), the rest as cards with their
+ * pictures, then anything "also related" as a quiet list. The label and the AI's one-line
+ * read of the question sit together above it, so the answer starts close to the question. */
 function Results({ label, statement, note, items, faded = false, quiet = false }: { label: string; statement?: string; note?: string; items: SearchResult[]; faded?: boolean; quiet?: boolean }) {
+  if (quiet) return (
+    <div data-search-results="also" className="mt-20 md:mt-28">
+      <p data-hand-note className={cn('m-0', type.label)}>{label}</p>
+      <ul className="m-0 mt-4 grid list-none gap-x-16 p-0 md:grid-cols-2">{items.map(item => <li key={item.slug}><RelatedRow item={item} /></li>)}</ul>
+    </div>
+  )
+  const rest = items.length - 1
   return (
-    <div data-search-results={quiet ? 'also' : 'main'} className={cn('mt-16 md:mt-24', faded && 'opacity-60 transition-opacity duration-300 motion-reduce:transition-none')}>
-      <div className="grid items-baseline gap-3 md:grid-cols-[0.8fr_1.2fr] md:gap-16">
-        <p data-hand-note className={cn('m-0', type.label, !quiet && 'text-secondary')}>{label}</p>
-        {(statement || note) && <div>
-          {statement && <p className={cn('m-0 max-w-[48ch]', type.lead)}>{statement}</p>}
-          {note && <p className={cn('m-0 max-w-[60ch] text-gray', type.body)}>{note}</p>}
-        </div>}
+    <div data-search-results="main" className={cn('mt-12 md:mt-16', faded && 'opacity-60 transition-opacity duration-300 motion-reduce:transition-none')}>
+      <div className="max-w-[60ch]">
+        <p data-hand-note className={cn('m-0 text-secondary', type.label)}>{label}</p>
+        {statement && <p className={cn('mb-0 mt-3', type.lead)}>{statement}</p>}
+        {note && <p className={cn('mb-0 mt-3 text-gray', type.body)}>{note}</p>}
       </div>
-      {quiet
-        ? <ul className="m-0 mt-6 grid list-none gap-x-16 p-0 md:grid-cols-2">{items.map(item => <li key={item.slug}><RelatedRow item={item} /></li>)}</ul>
-        : <ol className="m-0 mt-8 list-none p-0">{items.map((item, index) => <li key={item.slug}><ResultRow item={item} index={index} /></li>)}</ol>}
+      <ol className={cn('m-0 mt-8 grid list-none gap-x-10 gap-y-14 p-0 md:mt-10 md:grid-cols-2 md:gap-y-16', rest > 2 && 'lg:grid-cols-3')}>
+        {items.map((item, index) => <li key={item.slug} className={cn(index === 0 && 'md:col-span-full md:mb-6')}>
+          {index === 0 ? <FeatureResult item={item} /> : <CardResult item={item} index={index} />}
+        </li>)}
+      </ol>
     </div>
   )
 }
@@ -208,24 +218,41 @@ function ResultLink({ item, className, children }: { item: SearchResult; classNa
 
 const kindOf = (item: SearchResult) => `${item.kind === 'vision' ? 'Vision' : 'Case study'}${item.fit === 'adjacent' ? ' · Related, not exact' : ''}`
 const nudge = 'transition-transform duration-300 group-hover:translate-x-2 group-focus-visible:translate-x-2 motion-reduce:transition-none'
+const lift = 'transition-transform duration-700 ease-out-expo group-hover:scale-[1.03] motion-reduce:transition-none'
+const opensAt = (item: SearchResult) => item.anchorTitle ? `Opens at “${item.anchorTitle}”` : item.kind === 'vision' ? 'Read it' : 'Read the case study'
 
-/** One result as an index entry: number, title, why it fits, where it opens; the picture beside. */
-function ResultRow({ item, index }: { item: SearchResult; index: number }) {
+function ResultPicture({ item, sizes, className }: { item: SearchResult; sizes: string; className?: string }) {
   return (
-    <ResultLink item={item} className="grid gap-6 border-t border-black/15 py-8 md:grid-cols-[4rem_minmax(0,1fr)_minmax(0,17rem)] md:gap-10 md:py-10">
-      <span aria-hidden="true" className="hidden font-serif text-[clamp(28px,2.4vw,40px)] leading-none text-gray tabular-nums md:block">{String(index + 1).padStart(2, '0')}</span>
-      <div className="min-w-0">
-        <p className={cn('m-0 text-gray', type.caption)}>{kindOf(item)}</p>
-        <h3 className={cn('mb-0 mt-2 max-w-[26ch] transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.title)}><span data-link-label>{item.title}</span></h3>
-        <p className={cn('mb-0 mt-4 max-w-[60ch]', type.body)}>{item.blurb || item.caption}</p>
-        <p className={cn('mb-0 mt-5 flex items-center gap-3', type.label)}>
-          <span>{item.anchorTitle ? `Opens at “${item.anchorTitle}”` : item.kind === 'vision' ? 'Read it' : 'Read the case study'}</span>
-          <span className={nudge}><Arrow /></span>
-        </p>
+    <div className={cn('relative overflow-hidden bg-tertiary-lightest', className)}>
+      {item.image && <Image src={item.image} alt="" fill sizes={sizes} className={cn('object-cover', lift)} />}
+    </div>
+  )
+}
+
+/** The best match: the picture runs off the page's left edge and carries the row. */
+function FeatureResult({ item }: { item: SearchResult }) {
+  return (
+    <ResultLink item={item} className="grid items-end gap-6 md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-12">
+      <ResultPicture item={item} sizes="(min-width:768px) 62vw, 100vw" className="-mx-12 aspect-[16/10] md:-ml-[6vw] md:mr-0" />
+      <div className="min-w-0 md:pb-2">
+        <p className={cn('m-0 text-gray', type.caption)}>01 · {kindOf(item)}</p>
+        <h3 className={cn('mb-0 mt-3 transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.title)}><span data-link-label>{item.title}</span></h3>
+        <p className={cn('mb-0 mt-5', type.body)}>{item.blurb || item.caption}</p>
+        <p className={cn('mb-0 mt-6 flex items-center gap-3', type.label)}><span>{opensAt(item)}</span><span className={nudge}><Arrow /></span></p>
       </div>
-      <div className="relative order-first aspect-[4/3] overflow-hidden bg-tertiary-lightest md:order-none">
-        {item.image && <Image src={item.image} alt="" fill sizes="(min-width:768px) 17rem, 90vw" className="object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04] motion-reduce:transition-none" />}
-      </div>
+    </ResultLink>
+  )
+}
+
+/** The rest: a card each, picture first. */
+function CardResult({ item, index }: { item: SearchResult; index: number }) {
+  return (
+    <ResultLink item={item} className="block">
+      <ResultPicture item={item} sizes="(min-width:1024px) 30vw, (min-width:768px) 45vw, 90vw" className="aspect-[16/10]" />
+      <p className={cn('mb-0 mt-5 text-gray', type.caption)}>{String(index + 1).padStart(2, '0')} · {kindOf(item)}</p>
+      <h3 className={cn('mb-0 mt-2 transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.quote)}><span data-link-label>{item.title}</span></h3>
+      <p className={cn('mb-0 mt-3 line-clamp-4', type.body)}>{item.blurb || item.caption}</p>
+      <p className={cn('mb-0 mt-4 flex items-center gap-3', type.label)}><span>{opensAt(item)}</span><span className={nudge}><Arrow /></span></p>
     </ResultLink>
   )
 }
@@ -243,37 +270,29 @@ function RelatedRow({ item }: { item: SearchResult }) {
   )
 }
 
+/** The answer's shape while it is being found: a feature and two cards. */
 function Skeleton() {
   return (
-    <div aria-hidden="true" className="mt-16 md:mt-24">
+    <div aria-hidden="true" className="mt-12 md:mt-16">
       <p className={cn('m-0 text-secondary', type.label)}>Searching our work…</p>
-      <div className="mt-8">
-        {[0, 1, 2].map(index => <div key={index} className="grid animate-pulse gap-6 border-t border-black/10 py-8 motion-reduce:animate-none md:grid-cols-[4rem_minmax(0,1fr)_minmax(0,17rem)] md:gap-10 md:py-10">
-          <div className="hidden h-8 w-10 bg-tertiary-lightest md:block" />
-          <div className="space-y-4"><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-9 w-3/4 bg-tertiary-lightest" /><div className="h-4 w-full bg-tertiary-lightest" /><div className="h-4 w-2/3 bg-tertiary-lightest" /></div>
-          <div className="order-first aspect-[4/3] bg-tertiary-lightest md:order-none" />
-        </div>)}
+      <div className="mt-8 grid animate-pulse gap-x-10 gap-y-14 motion-reduce:animate-none md:mt-10 md:grid-cols-2">
+        <div className="grid items-end gap-6 md:col-span-full md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-12">
+          <div className="-mx-12 aspect-[16/10] bg-tertiary-lightest md:-ml-[6vw] md:mr-0" />
+          <div className="space-y-4"><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-10 w-5/6 bg-tertiary-lightest" /><div className="h-4 w-full bg-tertiary-lightest" /><div className="h-4 w-2/3 bg-tertiary-lightest" /></div>
+        </div>
+        {[0, 1].map(index => <div key={index} className="space-y-4"><div className="aspect-[16/10] bg-tertiary-lightest" /><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-7 w-3/4 bg-tertiary-lightest" /></div>)}
       </div>
     </div>
   )
 }
 
-function Message({ title, children }: { title: string; children: ReactNode }) {
+/** Nothing to show, for either reason: nothing fits, or the search failed. The old search's
+ * illustration, large enough to own the moment, and beside it the words and searches that do
+ * have answers (stored, so they come back at once, even while the search itself is failing),
+ * quoted as the page quotes a reader's concerns. */
+function EmptyState({ kind, title, note, run, retry }: { kind: 'none' | 'error'; title: string; note: string; run: (query: string) => void; retry?: () => void }) {
   return (
-    <div className="mt-16 max-w-[44ch] md:mt-20">
-      <p className={cn('m-0', type.title)}>{title}</p>
-      <p className={cn('mb-4 mt-4', type.body)}>{children}</p>
-      <TextLink href="/work">Browse all the work</TextLink>
-    </div>
-  )
-}
-
-/** Nothing fits: the old search's illustration, large enough to own the moment, and beside
- * it the words and searches that do have answers (stored, so they come back at once), quoted
- * as the page quotes a reader's concerns. */
-function NoResults({ note, run }: { note?: string | null; run: (query: string) => void }) {
-  return (
-    <div data-search-empty className="mt-12 lg:mt-8">
+    <div data-search-empty={kind} className="mt-12 lg:mt-8">
       {/* Roughly 70 / 20 / 10: the girl carries the block, the words come second, the
           suggestions after. The art is cropped to her (the file's empty top and right are
           cut away, never her) and runs off the page's right edge; it fades in at the top and
@@ -289,8 +308,9 @@ function NoResults({ note, run }: { note?: string | null; run: (query: string) =
           <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" width={3168} height={1536} sizes="(min-width:768px) 90vw, 115vw" className="absolute bottom-0 left-0 h-auto w-[113.64%] max-w-none" />
         </div>
         <div data-search-empty-words className="relative z-10 -mt-[6vw] lg:mt-0 lg:w-[min(94vw_-_1.536_*_var(--art-h)_-_2.5rem,_40rem)]">
-          <p className={cn('m-0', type.heading)}>No results</p>
-          <p className={cn('mb-0 mt-4 max-w-[34ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
+          <p className={cn('m-0', type.heading)}>{title}</p>
+          <p className={cn('mb-0 mt-4 max-w-[34ch]', type.lead)}>{note}</p>
+          {retry && <button type="button" onClick={retry} className={cn(textLinkClass, 'mt-6 cursor-pointer border-0 bg-transparent p-0', type.lead)}><span data-link-label className="group-hover:underline group-focus-visible:underline">Try again</span><Arrow /></button>}
           <div className="mt-10 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
             <p data-hand-note className={cn('m-0 text-gray', type.label)}>Try one of these</p>
             <TextLink href="/work" className={type.label}>Or browse all the work</TextLink>

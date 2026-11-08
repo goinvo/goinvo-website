@@ -189,6 +189,8 @@ try {
       await page.waitForFunction(() => document.querySelector('[data-search-results="main"]:not(.opacity-60)') || /snag|Nothing we/.test(document.querySelector('#ask').innerText), { timeout: 60000 })
       const found = await page.evaluate(() => ({ titles: [...document.querySelectorAll('[data-search-results="main"] h3')].length, live: document.querySelector('#ask [aria-live]').textContent, links: [...document.querySelectorAll('[data-search-results="main"] a')].every(a => a.getAttribute('href')?.startsWith('/')) }))
       check(found.titles > 0 && /results? for/.test(found.live) && found.links, `${width}: an example search returns our own work and announces it ${JSON.stringify(found)}`)
+      const feature = await page.evaluate(() => { const first = document.querySelector('[data-search-results="main"] li'), picture = first.querySelector('.relative.overflow-hidden').getBoundingClientRect(), title = first.querySelector('h3').getBoundingClientRect(); return { left: Math.round(picture.left), width: Math.round(picture.width), titleRight: title.left >= picture.right } })
+      check(feature.left <= 1 && feature.width >= width * 0.55 && feature.titleRight, `${width}: the best match leads, its picture off the left edge and most of the width ${JSON.stringify(feature)}`)
       await page.$eval('#ask-input', input => { input.value = '' }); await page.click('#ask-input', { clickCount: 3 }); await page.type('#ask-input', 'knitting patterns for zebras'); await page.keyboard.press('Enter')
       await page.waitForSelector('[data-search-empty] img', { timeout: 60000 })
       check(await page.evaluate(() => !document.querySelector('[data-search-results]') && /No strong matches/.test(document.querySelector('#ask [aria-live]').textContent) && decodeURIComponent(document.querySelector('[data-search-empty] img').getAttribute('src')).includes('404-ai') && document.querySelector('[data-search-empty]').innerText.includes('No results')), `${width}: a search nothing fits says so honestly, with the no-results illustration`)
@@ -211,6 +213,7 @@ try {
         const said = await sim.waitForFunction(pattern => { const text = document.querySelector('#ask').innerText; return new RegExp(pattern).test(text) && !/Searching our work/.test(document.querySelector('#ask [aria-live]').textContent) }, { timeout: 30000 }, expect.source).then(() => true, () => false)
         await sim.screenshot({ path: path.join(out, `search-${state}-${width}.png`) })
         check(said, `${width}: with the search ${state}, the reader is told plainly what happened`)
+        if (state === 'error') check(await sim.evaluate(() => { const empty = document.querySelector('[data-search-empty="error"]'); return !!empty && [...empty.querySelectorAll('button')].some(button => /Try again/.test(button.textContent)) && empty.querySelectorAll('li button').length === 4 }), `${width}: a failed search offers Try again and the stored suggestions`)
         await sim.close()
       }
     }
