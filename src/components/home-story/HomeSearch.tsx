@@ -77,7 +77,9 @@ export function HomeSearch() {
     // The question stays in view at the top, with the answer (or "No results") under it.
     requestAnimationFrame(() => form.current?.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' }))
 
-    const post = (body: object) => fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal })
+    // Review only (the route ignores it in production): ?search-state=ai-unavailable|rate-limited|error.
+    const simulate = new URLSearchParams(location.search).get('search-state') || undefined
+    const post = (body: object) => fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, simulate }), signal: controller.signal })
     // First paint: the keyword pass, shown only until the AI answer lands.
     post({ query: trimmed, instant: true })
       .then(async res => {
@@ -138,7 +140,7 @@ export function HomeSearch() {
             <span data-hand-note className="text-gray">Or try</span>
             {EXAMPLE_QUERIES.map(example => <button key={example.label} type="button" onClick={() => run(example.query)} className={cn('min-h-12 cursor-pointer border-0 bg-transparent p-0 text-inherit underline decoration-1 underline-offset-4 hover:text-secondary', focusRing)}>{example.label}</button>)}
           </p>
-          <p id="ask-note" className={cn('m-0 text-gray', type.caption)}>Experimental. It answers from our published work only.</p>
+          <p id="ask-note" className={cn('m-0 text-gray', type.caption)}>Experimental: an AI reads what you type and answers only from our published work.</p>
         </div>
       </form>
 
@@ -158,7 +160,7 @@ export function HomeSearch() {
           <Results
             label={!response.aiGenerated ? 'Keyword matches' : allAdjacent ? 'Closest related work' : 'Recommended for you'}
             statement={response.aiGenerated ? response.gapNote || response.insight || undefined : undefined}
-            note={!response.aiGenerated ? `Matches for “${submitted}”. The AI recommendations are unavailable right now.` : undefined}
+            note={!response.aiGenerated ? fallbackNote(response.reason, submitted) : undefined}
             items={response.results}
           />
           {response.alsoRelated && response.alsoRelated.length > 0 && <Results label="Also related" items={response.alsoRelated} quiet />}
@@ -167,6 +169,13 @@ export function HomeSearch() {
       </div>
     </Section>
   )
+}
+
+/** Why these are plain keyword matches: said plainly, with what is missing and what to do. */
+function fallbackNote(reason: SearchResponse['reason'], query: string) {
+  return reason === 'rate-limited'
+    ? `You’ve searched a lot in a short time, so the AI is sitting this one out. These are plain keyword matches for “${query}”, without the reasons why. Give it a minute.`
+    : `Our AI isn’t answering right now, so these are plain keyword matches for “${query}”, without the reasons why. Try again in a while.`
 }
 
 /** A heading row in the page's section grid: the label on the left, the AI's line beside it. */

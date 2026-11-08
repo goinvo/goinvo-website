@@ -200,6 +200,19 @@ try {
       await page.evaluate(() => document.querySelector('[data-search-empty] li button').click())
       await page.waitForFunction(() => document.querySelector('[data-search-results="main"]:not(.opacity-60)'), { timeout: 20000 })
       check(suggestions.length === 4 && Date.now() - askedAt < 5000, `${width}: the four suggestions answer at once from stored results (${Date.now() - askedAt} ms)`)
+      check(await page.$eval('#ask-note', note => /AI/.test(note.textContent)), `${width}: the disclaimer says the search uses AI`)
+      // When Claude is down or out of credit the search still answers, and says why the answers are plainer.
+      for (const [state, expect] of [['ai-unavailable', /Keyword matches[\s\S]*AI isn’t answering/], ['rate-limited', /Keyword matches[\s\S]*searched a lot/], ['error', /hit a snag/]]) {
+        const sim = await context.newPage(); await sim.setViewport({ width, height })
+        const simUrl = new URL(route); simUrl.searchParams.set('search-state', state)
+        await sim.goto(simUrl.href, { waitUntil: 'load', timeout: 120000 })
+        await sim.evaluate(() => document.querySelector('#ask').scrollIntoView())
+        await sim.type('#ask-input', 'clinical decision support'); await sim.keyboard.press('Enter')
+        const said = await sim.waitForFunction(pattern => { const text = document.querySelector('#ask').innerText; return new RegExp(pattern).test(text) && !/Searching our work/.test(document.querySelector('#ask [aria-live]').textContent) }, { timeout: 30000 }, expect.source).then(() => true, () => false)
+        await sim.screenshot({ path: path.join(out, `search-${state}-${width}.png`) })
+        check(said, `${width}: with the search ${state}, the reader is told plainly what happened`)
+        await sim.close()
+      }
     }
     await page.evaluate(() => document.querySelector('#services').scrollIntoView()); await pause(700)
     check(await page.$$eval('[data-explore-link]', els => els.length === 1 && els[0].textContent.includes('Who we’ve done it for')), `${width}: the bottom prompt follows the reader to the next section`)

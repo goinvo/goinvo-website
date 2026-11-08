@@ -20,7 +20,8 @@ export const maxDuration = 30
  *
  * Honest fallback contract (from the persona study):
  * - no lexical matches        → results: [],   reason: 'no-matches'
- * - Claude unavailable/error  → keyword top 9, reason: 'ai-unavailable'
+ * - Claude unavailable/error  → keyword top 9, reason: 'ai-unavailable' (out of credit,
+ *                               a timeout and a bad key all land here: any API error)
  * - Claude says nothing fits  → results: [],   reason: 'no-matches' (aiGenerated, persona still included)
  * Every AI blurb passes the grounding guard (checkBlurbGrounding); a blurb
  * that asserts unsourced claims is replaced by the project's own caption and
@@ -104,6 +105,12 @@ function toResponseItem(item: SearchIndexItem): SearchResponseItem {
  * hosts it (which is itself off in production). */
 const searchEnabled = () => designSwitchEnabled || process.env.HOME_AI_SEARCH === '1'
 
+/** For review (previews and dev only): `?search-state=` on the page forces what a visitor
+ * sees when Claude is down or out of credit (any API error lands there), when they are
+ * rate-limited, or when the route itself fails. Stored and cached answers are skipped. */
+const SIMULATED_STATES = ['ai-unavailable', 'rate-limited', 'error'] as const
+type SimulatedState = (typeof SIMULATED_STATES)[number]
+
 export async function POST(request: NextRequest) {
   if (!searchEnabled()) return NextResponse.json({ error: 'not found' }, { status: 404 })
   // Same-origin guard: browser calls from our own pages only.
@@ -126,11 +133,14 @@ export async function POST(request: NextRequest) {
   let query = ''
   let instant = false
   let fresh = false
+  let simulate: SimulatedState | null = null
   try {
-    const body = JSON.parse(raw) as { query?: unknown; instant?: unknown; fresh?: unknown }
+    const body = JSON.parse(raw) as { query?: unknown; instant?: unknown; fresh?: unknown; simulate?: unknown }
     query = typeof body.query === 'string' ? body.query.trim() : ''
     instant = body.instant === true
     fresh = body.fresh === true
+    // Review only: never honoured in production, where the design switch is off.
+    simulate = designSwitchEnabled && SIMULATED_STATES.includes(body.simulate as SimulatedState) ? (body.simulate as SimulatedState) : null
   } catch {
     return NextResponse.json({ error: 'invalid JSON' }, { status: 400 })
   }
@@ -140,7 +150,8 @@ export async function POST(request: NextRequest) {
 
   // The searches we suggest have their answers stored (suggested.ts): at once, no
   // model call. `fresh` skips it, for scripts/build-search-suggestions.mjs to rebuild them.
-  const stored = fresh ? null : storedAnswer(query)
+  if (simulate === 'error' && !instant) return NextResponse.json({ error: 'simulated failure' }, { status: 500 })
+  const stored = fresh || simulate ? null : storedAnswer(query)
   if (stored) return NextResponse.json({ ...stored, cached: 'stored' })
 
   const index = await getSearchIndex()
@@ -163,7 +174,7 @@ export async function POST(request: NextRequest) {
   // Cached AI responses make repeat + sector-preset queries instant and free.
   // Keys are environment-scoped so preview/dev entries never serve production.
   const cacheKey = searchCacheKey(createHash('sha256').update(query.toLowerCase()).digest('hex').slice(0, 24))
-  const cached = fresh ? null : ((await kv(['GET', cacheKey])) as string | null)
+  const cached = fresh || simulate ? null : ((await kv(['GET', cacheKey])) as string | null)
   if (cached) {
     try {
       return NextResponse.json({ ...(JSON.parse(cached) as object), cached: true })
@@ -173,9 +184,9 @@ export async function POST(request: NextRequest) {
   }
 
   const ip = (request.headers.get('x-forwarded-for') ?? 'unknown').split(',')[0].trim()
-  const limited = await overRateLimit(ip)
+  const limited = simulate === 'rate-limited' || (!simulate && (await overRateLimit(ip)))
 
-  const selection = limited ? null : await selectAndDescribe(query, shortlist.map((s) => s.item))
+  const selection = limited || simulate === 'ai-unavailable' ? null : await selectAndDescribe(query, shortlist.map((s) => s.item))
 
   if (!selection) {
     return NextResponse.json({
