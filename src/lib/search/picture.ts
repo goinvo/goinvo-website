@@ -33,8 +33,10 @@ export function imageShape(image?: ImageFields | null): { aspect?: number; focus
   return { aspect, focus: { x: clamp((hotspot.x - crop.left) / keptWidth), y: clamp((hotspot.y - crop.top) / keptHeight) } }
 }
 
-/** The most of either side a picture may lose to fill its frame. */
-export const MAX_PICTURE_CROP = 0.2
+/** The most of either side a picture may lose to fill its frame. Generous on purpose: the
+ * cards fill their frames as the site's own cards do, and only a picture that would lose
+ * a big share of itself (wide lettering, like the Pay the Patient banner) shows whole. */
+export const MAX_PICTURE_CROP = 0.4
 
 /** How much of the image filling the frame would cut away, 0 to 1. */
 export function cropLoss(imageAspect: number, frameAspect: number): number {
@@ -47,7 +49,9 @@ export function pictureFit(imageAspect: number | undefined, frameAspect: number)
   return cropLoss(imageAspect, frameAspect) > MAX_PICTURE_CROP ? 'whole' : 'fill'
 }
 
-/** CSS object-position for the editor's focal point (centre when there is none). */
-export function focusPosition(focus?: PictureFocus): string {
+/** CSS object-position: the editor's card position when set (features have one, as on
+ * the site's cards), else the image's focal point, else the centre. */
+export function focusPosition(focus?: PictureFocus, position?: string): string {
+  if (position?.trim()) return position.trim()
   return focus ? `${Math.round(focus.x * 100)}% ${Math.round(focus.y * 100)}%` : '50% 50%'
 }

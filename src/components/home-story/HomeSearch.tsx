@@ -37,6 +37,7 @@ interface SearchResult {
   image?: string
   imageAspect?: number
   imageFocus?: PictureFocus
+  imagePosition?: string
   kind?: 'work' | 'vision'
   blurb?: string
   blurbSource?: 'ai' | 'caption'
@@ -236,20 +237,19 @@ const nudge = 'transition-transform duration-300 group-hover:translate-x-2 group
 const lift = 'transition-transform duration-700 ease-out-expo group-hover:scale-[1.03] motion-reduce:transition-none'
 const opensAt = (item: SearchResult) => item.anchorTitle ? `Opens at “${item.anchorTitle}”` : item.kind === 'vision' ? 'Read it' : 'Read the case study'
 
-/** Frames, width over height. Cards are wide because the project images are: most are
- * banners near 2:1. */
+/** Frames, width over height. */
 const FEATURE_FRAME = 16 / 10
-const CARD_FRAME = 2
+const CARD_FRAME = 16 / 10
 
-/** Fills its frame when that costs little of the image (around the editor's focal point);
- * otherwise shows the whole image over a soft, blurred copy of itself, so a picture that is
- * mostly lettering is never cut mid-word. */
+/** Fills its frame, positioned as the editor set it for the site's cards. Only a picture
+ * that would lose a big share of itself (picture.ts) shows whole, over a soft blurred copy
+ * of itself, so wide lettering is never cut mid-word. */
 function ResultPicture({ item, frame, sizes, className, feature = false }: { item: SearchResult; frame: number; sizes: string; className?: string; feature?: boolean }) {
   const fit = pictureFit(item.imageAspect, frame)
   return (
     <div data-search-picture={feature ? 'feature' : 'card'} data-picture-fit={fit} style={{ aspectRatio: frame }} className={cn('relative overflow-hidden bg-tertiary-lightest', className)}>
       {item.image && fit === 'whole' && <Image src={item.image} alt="" fill sizes={sizes} className="scale-125 object-cover opacity-30 blur-2xl" />}
-      {item.image && <Image src={item.image} alt="" fill sizes={sizes} style={fit === 'fill' ? { objectPosition: focusPosition(item.imageFocus) } : undefined} className={cn(fit === 'whole' ? 'object-contain' : 'object-cover', lift)} />}
+      {item.image && <Image src={item.image} alt="" fill sizes={sizes} style={fit === 'fill' ? { objectPosition: focusPosition(item.imageFocus, item.imagePosition) } : undefined} className={cn(fit === 'whole' ? 'object-contain' : 'object-cover', lift)} />}
     </div>
   )
 }

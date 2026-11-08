@@ -21,6 +21,8 @@ export interface SearchIndexItem {
   /** The image's width over height as served, and the editor's focal point (picture.ts). */
   imageAspect?: number
   imageFocus?: PictureFocus
+  /** The editor's card position (heroPosition), as the site's cards use it. */
+  imagePosition?: string
   kind: 'work' | 'vision'
   /** Curated retrieval vocabulary (see PROJECT_KEYWORDS) — searched, never displayed. */
   keywords?: string[]
@@ -114,6 +116,7 @@ interface RawCaseStudy {
   client?: string
   caption?: string
   image?: SanityImage
+  heroPosition?: string
   categories?: (string | null)[]
   sectionBlocks?: { text?: string | null }[]
 }
@@ -124,6 +127,7 @@ interface RawFeature {
   description?: string
   image?: SanityImage
   externalLink?: string
+  heroPosition?: string
   categories?: (string | null)[]
   sectionBlocks?: { text?: string | null }[]
 }
@@ -140,6 +144,7 @@ const searchIndexQuery = groq`{
     client,
     caption,
     image,
+    heroPosition,
     "categories": categories[]->title,
     "sectionBlocks": content[_type == "block" && style in ${JSON.stringify(ANCHORED_STYLES)}]{ "text": pt::text(@) }
   },
@@ -151,6 +156,7 @@ const searchIndexQuery = groq`{
     "title": coalesce(cardTitle, title),
     description,
     image,
+    heroPosition,
     externalLink,
     categories,
     "sectionBlocks": content[_type == "block" && style in ${JSON.stringify(ANCHORED_STYLES)}]{ "text": pt::text(@) }
@@ -159,11 +165,11 @@ const searchIndexQuery = groq`{
 
 /** The image at its own shape (the editor's crop applied, nothing more), wide enough
  * for the lead result, which spans most of the page. The card decides how to frame it. */
-function picture(image?: SanityImage): Pick<SearchIndexItem, 'image' | 'imageAspect' | 'imageFocus'> {
+function picture(image?: SanityImage, heroPosition?: string): Pick<SearchIndexItem, 'image' | 'imageAspect' | 'imageFocus' | 'imagePosition'> {
   if (!image) return {}
   try {
     const { aspect, focus } = imageShape(image)
-    return { image: urlForImage(image).width(1600).fit('max').url(), imageAspect: aspect, imageFocus: focus }
+    return { image: urlForImage(image).width(1600).fit('max').url(), imageAspect: aspect, imageFocus: focus, imagePosition: heroPosition?.trim() || undefined }
   } catch {
     return {}
   }
@@ -193,7 +199,7 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       caption: cs.caption ?? cs.heading ?? '',
       client: cs.client,
       categories: cleanCategories(cs.categories),
-      ...picture(cs.image),
+      ...picture(cs.image, cs.heroPosition),
       kind: 'work' as const,
       keywords: PROJECT_KEYWORDS[cs.slug],
       sections: normalizeSections(cs.sectionBlocks),
@@ -208,7 +214,7 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       title: f.title,
       caption: f.description ?? '',
       categories: cleanCategories(f.categories),
-      ...picture(f.image),
+      ...picture(f.image, f.heroPosition),
       kind: 'vision' as const,
       keywords: PROJECT_KEYWORDS[f.slug],
       // External features scroll nowhere we control — no anchors for those.

@@ -17,7 +17,7 @@ const cases = [
 ]
 const response = await fetch(route)
 check(response.status === 200 && (await response.text()).includes('noindex'), 'Review reachable and unindexed')
-/** Every result picture against its frame: one that would lose more than a fifth of the image
+/** Every result picture against its frame: one that would lose more than 40% of the image
  * to the crop must be shown whole (src/lib/search/picture.ts), so lettering is never cut. */
 async function pictureCrops(page) {
   return page.evaluate(async () => {
@@ -212,7 +212,7 @@ try {
       const feature = await page.evaluate(() => { const picture = document.querySelector('[data-search-picture="feature"]').getBoundingClientRect(), title = document.querySelector('[data-search-feature] h3').getBoundingClientRect(), label = document.querySelector('[data-search-results="main"] [data-hand-note]').getBoundingClientRect(); return { left: Math.round(picture.left), width: Math.round(picture.width), titleRight: title.left >= picture.right && label.left >= picture.right && label.top < title.top, firstScreen: title.bottom <= innerHeight } })
       check(feature.left <= 1 && feature.width >= width * 0.55 && feature.titleRight && feature.firstScreen, `${width}: the best match leads, its picture off the left edge and most of the width, its title on the first screen ${JSON.stringify(feature)}`)
       const crops = await pictureCrops(page)
-      check(crops.length >= 2 && crops.every(row => !row.unloaded && (row.loss <= 0.2 ? row.shown === 'cover' : row.fit === 'whole' && row.shown === 'contain')), `${width}: no result picture loses more than a fifth of itself to the crop; the rest show whole ${JSON.stringify(crops)}`)
+      check(crops.length >= 2 && crops.every(row => !row.unloaded && (row.loss <= 0.4 ? row.shown === 'cover' : row.fit === 'whole' && row.shown === 'contain')), `${width}: no result picture loses more than 40% of itself to the crop; the rest show whole ${JSON.stringify(crops)}`)
       await page.$eval('#ask-input', input => { input.value = '' }); await page.click('#ask-input', { clickCount: 3 }); await page.type('#ask-input', 'knitting patterns for zebras'); await page.keyboard.press('Enter')
       await page.waitForSelector('[data-search-empty] img', { timeout: 60000 })
       check(await page.evaluate(() => !document.querySelector('[data-search-results]') && /No strong matches/.test(document.querySelector('#ask [aria-live]').textContent) && decodeURIComponent(document.querySelector('[data-search-empty] img').getAttribute('src')).includes('404-ai') && document.querySelector('[data-search-empty]').innerText.includes('No results')), `${width}: a search nothing fits says so honestly, with the no-results illustration`)
@@ -235,7 +235,7 @@ try {
         const said = await sim.waitForFunction(pattern => { const text = document.querySelector('#ask').innerText; return new RegExp(pattern).test(text) && !/Searching our work/.test(document.querySelector('#ask [aria-live]').textContent) }, { timeout: 30000 }, expect.source).then(() => true, () => false)
         await sim.screenshot({ path: path.join(out, `search-${state}-${width}.png`) })
         check(said, `${width}: with the search ${state}, the reader is told plainly what happened`)
-        if (state === 'ai-unavailable') { const crops = await pictureCrops(sim); check(crops.length >= 3 && crops.every(row => !row.unloaded && (row.loss <= 0.2 ? row.shown === 'cover' : row.fit === 'whole' && row.shown === 'contain')), `${width}: keyword matches keep their pictures whole too ${JSON.stringify(crops)}`) }
+        if (state === 'ai-unavailable') { const crops = await pictureCrops(sim); check(crops.length >= 3 && crops.every(row => !row.unloaded && (row.loss <= 0.4 ? row.shown === 'cover' : row.fit === 'whole' && row.shown === 'contain')), `${width}: keyword matches keep their pictures whole too ${JSON.stringify(crops)}`) }
         if (state === 'error') check(await sim.evaluate(() => { const empty = document.querySelector('[data-search-empty="error"]'); return !!empty && [...empty.querySelectorAll('button')].some(button => /Try again/.test(button.textContent)) && empty.querySelectorAll('li button').length === 4 }), `${width}: a failed search offers Try again and the stored suggestions`)
         await sim.close()
       }

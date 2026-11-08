@@ -39,6 +39,7 @@ interface SearchResponseItem {
   image?: string
   imageAspect?: number
   imageFocus?: PictureFocus
+  imagePosition?: string
   kind: 'work' | 'vision'
   blurb?: string
   blurbSource?: BlurbSource
@@ -101,6 +102,7 @@ function toResponseItem(item: SearchIndexItem): SearchResponseItem {
     image: item.image,
     imageAspect: item.imageAspect,
     imageFocus: item.imageFocus,
+    imagePosition: item.imagePosition,
     kind: item.kind,
   }
 }
@@ -113,7 +115,7 @@ async function withCurrentPictures<T extends object>(payload: T): Promise<T> {
     const refresh = (list: unknown) => Array.isArray(list)
       ? list.map((result: SearchResponseItem) => {
           const item = bySlug.get(result.slug)
-          return item ? { ...result, image: item.image, imageAspect: item.imageAspect, imageFocus: item.imageFocus } : result
+          return item ? { ...result, image: item.image, imageAspect: item.imageAspect, imageFocus: item.imageFocus, imagePosition: item.imagePosition } : result
         })
       : list
     const record = payload as Record<string, unknown>
