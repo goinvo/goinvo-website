@@ -203,6 +203,14 @@ try {
     }
     await page.evaluate(() => document.querySelector('#services').scrollIntoView()); await pause(700)
     check(await page.$$eval('[data-explore-link]', els => els.length === 1 && els[0].textContent.includes('Who we’ve done it for')), `${width}: the bottom prompt follows the reader to the next section`)
+    {
+      const shown = () => page.$eval('nav[aria-label="Next section"]', nav => nav.dataset.promptShown === 'true' && getComputedStyle(nav).opacity === '1')
+      await page.mouse.move(width / 2, height / 2); await pause(450)
+      const hiddenMidPage = !(await shown())
+      let revealed = true
+      if (width >= 768) { await page.mouse.move(width / 2, height - 40); await pause(450); revealed = await shown(); await page.mouse.move(width / 2, height / 2); await pause(450) }
+      check(hiddenMidPage && revealed && !(await shown()), `${width}: past the opening the prompt stays out of the way until the pointer nears the bottom (hidden ${hiddenMidPage}, revealed ${revealed})`)
+    }
     check(await page.$$eval('#services h3', els => els.length === 3), `${width}: three service-and-concern pairings`)
     check(await page.$$eval('#proof blockquote', els => els.length === 2 && els.every(el => el.getAttribute('cite')?.startsWith('https://www.goinvo.com/'))), `${width}: two attributed published testimonials`)
     // The logos are lazy: read them once they are on screen, not from the section above.

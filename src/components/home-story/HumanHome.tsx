@@ -385,10 +385,19 @@ const nextSteps = [
   { after: 'evidence', target: 'contact', text: 'Tell us what you’re working on' },
 ]
 
-/** One prompt, centred on the page. As the reader moves on, the old line rises
- * and fades while the next slides up from below. Gone once the contact form is in view. */
+/** How close to the bottom of the window the pointer has to come to call the prompt up. */
+const PROMPT_REACH = 120
+
+/** One prompt, centred on the page. On the opening it is the invitation to scroll; after
+ * that it stays out of the way (it sat on top of whatever the reader was looking at) and
+ * comes up only when the pointer nears the bottom of the window, or when it takes keyboard
+ * focus. As the reader moves on, the old line rises and fades while the next slides up
+ * from below. Gone once the contact form is in view. */
 function NextPrompt({ low }: { low: boolean }) {
   const [step, setStep] = useState(0)
+  const [opening, setOpening] = useState(true)
+  const [near, setNear] = useState(false)
+  const [focused, setFocused] = useState(false)
   useEffect(() => {
     let frame = 0
     const measure = () => {
@@ -398,18 +407,24 @@ function NextPrompt({ low }: { low: boolean }) {
       const contact = document.getElementById('contact')
       if (contact && contact.getBoundingClientRect().top <= innerHeight * 0.85) current = -1
       setStep(current)
+      setOpening(scrollY < innerHeight * 0.25)
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
+    // A mouse or trackpad only: a touch has no hover, so there the prompt is the opening's alone.
+    const pointer = (event: PointerEvent) => { if (event.pointerType === 'mouse' || event.pointerType === 'pen') setNear(event.clientY >= innerHeight - PROMPT_REACH) }
+    const away = () => setNear(false)
     measure()
     addEventListener('scroll', schedule, { passive: true }); addEventListener('resize', schedule)
+    addEventListener('pointermove', pointer, { passive: true }); document.documentElement.addEventListener('pointerleave', away)
     const observer = new ResizeObserver(schedule)
     observer.observe(document.body)
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); removeEventListener('scroll', schedule); removeEventListener('resize', schedule) }
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); removeEventListener('scroll', schedule); removeEventListener('resize', schedule); removeEventListener('pointermove', pointer); document.documentElement.removeEventListener('pointerleave', away) }
   }, [low])
   const next = step >= 0 ? nextSteps[step] : null
-  return <nav aria-label="Next section" className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center">
+  const shown = opening || near || focused
+  return <nav aria-label="Next section" data-prompt-shown={shown} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} className={cn('fixed inset-x-0 bottom-5 z-40 flex justify-center transition-[opacity,translate] duration-300 ease-standard motion-reduce:transition-none', shown ? 'opacity-100' : 'pointer-events-none translate-y-3 opacity-0')}>
     <AnimatePresence mode="popLayout" initial={false}>
-      {next && <motion.a key={next.target} href={`#${next.target}`} data-explore-link initial={{ y: 28, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -28, opacity: 0 }} transition={{ duration: 0.45, ease: easing }} onClick={event => { event.preventDefault(); jumpTo(next.target, low) }} className={cn(link, type.lead, 'pointer-events-auto whitespace-nowrap bg-white px-4 text-inherit hover:underline')}>{next.text} <Arrow direction="down" /></motion.a>}
+      {next && <motion.a key={next.target} href={`#${next.target}`} data-explore-link initial={{ y: 28, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -28, opacity: 0 }} transition={{ duration: 0.45, ease: easing }} onClick={event => { event.preventDefault(); jumpTo(next.target, low) }} className={cn(link, type.lead, 'whitespace-nowrap bg-white px-4 text-inherit hover:underline', shown && 'pointer-events-auto')}>{next.text} <Arrow direction="down" /></motion.a>}
     </AnimatePresence>
   </nav>
 }
