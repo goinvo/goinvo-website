@@ -271,13 +271,15 @@ function NoResults({ note, run }: { note?: string | null; run: (query: string) =
           out at the bottom. Everything else is one column on her empty left side, bottom-
           aligned with her, so the suggestions sit above the fold. Its width is what her empty side
           leaves (her face starts 1.536 × her height in from the right edge), so a short window,
-          where she is smaller, gives the words more room. A tablet stacks, like a phone. Her height leaves a band
+          where she is smaller, gives the words more room. Her height (--art-h) is the smallest of:
+          the window less the search above and the prompt's band below, 46% of the width, and
+          what still leaves the column about 26rem. A tablet stacks, like a phone. Her height leaves a band
           free at the bottom of the window for the next-section prompt. */}
-      <div className="relative lg:flex lg:min-h-[min(calc(100svh-23rem),46vw)] lg:flex-col lg:justify-end">
-        <div data-search-empty-art className="pointer-events-none relative -mx-12 aspect-[2788/1444] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_74%,transparent)] lg:absolute lg:bottom-0 lg:right-[-6vw] lg:mx-0 lg:h-[min(calc(100svh-23rem),46vw)]">
+      <div className="relative [--art-h:min(100svh_-_23rem,_46vw,_(94vw_-_28.75rem)_/_1.536)] lg:flex lg:min-h-(--art-h) lg:flex-col lg:justify-end">
+        <div data-search-empty-art className="pointer-events-none relative -mx-12 aspect-[2788/1444] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_74%,transparent)] lg:absolute lg:bottom-0 lg:right-[-6vw] lg:mx-0 lg:h-(--art-h)">
           <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" width={3168} height={1536} sizes="(min-width:768px) 90vw, 115vw" className="absolute bottom-0 left-0 h-auto w-[113.64%] max-w-none" />
         </div>
-        <div data-search-empty-words className="relative z-10 -mt-[6vw] lg:mt-0 lg:w-[min(94vw_-_1.536_*_min(100svh_-_23rem,_46vw)_-_2.5rem,_40rem)]">
+        <div data-search-empty-words className="relative z-10 -mt-[6vw] lg:mt-0 lg:w-[min(94vw_-_1.536_*_var(--art-h)_-_2.5rem,_40rem)]">
           <p className={cn('m-0', type.heading)}>No results</p>
           <p className={cn('mb-0 mt-4 max-w-[34ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
           <div className="mt-10 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
