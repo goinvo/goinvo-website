@@ -259,37 +259,38 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-/** Nothing fits: the old search's illustration, large enough to own the moment, with the
- * words set small against it, then searches that do have answers (stored, so they come back
- * at once), set as the page sets a reader's concerns: quoted, in the serif. */
+/** Nothing fits: the old search's illustration, large enough to own the moment, and beside
+ * it the words and searches that do have answers (stored, so they come back at once), quoted
+ * as the page quotes a reader's concerns. */
 function NoResults({ note, run }: { note?: string | null; run: (query: string) => void }) {
   return (
     <div data-search-empty className="mt-12 md:mt-8">
       {/* Roughly 70 / 20 / 10: the girl carries the block, the words come second, the
           suggestions after. The art is cropped to her (the file's empty top and right are
           cut away, never her) and runs off the page's right edge; it fades in at the top and
-          out at the bottom. The words sit bottom-left, over the art's empty side. Its height
-          leaves a band free at the bottom of the window for the next-section prompt. */}
+          out at the bottom. Everything else is one column on her empty left side, bottom-
+          aligned with her, so the suggestions sit above the fold. Her height leaves a band
+          free at the bottom of the window for the next-section prompt. */}
       <div className="relative md:flex md:min-h-[min(calc(100svh-23rem),46vw)] md:flex-col md:justify-end">
-        <div data-search-empty-art className="pointer-events-none relative -mx-12 aspect-[2788/1444] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_74%,transparent)] md:absolute md:inset-y-0 md:right-[-6vw] md:mx-0">
+        <div data-search-empty-art className="pointer-events-none relative -mx-12 aspect-[2788/1444] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_14%,black_74%,transparent)] md:absolute md:bottom-0 md:right-[-6vw] md:mx-0 md:h-[min(calc(100svh-23rem),46vw)]">
           <Image src={cloudfrontImage(NO_RESULTS_ART)} alt="" width={3168} height={1536} sizes="(min-width:768px) 90vw, 115vw" className="absolute bottom-0 left-0 h-auto w-[113.64%] max-w-none" />
         </div>
-        <div data-search-empty-words className="relative z-10 -mt-[6vw] md:mt-0">
+        <div data-search-empty-words className="relative z-10 -mt-[6vw] md:mt-0 md:w-[min(36vw,34rem)]">
           <p className={cn('m-0', type.heading)}>No results</p>
-          <p className={cn('mb-0 mt-4 max-w-[24ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
+          <p className={cn('mb-0 mt-4 max-w-[30ch]', type.lead)}>{note || 'Nothing we’ve published fits that closely.'}</p>
+          <div className="mt-10 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+            <p data-hand-note className={cn('m-0 text-gray', type.label)}>Try one of these</p>
+            <TextLink href="/work" className={type.label}>Or browse all the work</TextLink>
+          </div>
+          <ul className="m-0 mt-3 list-none p-0">
+            {EMPTY_STATE_QUERIES.map(item => <li key={item.query}>
+              <button type="button" data-rule onClick={() => run(item.query)} className={cn('group flex w-full cursor-pointer items-baseline justify-between gap-6 border-x-0 border-b-0 border-t border-solid border-black/15 bg-transparent px-0 py-3 text-left text-inherit', focusRing)}>
+                <span className={cn('transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.lead)}>“{item.label}”</span>
+                <span className={cn('shrink-0', nudge)}><Arrow /></span>
+              </button>
+            </li>)}
+          </ul>
         </div>
-      </div>
-      <div>
-        <p data-hand-note className={cn('mb-0 mt-14 text-gray', type.label)}>Try one of these</p>
-        <ul className="m-0 mt-4 grid list-none gap-x-16 p-0 md:grid-cols-2">
-          {EMPTY_STATE_QUERIES.map(item => <li key={item.query}>
-            <button type="button" data-rule onClick={() => run(item.query)} className={cn('group flex w-full cursor-pointer items-start justify-between gap-6 border-x-0 border-b-0 border-t border-solid border-black/15 bg-transparent px-0 py-6 text-left text-inherit', focusRing)}>
-              <span className={cn('transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.quote)}>“{item.label}”</span>
-              <span className={cn('mt-2 shrink-0', nudge)}><Arrow /></span>
-            </button>
-          </li>)}
-        </ul>
-        <TextLink href="/work" className="mt-6">Or browse all the work</TextLink>
       </div>
     </div>
   )
