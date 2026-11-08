@@ -186,7 +186,7 @@ try {
     if (width === 1440) {
       await page.evaluate(() => document.querySelector('#ask').scrollIntoView()); await pause(400)
       await page.evaluate(() => [...document.querySelectorAll('#ask form button')].find(button => button.textContent === 'Government').click())
-      await page.waitForFunction(() => document.querySelector('[data-search-results="main"]:not(.opacity-60)') || /snag|Nothing we/.test(document.querySelector('#ask').innerText), { timeout: 60000 })
+      await page.waitForFunction(() => document.querySelector('[data-search-results="main"]:not(.opacity-60)') || /Search failed|Nothing we/.test(document.querySelector('#ask').innerText), { timeout: 60000 })
       const found = await page.evaluate(() => ({ titles: [...document.querySelectorAll('[data-search-results="main"] h3')].length, live: document.querySelector('#ask [aria-live]').textContent, links: [...document.querySelectorAll('[data-search-results="main"] a')].every(a => a.getAttribute('href')?.startsWith('/')) }))
       check(found.titles > 0 && /results? for/.test(found.live) && found.links, `${width}: an example search returns our own work and announces it ${JSON.stringify(found)}`)
       const feature = await page.evaluate(() => { const picture = document.querySelector('[data-search-picture="feature"]').getBoundingClientRect(), title = document.querySelector('[data-search-feature] h3').getBoundingClientRect(), label = document.querySelector('[data-search-results="main"] [data-hand-note]').getBoundingClientRect(); return { left: Math.round(picture.left), width: Math.round(picture.width), titleRight: title.left >= picture.right && label.left >= picture.right && label.top < title.top, firstScreen: title.bottom <= innerHeight } })
@@ -204,7 +204,7 @@ try {
       check(suggestions.length === 4 && Date.now() - askedAt < 5000, `${width}: the four suggestions answer at once from stored results (${Date.now() - askedAt} ms)`)
       check(await page.$eval('#ask-note', note => /\bAI\b/.test(note.textContent)), `${width}: the disclaimer says the search uses AI`)
       // When Claude is down or out of credit the search still answers, and says why the answers are plainer.
-      for (const [state, expect] of [['ai-unavailable', /Keyword matches[\s\S]*AI isn’t answering/], ['rate-limited', /Keyword matches[\s\S]*searched a lot/], ['error', /hit a snag/]]) {
+      for (const [state, expect] of [['ai-unavailable', /Keyword matches[\s\S]*AI isn’t answering/], ['rate-limited', /Keyword matches[\s\S]*searched a lot/], ['error', /Search failed[\s\S]*Something broke/]]) {
         const sim = await context.newPage(); await sim.setViewport({ width, height })
         const simUrl = new URL(route); simUrl.searchParams.set('search-state', state)
         await sim.goto(simUrl.href, { waitUntil: 'load', timeout: 120000 })

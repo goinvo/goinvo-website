@@ -152,7 +152,7 @@ export function HomeSearch() {
           ? <Results label="First matches" note="Narrowing these down and writing why each fits…" items={provisional.slice(0, 6)} faded />
           : <Skeleton />)}
 
-        {!loading && failed && <EmptyState kind="error" title="The search hit a snag." note="Something broke on our side." run={run} retry={() => run(submitted)} />}
+        {!loading && failed && <EmptyState kind="error" title="Search failed" note="Something broke on our side." run={run} retry={() => run(submitted)} />}
 
         {!loading && response && response.results.length === 0 && <EmptyState kind="none" title="No results" note={response.gapNote || 'Nothing we’ve published fits that closely.'} run={run} />}
 
