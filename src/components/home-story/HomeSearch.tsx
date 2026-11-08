@@ -152,7 +152,7 @@ export function HomeSearch() {
           ? <Results label="First matches" note="Narrowing these down and writing why each fits…" items={provisional.slice(0, 6)} faded />
           : <Skeleton />)}
 
-        {!loading && failed && <EmptyState kind="error" title="The search hit a snag." note="Something went wrong on our side. Try again, or start from one of these: they answer even now." run={run} retry={() => run(submitted)} />}
+        {!loading && failed && <EmptyState kind="error" title="The search hit a snag." note="Something broke on our side." run={run} retry={() => run(submitted)} />}
 
         {!loading && response && response.results.length === 0 && <EmptyState kind="none" title="No results" note={response.gapNote || 'Nothing we’ve published fits that closely.'} run={run} />}
 
@@ -181,7 +181,8 @@ function fallbackNote(reason: SearchResponse['reason'], query: string) {
 /** The answer, weighted roughly 70 / 20 / 10: the best match as a feature (its picture
  * runs off the left edge and takes most of the width), the rest as cards with their
  * pictures, then anything "also related" as a quiet list. The label and the AI's one-line
- * read of the question sit together above it, so the answer starts close to the question. */
+ * read of the question sit beside the top of the feature's picture, so the picture starts
+ * right under the question and the whole best match fits the first screen. */
 function Results({ label, statement, note, items, faded = false, quiet = false }: { label: string; statement?: string; note?: string; items: SearchResult[]; faded?: boolean; quiet?: boolean }) {
   if (quiet) return (
     <div data-search-results="also" className="mt-20 md:mt-28">
@@ -189,19 +190,29 @@ function Results({ label, statement, note, items, faded = false, quiet = false }
       <ul className="m-0 mt-4 grid list-none gap-x-16 p-0 md:grid-cols-2">{items.map(item => <li key={item.slug}><RelatedRow item={item} /></li>)}</ul>
     </div>
   )
-  const rest = items.length - 1
+  const [lead, ...rest] = items
   return (
-    <div data-search-results="main" className={cn('mt-12 md:mt-16', faded && 'opacity-60 transition-opacity duration-300 motion-reduce:transition-none')}>
-      <div className="max-w-[60ch]">
+    <div data-search-results="main" className={cn('mt-10 grid gap-y-6 md:mt-12 md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-x-12', faded && 'opacity-60 transition-opacity duration-300 motion-reduce:transition-none')}>
+      <div className="md:col-start-2 md:row-start-1">
         <p data-hand-note className={cn('m-0 text-secondary', type.label)}>{label}</p>
         {statement && <p className={cn('mb-0 mt-3', type.lead)}>{statement}</p>}
         {note && <p className={cn('mb-0 mt-3 text-gray', type.body)}>{note}</p>}
       </div>
-      <ol className={cn('m-0 mt-8 grid list-none gap-x-10 gap-y-14 p-0 md:mt-10 md:grid-cols-2 md:gap-y-16', rest > 2 && 'lg:grid-cols-3')}>
-        {items.map((item, index) => <li key={item.slug} className={cn(index === 0 && 'md:col-span-full md:mb-6')}>
-          {index === 0 ? <FeatureResult item={item} /> : <CardResult item={item} index={index} />}
-        </li>)}
-      </ol>
+      {/* The picture is a second way into the same page, so it stays out of the tab order and the accessibility tree. */}
+      <ResultLink item={lead} hidden className="md:col-start-1 md:row-span-2 md:row-start-1">
+        <ResultPicture item={lead} sizes="(min-width:768px) 62vw, 100vw" className="-mx-12 aspect-[16/10] md:-ml-[6vw] md:mr-0" feature />
+      </ResultLink>
+      <article data-search-feature className="md:col-start-2 md:row-start-2 md:self-end md:pb-2">
+        <ResultLink item={lead} className="block">
+          <p className={cn('m-0 text-gray', type.caption)}>01 · {kindOf(lead)}</p>
+          <h3 className={cn('mb-0 mt-3 transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.title)}><span data-link-label>{lead.title}</span></h3>
+          <p className={cn('mb-0 mt-5', type.body)}>{lead.blurb || lead.caption}</p>
+          <p className={cn('mb-0 mt-6 flex items-center gap-3', type.label)}><span>{opensAt(lead)}</span><span className={nudge}><Arrow /></span></p>
+        </ResultLink>
+      </article>
+      {rest.length > 0 && <ol start={2} className={cn('m-0 mt-10 grid list-none gap-x-10 gap-y-14 p-0 md:col-span-full md:mt-16 md:grid-cols-2', rest.length > 2 && 'lg:grid-cols-3')}>
+        {rest.map((item, index) => <li key={item.slug}><CardResult item={item} index={index + 1} /></li>)}
+      </ol>}
     </div>
   )
 }
@@ -209,11 +220,12 @@ function Results({ label, statement, note, items, faded = false, quiet = false }
 /** Our own page, by the kind of link it needs. A link to a section uses a full
  * navigation: the browser's own scroll to the fragment lands reliably, where a
  * client navigation loses it to the page's reveals. */
-function ResultLink({ item, className, children }: { item: SearchResult; className: string; children: ReactNode }) {
+function ResultLink({ item, className, children, hidden = false }: { item: SearchResult; className: string; children: ReactNode; hidden?: boolean }) {
   const classes = cn('group text-inherit no-underline', focusRing, className)
-  if (item.href.startsWith('http')) return <a href={item.href} target="_blank" rel="noopener noreferrer" className={classes}>{children}</a>
-  if (item.href.includes('#')) return <a href={item.href} className={classes}>{children}</a>
-  return <Link href={item.href} className={classes}>{children}</Link>
+  const extra = hidden ? { tabIndex: -1, 'aria-hidden': true } : {}
+  if (item.href.startsWith('http')) return <a href={item.href} target="_blank" rel="noopener noreferrer" className={classes} {...extra}>{children}</a>
+  if (item.href.includes('#')) return <a href={item.href} className={classes} {...extra}>{children}</a>
+  return <Link href={item.href} className={classes} {...extra}>{children}</Link>
 }
 
 const kindOf = (item: SearchResult) => `${item.kind === 'vision' ? 'Vision' : 'Case study'}${item.fit === 'adjacent' ? ' · Related, not exact' : ''}`
@@ -221,26 +233,11 @@ const nudge = 'transition-transform duration-300 group-hover:translate-x-2 group
 const lift = 'transition-transform duration-700 ease-out-expo group-hover:scale-[1.03] motion-reduce:transition-none'
 const opensAt = (item: SearchResult) => item.anchorTitle ? `Opens at “${item.anchorTitle}”` : item.kind === 'vision' ? 'Read it' : 'Read the case study'
 
-function ResultPicture({ item, sizes, className }: { item: SearchResult; sizes: string; className?: string }) {
+function ResultPicture({ item, sizes, className, feature = false }: { item: SearchResult; sizes: string; className?: string; feature?: boolean }) {
   return (
-    <div className={cn('relative overflow-hidden bg-tertiary-lightest', className)}>
+    <div data-search-picture={feature ? 'feature' : 'card'} className={cn('relative overflow-hidden bg-tertiary-lightest', className)}>
       {item.image && <Image src={item.image} alt="" fill sizes={sizes} className={cn('object-cover', lift)} />}
     </div>
-  )
-}
-
-/** The best match: the picture runs off the page's left edge and carries the row. */
-function FeatureResult({ item }: { item: SearchResult }) {
-  return (
-    <ResultLink item={item} className="grid items-end gap-6 md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-12">
-      <ResultPicture item={item} sizes="(min-width:768px) 62vw, 100vw" className="-mx-12 aspect-[16/10] md:-ml-[6vw] md:mr-0" />
-      <div className="min-w-0 md:pb-2">
-        <p className={cn('m-0 text-gray', type.caption)}>01 · {kindOf(item)}</p>
-        <h3 className={cn('mb-0 mt-3 transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.title)}><span data-link-label>{item.title}</span></h3>
-        <p className={cn('mb-0 mt-5', type.body)}>{item.blurb || item.caption}</p>
-        <p className={cn('mb-0 mt-6 flex items-center gap-3', type.label)}><span>{opensAt(item)}</span><span className={nudge}><Arrow /></span></p>
-      </div>
-    </ResultLink>
   )
 }
 
@@ -273,13 +270,13 @@ function RelatedRow({ item }: { item: SearchResult }) {
 /** The answer's shape while it is being found: a feature and two cards. */
 function Skeleton() {
   return (
-    <div aria-hidden="true" className="mt-12 md:mt-16">
-      <p className={cn('m-0 text-secondary', type.label)}>Searching our work…</p>
-      <div className="mt-8 grid animate-pulse gap-x-10 gap-y-14 motion-reduce:animate-none md:mt-10 md:grid-cols-2">
-        <div className="grid items-end gap-6 md:col-span-full md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-12">
-          <div className="-mx-12 aspect-[16/10] bg-tertiary-lightest md:-ml-[6vw] md:mr-0" />
-          <div className="space-y-4"><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-10 w-5/6 bg-tertiary-lightest" /><div className="h-4 w-full bg-tertiary-lightest" /><div className="h-4 w-2/3 bg-tertiary-lightest" /></div>
-        </div>
+    <div aria-hidden="true" className="mt-10 md:mt-12">
+      <div className="grid animate-pulse gap-y-6 motion-reduce:animate-none md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-x-12">
+        <p className={cn('m-0 text-secondary md:col-start-2 md:row-start-1', type.label)}>Searching our work…</p>
+        <div className="-mx-12 aspect-[16/10] bg-tertiary-lightest md:col-start-1 md:row-span-2 md:row-start-1 md:-ml-[6vw] md:mr-0" />
+        <div className="space-y-4 md:col-start-2 md:row-start-2 md:self-end"><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-10 w-5/6 bg-tertiary-lightest" /><div className="h-4 w-full bg-tertiary-lightest" /><div className="h-4 w-2/3 bg-tertiary-lightest" /></div>
+      </div>
+      <div className="mt-10 grid animate-pulse gap-x-10 gap-y-14 motion-reduce:animate-none md:mt-16 md:grid-cols-2">
         {[0, 1].map(index => <div key={index} className="space-y-4"><div className="aspect-[16/10] bg-tertiary-lightest" /><div className="h-4 w-24 bg-tertiary-lightest" /><div className="h-7 w-3/4 bg-tertiary-lightest" /></div>)}
       </div>
     </div>
@@ -309,8 +306,10 @@ function EmptyState({ kind, title, note, run, retry }: { kind: 'none' | 'error';
         </div>
         <div data-search-empty-words className="relative z-10 -mt-[6vw] lg:mt-0 lg:w-[min(94vw_-_1.536_*_var(--art-h)_-_2.5rem,_40rem)]">
           <p className={cn('m-0', type.heading)}>{title}</p>
-          <p className={cn('mb-0 mt-4 max-w-[34ch]', type.lead)}>{note}</p>
-          {retry && <button type="button" onClick={retry} className={cn(textLinkClass, 'mt-6 cursor-pointer border-0 bg-transparent p-0', type.lead)}><span data-link-label className="group-hover:underline group-focus-visible:underline">Try again</span><Arrow /></button>}
+          <p className={cn('mb-0 mt-4 max-w-[34ch]', type.lead)}>
+            {note}
+            {retry && <> <button type="button" onClick={retry} className={cn(textLinkClass, 'cursor-pointer border-0 bg-transparent p-0 align-baseline text-secondary', type.lead)}><span data-link-label className="underline underline-offset-4">Try again</span><Arrow /></button></>}
+          </p>
           <div className="mt-10 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
             <p data-hand-note className={cn('m-0 text-gray', type.label)}>Try one of these</p>
             <TextLink href="/work" className={type.label}>Or browse all the work</TextLink>
