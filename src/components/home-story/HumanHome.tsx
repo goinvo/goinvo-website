@@ -422,7 +422,7 @@ function NextPrompt({ low }: { low: boolean }) {
   }, [low])
   const next = step >= 0 ? nextSteps[step] : null
   const shown = opening || near || focused
-  return <nav aria-label="Next section" data-prompt-shown={shown} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} className={cn('fixed inset-x-0 bottom-5 z-40 flex justify-center transition-[opacity,translate] duration-300 ease-standard motion-reduce:transition-none', shown ? 'opacity-100' : 'pointer-events-none translate-y-3 opacity-0')}>
+  return <nav aria-label="Next section" data-prompt-shown={shown} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} className={cn('pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-center transition-[opacity,translate] duration-300 ease-standard motion-reduce:transition-none', shown ? 'opacity-100' : 'translate-y-3 opacity-0')}>
     <AnimatePresence mode="popLayout" initial={false}>
       {next && <motion.a key={next.target} href={`#${next.target}`} data-explore-link initial={{ y: 28, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -28, opacity: 0 }} transition={{ duration: 0.45, ease: easing }} onClick={event => { event.preventDefault(); jumpTo(next.target, low) }} className={cn(link, type.lead, 'whitespace-nowrap bg-white px-4 text-inherit hover:underline', shown && 'pointer-events-auto')}>{next.text} <Arrow direction="down" /></motion.a>}
     </AnimatePresence>

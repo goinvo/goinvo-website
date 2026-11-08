@@ -209,6 +209,7 @@ try {
       const hiddenMidPage = !(await shown())
       let revealed = true
       if (width >= 768) { await page.mouse.move(width / 2, height - 40); await pause(450); revealed = await shown(); await page.mouse.move(width / 2, height / 2); await pause(450) }
+      check(await page.$eval('nav[aria-label="Next section"]', nav => getComputedStyle(nav).pointerEvents === 'none'), `${width}: the prompt's full-width bar never takes a click meant for the page under it`)
       check(hiddenMidPage && revealed && !(await shown()), `${width}: past the opening the prompt stays out of the way until the pointer nears the bottom (hidden ${hiddenMidPage}, revealed ${revealed})`)
     }
     check(await page.$$eval('#services h3', els => els.length === 3), `${width}: three service-and-concern pairings`)
