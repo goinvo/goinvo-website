@@ -238,7 +238,10 @@ try {
       const crops = await pictureCrops(page)
       check(crops.length >= 2 && (crops.some(row => row.fit === 'whole') ? crops.some(row => row.block) : true) && crops.every(row => !row.unloaded && (row.loss < 0.24 ? row.shown === 'cover' : row.loss > 0.26 ? row.fit === 'whole' && row.shown === 'contain' : true)), `${width}: no result picture loses more than a quarter of itself to the crop; the rest show whole on their own edge colours ${JSON.stringify(crops)}`)
       // The search hands the visitor's words to the contact form: read the filled field back
-      // out of the live JotForm form.
+      // out of the live JotForm form. The detour to the form puts the scroll back exactly
+      // where it was: returning by scrollIntoView left the next search's own scroll
+      // mid-flight when the no-results layout was measured.
+      const scrolledTo = await page.evaluate(() => scrollY)
       await page.evaluate(() => document.querySelector('#contact').scrollIntoView())
       await page.waitForFunction(() => /[?&]howCan=/.test(document.querySelector('iframe[data-contact-form]')?.src || ''), { timeout: 15000 }).catch(() => {})
       const handOff = await (async () => {
@@ -248,9 +251,12 @@ try {
         return { field: await frame.$eval('#input_5', el => el.value).catch(() => null), offer: await page.evaluate(() => !!document.querySelector('[data-search-to-contact]')) }
       })()
       check(handOff.field === example && handOff.offer, `${width}: the search's words arrive in the contact form, and the answer offers it ${JSON.stringify({ ...handOff, example })}`)
-      await page.evaluate(() => document.querySelector('#ask').scrollIntoView()); await pause(300)
+      await page.evaluate(top => window.scrollTo({ top, behavior: 'instant' }), scrolledTo); await pause(300)
       await page.$eval('#ask-input', input => { input.value = '' }); await page.click('#ask-input', { clickCount: 3 }); await page.type('#ask-input', 'knitting patterns for zebras'); await page.keyboard.press('Enter')
       await page.waitForSelector('[data-search-empty] img', { timeout: 60000 })
+      // A cached answer can land while the search's own smooth scroll is still running;
+      // measure the layout once the page has stopped moving.
+      await page.waitForFunction(() => new Promise(resolve => { const y = scrollY; setTimeout(() => resolve(scrollY === y), 250) }), { timeout: 10000, polling: 300 })
       check(await page.evaluate(() => !document.querySelector('[data-search-results]') && /No strong matches/.test(document.querySelector('#ask [aria-live]').textContent) && decodeURIComponent(document.querySelector('[data-search-empty] img').getAttribute('src')).includes('404-ai') && document.querySelector('[data-search-empty]').innerText.includes('No results')), `${width}: a search nothing fits says so honestly, with the no-results illustration`)
       const art = await page.$eval('[data-search-empty-art]', box => { const r = box.getBoundingClientRect(); return { top: Math.round(r.top), right: Math.round(innerWidth - r.right), width: Math.round(r.width), mask: getComputedStyle(box).maskImage } })
       check((art.mask.match(/transparent|rgba\(0, 0, 0, 0\)/g) || []).length >= 2 && art.right <= 1 && art.width >= width * 0.7 && await page.evaluate(() => { const box = document.querySelector('[data-search-empty-art]'), art = box.getBoundingClientRect(), img = box.querySelector('img').getBoundingClientRect(), words = document.querySelector('[data-search-empty-words]'), title = words.querySelector('p').getBoundingClientRect(), form = document.querySelector('#ask form').getBoundingClientRect(); return img.right > art.right && art.top >= form.bottom && Math.abs(words.getBoundingClientRect().bottom - art.bottom) < 2 && words.querySelectorAll('li button').length === 4 && [...words.querySelectorAll('li button')].every(button => button.getBoundingClientRect().bottom <= innerHeight) && words.getBoundingClientRect().right <= img.left + img.width * 0.17 && Number(getComputedStyle(words).zIndex) > 0 }), `${width}: the girl takes 70% of the width (cropped to her, off the right edge, fading at both ends) with the words and suggestions on her empty side, above the fold ${JSON.stringify(art)}`)
