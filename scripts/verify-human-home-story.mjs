@@ -205,15 +205,20 @@ try {
     // work; a query nothing fits says so, with the 404 illustration, and lists nothing.
     if (width === 1440) {
       await page.evaluate(() => document.querySelector('#ask').scrollIntoView()); await pause(400)
-      const line = await page.evaluate(async () => {
+      // A real press, not element.click(): a scripted click let a submit button swapped in
+      // mid-press go unnoticed, while a mouse submitted the form.
+      const lineBefore = await page.evaluate(() => {
         const input = document.querySelector('#ask-input'), use = document.querySelector('[data-use-suggestion]')
         const shown = document.querySelector('[data-line-suggestion]'), shownBox = shown?.getBoundingClientRect(), lineBox = input.parentElement.getBoundingClientRect()
-        const before = { empty: input.value === '', shown: !!use && use.getBoundingClientRect().width > 0, whole: !!shown && shown.textContent === input.placeholder && shown.scrollWidth <= shownBox.width + 1 && shownBox.right <= lineBox.right + 1 }
-        use?.click(); await new Promise(resolve => setTimeout(resolve, 300))
-        const after = { filled: input.value === input.placeholder, focused: document.activeElement === input, searchShown: [...document.querySelectorAll('#ask form button[type="submit"]')].some(button => /Search/.test(button.textContent)), useGone: !document.querySelector('[data-use-suggestion]'), didNotSearch: !document.querySelector('[data-search-results]') && !/Searching/.test(document.querySelector('#ask [aria-live]').textContent) }
-        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ''); input.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(resolve => setTimeout(resolve, 100))
-        return { ...before, ...after }
+        return { empty: input.value === '', shown: !!use && use.getBoundingClientRect().width > 0, whole: !!shown && shown.textContent === input.placeholder && shown.scrollWidth <= shownBox.width + 1 && shownBox.right <= lineBox.right + 1 }
       })
+      if (lineBefore.shown) { await page.click('[data-use-suggestion]'); await pause(800) }
+      const lineAfter = await page.evaluate(() => {
+        const input = document.querySelector('#ask-input')
+        return { filled: input.value === input.placeholder, focused: document.activeElement === input, searchShown: [...document.querySelectorAll('#ask form button[type="submit"]')].some(button => /Search/.test(button.textContent)), useGone: !document.querySelector('[data-use-suggestion]'), didNotSearch: !document.querySelector('[data-search-results]') && !/Searching|result/.test(document.querySelector('#ask [aria-live]').textContent) }
+      })
+      await page.evaluate(() => { const input = document.querySelector('#ask-input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ''); input.dispatchEvent(new Event('input', { bubbles: true })) }); await pause(150)
+      const line = { ...lineBefore, ...lineAfter }
       check(line.empty && line.shown && line.whole && line.didNotSearch && line.filled && line.focused && line.searchShown && line.useGone, `${width}: the empty line shows its whole suggestion, and a button puts it in the box, ready to edit or send, without searching ${JSON.stringify(line)}`)
       const example = await page.evaluate(() => { const button = document.querySelector('[data-search-examples] button'); const text = button.textContent; button.click(); return text })
       check(example.split(/\s+/).length >= 4, `${width}: the examples beside the box are problems in a reader's words, not categories ("${example}")`)
