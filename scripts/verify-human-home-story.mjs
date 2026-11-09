@@ -237,6 +237,17 @@ try {
       check(rail.railBottom <= rail.footerTop - 16 && rail.lowestDot <= rail.footerTop - 16 && rail.height >= 150, `${width}: at the bottom of the page the side rail ends above the footer ${JSON.stringify(rail)}`)
       const accessOnTop = await page.evaluate(() => { const button = document.querySelector('[aria-label="Accessibility settings"]'), r = button.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return button === hit || button.contains(hit) })
       check(accessOnTop, `${width}: at the bottom of the page the accessibility button stays above the footer`)
+      // Aiming at a rail item says so: its dot grows teal and its label comes forward with an
+      // arrow, distinct from the section you are in and from the rest.
+      const aim = await page.$$eval('[data-page-rail] button', buttons => buttons.findIndex(button => !button.hasAttribute('aria-current')))
+      const aimBox = await page.evaluate(index => { const r = document.querySelectorAll('[data-page-rail] button')[index].getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } }, aim)
+      await page.mouse.move(aimBox.x, aimBox.y); await pause(400)
+      const aimed = await page.evaluate(index => {
+        const items = [...document.querySelectorAll('[data-page-rail] button')], look = item => { const dot = item.querySelector('[data-rail-dot]'), label = item.querySelector('[data-rail-label]'); return { state: item.dataset.railItem, dot: Math.round(dot.getBoundingClientRect().width), label: getComputedStyle(label).opacity, arrow: label.textContent.includes('→'), weight: getComputedStyle(label).fontWeight } }
+        return { aimed: look(items[index]), current: look(items.find(item => item.hasAttribute('aria-current'))), rest: look(items.find((item, i) => i !== index && !item.hasAttribute('aria-current'))) }
+      }, aim)
+      check(aimed.aimed.state === 'aimed' && aimed.aimed.arrow && aimed.aimed.label === '1' && aimed.aimed.dot > aimed.rest.dot && aimed.current.state === 'current' && !aimed.current.arrow && Number(aimed.current.weight) >= 600 && aimed.current.dot > aimed.rest.dot && !aimed.rest.arrow, `${width}: the rail item under the pointer comes forward (bigger teal dot, label with an arrow), apart from the current section and the rest ${JSON.stringify(aimed)}`)
+      await page.mouse.move(5, 5); await pause(200)
       await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), railFrom); await pause(300)
     }
     if (width === 1440) {

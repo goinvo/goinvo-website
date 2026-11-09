@@ -30,6 +30,8 @@ export function HumanPageControls({ low, ready, toggleMotion, largerText, setLar
   low: boolean; ready: boolean; toggleMotion: () => void; largerText: boolean; setLargerText: (value: boolean) => void
 }) {
   const [reading, setReading] = useState({ percent: 0, chapter: 0, dark: false, positions: chapters.map((_, index) => index / (chapters.length - 1) * 100), rail: null as { top: number; height: number } | null })
+  // The rail item under the pointer or keyboard focus: its dot and label come forward.
+  const [target, setTarget] = useState<number | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const menu = useRef<HTMLDetailsElement>(null)
 
@@ -86,7 +88,17 @@ export function HumanPageControls({ low, ready, toggleMotion, largerText, setLar
       <nav aria-label="Page timeline" data-page-rail style={{ color: reading.dark ? 'var(--color-white)' : 'var(--color-black)', ...(reading.rail ? { top: reading.rail.top, height: reading.rail.height } : {}) }} className="group/rail pointer-events-auto absolute right-3 top-[26vh] hidden h-[48vh] w-12 md:block">
         <div aria-hidden="true" className="absolute bottom-0 left-1/2 top-0 w-[2px] -translate-x-1/2 bg-current opacity-20" />
         <div aria-hidden="true" style={{ transform: `scaleY(${reading.percent / 100})` }} className="absolute bottom-0 left-1/2 top-0 w-[2px] origin-top -translate-x-1/2 bg-current" />
-        {chapters.map((chapter, index) => <button key={chapter.id} aria-label={`Go to ${chapter.label}`} aria-current={reading.chapter === index ? 'location' : undefined} onClick={() => go(index)} style={{ top: `${reading.positions[index]}%` }} className={cn('absolute left-0 flex h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center bg-transparent text-inherit focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-current')}><span aria-hidden="true" className={cn('rounded-full bg-current transition-transform duration-200 motion-reduce:transition-none', reading.chapter === index ? 'h-2 w-2 scale-125' : 'h-1 w-1')} /><span aria-hidden="true" className={cn('pointer-events-none absolute right-11 whitespace-nowrap border-l-4 border-secondary bg-white px-4 py-2 text-[18px] leading-snug text-black opacity-0 transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none', reading.chapter === index && 'font-semibold')}>{chapter.label}</span></button>)}
+        {/* Three states, each its own look: the item you are aiming at (dot grows teal, label
+            comes forward underlined with an arrow: this navigates), the section you are in
+            (ringed teal dot, bold label on a teal edge), and the rest, quieter. */}
+        {chapters.map((chapter, index) => {
+          const current = reading.chapter === index
+          const aimed = target === index
+          return <button key={chapter.id} data-rail-item={aimed ? 'aimed' : current ? 'current' : 'rest'} aria-label={`Go to ${chapter.label}`} aria-current={current ? 'location' : undefined} onClick={() => go(index)} onPointerEnter={() => setTarget(index)} onPointerLeave={() => setTarget(value => value === index ? null : value)} onFocus={() => setTarget(index)} onBlur={() => setTarget(value => value === index ? null : value)} style={{ top: `${reading.positions[index]}%` }} className={cn('absolute left-0 flex h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center bg-transparent text-inherit focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-current')}>
+            <span aria-hidden="true" data-rail-dot className={cn('rounded-full transition-[width,height,background-color,box-shadow] duration-200 motion-reduce:transition-none', aimed ? 'h-3 w-3 bg-secondary' : current ? 'h-2.5 w-2.5 bg-secondary shadow-[0_0_0_3px_white,0_0_0_4px_var(--color-secondary)]' : 'h-1 w-1 bg-current')} />
+            <span aria-hidden="true" data-rail-label className={cn('pointer-events-none absolute right-11 flex items-center gap-2 whitespace-nowrap border-l-4 px-4 py-2 text-[18px] leading-snug opacity-0 transition-[opacity,transform,background-color] duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none', aimed ? '-translate-x-1 border-secondary bg-tertiary-lightest text-black underline decoration-1 underline-offset-4' : current ? 'border-secondary bg-white font-semibold text-black' : 'border-gray-medium bg-white text-gray')}>{chapter.label}{aimed && <span className="no-underline">→</span>}</span>
+          </button>
+        })}
         <span aria-hidden="true" className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs tabular-nums opacity-0 transition-opacity group-hover/rail:opacity-100 group-focus-within/rail:opacity-100">{reading.percent}%</span>
       </nav>
       {/* Sits above the site's chat widget, which owns the bottom-right corner. */}
