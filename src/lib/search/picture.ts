@@ -120,3 +120,37 @@ export function edgeBlock(edges?: PictureEdges): string | undefined {
   const [a, b] = edges.colors
   return a === b ? a : `linear-gradient(${edges.side === 'tb' ? 'to bottom' : 'to right'}, ${a} 50%, ${b} 50%)`
 }
+
+/** The words beside the lead: body text, and the title's hover colour (globals.css
+ * --color-black and --color-secondary; a test pins them to the stylesheet). */
+export const LEAD_TEXT = '#1d1b1a'
+export const LEAD_HOVER = '#007385'
+
+/** WCAG relative luminance of #rrggbb. */
+export function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map(at => {
+    const value = parseInt(hex.slice(at, at + 2), 16) / 255
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+/** WCAG contrast ratio of two #rrggbb colours. */
+export function contrast(a: string, b: string): number {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (light + 0.05) / (dark + 0.05)
+}
+
+/** The block behind the lead's words: the picture's own tone (its light muted swatch),
+ * lightened only as far as the words need: body text at 7:1 or better, the hover colour
+ * on the large title at 3:1 or better. Nothing when there is no usable colour. */
+export function leadBlockColor(tint?: string): string | undefined {
+  if (!tint || !/^#[0-9a-f]{6}$/i.test(tint)) return undefined
+  const channels = [1, 3, 5].map(at => parseInt(tint.slice(at, at + 2), 16))
+  for (let step = 0; step <= 20; step++) {
+    const mix = step / 20
+    const color = '#' + channels.map(value => Math.round(value + (255 - value) * mix).toString(16).padStart(2, '0')).join('')
+    if (contrast(color, LEAD_TEXT) >= 7 && contrast(color, LEAD_HOVER) >= 3) return color
+  }
+  return undefined
+}

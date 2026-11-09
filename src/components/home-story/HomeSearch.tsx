@@ -11,7 +11,7 @@ import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { TextLink, focusRing, textLinkClass } from '@/components/ui/TextLink'
 import { EMPTY_STATE_QUERIES, EXAMPLE_QUERIES } from '@/lib/search/suggested'
-import { edgeBlock, focusPosition, pictureFit, SEARCH_PICTURE_FRAME, type PictureEdges, type PictureFocus } from '@/lib/search/picture'
+import { edgeBlock, focusPosition, leadBlockColor, pictureFit, SEARCH_PICTURE_FRAME, type PictureEdges, type PictureFocus } from '@/lib/search/picture'
 
 /**
  * "Not on the list? Describe yours." The opening offers three situations; this lets
@@ -37,6 +37,7 @@ interface SearchResult {
   image?: string
   imageAspect?: number
   imageEdges?: PictureEdges
+  imageTint?: string
   imageFocus?: PictureFocus
   imagePosition?: string
   kind?: 'work' | 'vision'
@@ -196,6 +197,7 @@ function Results({ label, statement, note, items, faded = false, quiet = false }
     </div>
   )
   const [lead, ...rest] = items
+  const block = leadBlockColor(lead.imageTint)
   return (
     <div data-search-results="main" className={cn('mt-10 grid gap-y-6 md:mt-12 md:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] md:gap-x-12', faded && 'opacity-60 transition-opacity duration-300 motion-reduce:transition-none')}>
       <div className="md:col-start-2 md:row-start-1">
@@ -207,9 +209,13 @@ function Results({ label, statement, note, items, faded = false, quiet = false }
       <ResultLink item={lead} hidden className="md:col-start-1 md:row-span-2 md:row-start-1">
         <ResultPicture item={lead} frame={FEATURE_FRAME} sizes="(min-width:768px) 62vw, 100vw" className="-mx-12 md:-ml-[6vw] md:mr-0" feature />
       </ResultLink>
-      <article data-search-feature className="md:col-start-2 md:row-start-2 md:self-end md:pb-2">
+      {/* The lead's words sit on a block of its picture's own colour, butted against the
+          picture and running off the right edge as the picture runs off the left: one band,
+          so the eye lands there first. The padding keeps the words where they were. Grey
+          text cannot hold its contrast on a colour, so the caption is ink here. */}
+      <article data-search-feature data-lead-block={block ?? 'plain'} style={{ backgroundColor: block }} className="-mx-12 -mt-6 bg-tertiary-lightest px-12 py-10 md:col-start-2 md:row-start-2 md:-ml-12 md:-mr-[6vw] md:mt-0 md:self-end md:py-12 md:pl-12 md:pr-[6vw]">
         <ResultLink item={lead} className="block">
-          <p className={cn('m-0 text-gray', type.caption)}>01 · {kindOf(lead)}</p>
+          <p className={cn('m-0', type.caption)}>01 · {kindOf(lead)}</p>
           <h3 className={cn('mb-0 mt-3 transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.title)}><span data-link-label>{lead.title}</span></h3>
           <p className={cn('mb-0 mt-5', type.body)}>{lead.blurb || lead.caption}</p>
           <p className={cn('mb-0 mt-6 flex items-center gap-3', type.label)}><span>{opensAt(lead)}</span><span className={nudge}><Arrow /></span></p>

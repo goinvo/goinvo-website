@@ -1,6 +1,7 @@
+import { readFileSync } from 'node:fs'
 import { inflateSync, deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
-import { cropLoss, edgeBlock, edgeSampleQuery, focusPosition, imageShape, pictureFit, pngEndColors, MAX_PICTURE_CROP, SEARCH_PICTURE_FRAME } from '@/lib/search/picture'
+import { contrast, cropLoss, edgeBlock, LEAD_HOVER, LEAD_TEXT, leadBlockColor, edgeSampleQuery, focusPosition, imageShape, pictureFit, pngEndColors, MAX_PICTURE_CROP, SEARCH_PICTURE_FRAME } from '@/lib/search/picture'
 
 const FRAME = SEARCH_PICTURE_FRAME
 
@@ -84,5 +85,25 @@ describe('search result pictures', () => {
     expect(edgeBlock({ side: 'tb', colors: ['#d6dfef', '#ececec'] })).toBe('linear-gradient(to bottom, #d6dfef 50%, #ececec 50%)')
     expect(edgeBlock({ side: 'lr', colors: ['#000000', '#111111'] })).toBe('linear-gradient(to right, #000000 50%, #111111 50%)')
     expect(edgeBlock(undefined)).toBeUndefined()
+  })
+
+  it('keeps the words on the lead block readable: body text 7:1, the hover teal on the title 3:1', () => {
+    // Swatches from real pictures: dark ink, slate, near-white, the usual light muted tones.
+    for (const tint of ['#071421', '#38393f', '#2d384f', '#fcf6f4', '#a6d3d8', '#b7c1ca', '#d9d2b4', '#9880c4', '#3da4af', '#ff0000']) {
+      const block = leadBlockColor(tint)
+      expect(block, tint).toBeDefined()
+      expect(contrast(block!, LEAD_TEXT), tint).toBeGreaterThanOrEqual(7)
+      expect(contrast(block!, LEAD_HOVER), tint).toBeGreaterThanOrEqual(3)
+    }
+    // A tone that already reads stays itself: the block is the picture's colour, not a wash.
+    expect(leadBlockColor('#b7c1ca')).toBe('#b7c1ca')
+    expect(leadBlockColor(undefined)).toBeUndefined()
+    expect(leadBlockColor('teal')).toBeUndefined()
+  })
+
+  it('checks contrast against the colours the page actually uses', () => {
+    const css = readFileSync('src/app/globals.css', 'utf8')
+    expect(css).toMatch(new RegExp(`--color-black:\\s*${LEAD_TEXT};`))
+    expect(css).toMatch(new RegExp(`--color-secondary:\\s*${LEAD_HOVER};`))
   })
 })

@@ -26,6 +26,8 @@ export interface SearchIndexItem {
   imagePosition?: string
   /** For a picture shown whole: the colours of its edges, which fill the rest of the frame. */
   imageEdges?: PictureEdges
+  /** The picture's own tone (Sanity's light muted swatch), for the lead's colour block. */
+  imageTint?: string
   kind: 'work' | 'vision'
   /** Curated retrieval vocabulary (see PROJECT_KEYWORDS) — searched, never displayed. */
   keywords?: string[]
@@ -120,6 +122,7 @@ interface RawCaseStudy {
   caption?: string
   image?: SanityImage
   heroPosition?: string
+  tint?: string
   categories?: (string | null)[]
   sectionBlocks?: { text?: string | null }[]
 }
@@ -131,6 +134,7 @@ interface RawFeature {
   image?: SanityImage
   externalLink?: string
   heroPosition?: string
+  tint?: string
   categories?: (string | null)[]
   sectionBlocks?: { text?: string | null }[]
 }
@@ -148,6 +152,7 @@ const searchIndexQuery = groq`{
     caption,
     image,
     heroPosition,
+    "tint": coalesce(image.asset->metadata.palette.lightMuted.background, image.asset->metadata.palette.lightVibrant.background, image.asset->metadata.palette.dominant.background),
     "categories": categories[]->title,
     "sectionBlocks": content[_type == "block" && style in ${JSON.stringify(ANCHORED_STYLES)}]{ "text": pt::text(@) }
   },
@@ -160,6 +165,7 @@ const searchIndexQuery = groq`{
     description,
     image,
     heroPosition,
+    "tint": coalesce(image.asset->metadata.palette.lightMuted.background, image.asset->metadata.palette.lightVibrant.background, image.asset->metadata.palette.dominant.background),
     externalLink,
     categories,
     "sectionBlocks": content[_type == "block" && style in ${JSON.stringify(ANCHORED_STYLES)}]{ "text": pt::text(@) }
@@ -233,6 +239,7 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       client: cs.client,
       categories: cleanCategories(cs.categories),
       ...picture(cs.image, cs.heroPosition),
+      imageTint: cs.tint || undefined,
       kind: 'work' as const,
       keywords: PROJECT_KEYWORDS[cs.slug],
       sections: normalizeSections(cs.sectionBlocks),
@@ -248,6 +255,7 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       caption: f.description ?? '',
       categories: cleanCategories(f.categories),
       ...picture(f.image, f.heroPosition),
+      imageTint: f.tint || undefined,
       kind: 'vision' as const,
       keywords: PROJECT_KEYWORDS[f.slug],
       // External features scroll nowhere we control — no anchors for those.
