@@ -24,6 +24,18 @@ export function railBox(viewportHeight: number, footerTop: number) {
   const height = Math.max(RAIL_MIN, floor - top)
   return { top: Math.min(top, floor - height), height }
 }
+/** Each item's stretch of the rail, in percent: from the midpoint with the dot above to the
+ * midpoint with the dot below, at most `reach` either side. Sections that sit close together
+ * (and a rail shortened above the footer) put dots under 48px apart; equal fixed targets then
+ * overlapped, and pointing at a dot picked its neighbour. */
+export function railTargets(positions: number[], reach: number) {
+  return positions.map((at, index) => {
+    const start = index === 0 ? at - reach : Math.max(at - reach, (at + positions[index - 1]) / 2)
+    const end = index === positions.length - 1 ? at + reach : Math.min(at + reach, (at + positions[index + 1]) / 2)
+    return { start, end }
+  })
+}
+
 /** Where each dark band crosses the rail, as [start, end] percent of the rail's height. */
 export function railBands(rail: { top: number; height: number }, bands: { top: number; bottom: number }[]) {
   const pct = (y: number) => Math.max(0, Math.min(100, (y - rail.top) / rail.height * 100))
@@ -102,6 +114,8 @@ export function HumanPageControls({ low, ready, toggleMotion, largerText, setLar
   }
 
   if (!ready) return null
+  const railHeight = reading.rail?.height ?? innerHeight * 0.48
+  const targets = railTargets(reading.positions, 24 / railHeight * 100)
 
   // Rendered straight into <body>: inside the page's wrapper, which is its own stacking
   // layer, z-index 70 only ranked within that layer and the footer painted over the
@@ -119,8 +133,9 @@ export function HumanPageControls({ low, ready, toggleMotion, largerText, setLar
         {chapters.map((chapter, index) => {
           const current = reading.chapter === index
           const aimed = target === index
-          return <button key={chapter.id} data-rail-item={aimed ? 'aimed' : current ? 'current' : 'rest'} aria-label={`Go to ${chapter.label}`} aria-current={current ? 'location' : undefined} onClick={() => go(index)} onPointerEnter={() => setTarget(index)} onPointerLeave={() => setTarget(value => value === index ? null : value)} onFocus={() => setTarget(index)} onBlur={() => setTarget(value => value === index ? null : value)} style={{ top: `${reading.positions[index]}%` }} className={cn('absolute left-0 flex h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center bg-transparent text-inherit focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-current')}>
-            <span aria-hidden="true" data-rail-label className={cn('pointer-events-none absolute right-11 flex items-center gap-2 whitespace-nowrap border-l-4 px-4 py-2 text-[18px] leading-snug opacity-0 transition-[opacity,transform,background-color] duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none', aimed ? '-translate-x-1 border-secondary bg-tertiary-lightest text-black underline decoration-1 underline-offset-4' : current ? 'border-secondary bg-white font-semibold text-black' : 'border-gray-medium bg-white text-gray')}>{chapter.label}{aimed && <span className="no-underline">→</span>}</span>
+          const hit = targets[index]
+          return <button key={chapter.id} data-rail-item={aimed ? 'aimed' : current ? 'current' : 'rest'} aria-label={`Go to ${chapter.label}`} aria-current={current ? 'location' : undefined} onClick={() => go(index)} onPointerEnter={() => setTarget(index)} onPointerLeave={() => setTarget(value => value === index ? null : value)} onFocus={() => setTarget(index)} onBlur={() => setTarget(value => value === index ? null : value)} style={{ top: `${hit.start}%`, height: `${hit.end - hit.start}%` }} className={cn('absolute left-0 w-12 cursor-pointer bg-transparent text-inherit focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-current')}>
+            <span aria-hidden="true" data-rail-label style={{ top: `${(reading.positions[index] - hit.start) / (hit.end - hit.start) * 100}%` }} className={cn('pointer-events-none absolute right-11 flex -translate-y-1/2 items-center gap-2 whitespace-nowrap border-l-4 px-4 py-2 text-[18px] leading-snug opacity-0 transition-[opacity,transform,background-color] duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none', aimed ? '-translate-x-1 border-secondary bg-tertiary-lightest text-black underline decoration-1 underline-offset-4' : current ? 'border-secondary bg-white font-semibold text-black' : 'border-gray-medium bg-white text-gray')}>{chapter.label}{aimed && <span className="no-underline">→</span>}</span>
           </button>
         })}
         <span aria-hidden="true" className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs tabular-nums text-black opacity-0 transition-opacity group-hover/rail:opacity-100 group-focus-within/rail:opacity-100">{reading.percent}%</span>

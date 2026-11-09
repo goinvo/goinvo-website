@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { railBands, railBox } from '@/components/home-story/HumanPageControls'
+import { railBands, railBox, railTargets } from '@/components/home-story/HumanPageControls'
 
 /** Rule: the homepage's side rail never runs into the footer. */
 describe('page rail', () => {
@@ -28,5 +28,18 @@ describe('page rail', () => {
     expect(railBands(rail, [{ top: 0, bottom: 260 }])).toEqual([{ start: 0, end: 15 }])
     // A band off screen does not draw.
     expect(railBands(rail, [{ top: 900, bottom: 1400 }])).toEqual([])
+  })
+
+  it('gives each dot its own stretch of the rail, so pointing at a dot picks that dot', () => {
+    const positions = [10, 14, 20, 60, 90]
+    const targets = railTargets(positions, 6)
+    positions.forEach((at, index) => {
+      // The dot is inside its own target and no other.
+      const owners = targets.filter(target => target.start <= at && at < target.end)
+      expect(owners).toEqual([targets[index]])
+    })
+    // Neighbours meet at the midpoint; lone dots keep the full reach.
+    expect(targets[0]).toEqual({ start: 4, end: 12 })
+    expect(targets[3]).toEqual({ start: 54, end: 66 })
   })
 })
