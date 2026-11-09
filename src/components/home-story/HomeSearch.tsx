@@ -206,7 +206,7 @@ function Results({ label, statement, note, items, faded = false, quiet = false }
         {note && <p className={cn('mb-0 mt-3 text-gray', type.body)}>{note}</p>}
       </div>
       {/* The picture is a second way into the same page, so it stays out of the tab order and the accessibility tree. */}
-      <ResultLink item={lead} hidden className="md:col-start-1 md:row-span-2 md:row-start-1">
+      <ResultLink item={lead} hidden className="md:col-start-1 md:row-span-2 md:row-start-1 md:self-end">
         <ResultPicture item={lead} frame={FEATURE_FRAME} sizes="(min-width:768px) 62vw, 100vw" className="-mx-12 md:-ml-[6vw] md:mr-0" feature />
       </ResultLink>
       {/* The lead's words sit on a block of its picture's own colour, butted against the
