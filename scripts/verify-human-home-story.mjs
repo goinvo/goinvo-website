@@ -215,11 +215,11 @@ try {
       if (lineBefore.shown) { await page.click('[data-use-suggestion]'); await pause(800) }
       const lineAfter = await page.evaluate(() => {
         const input = document.querySelector('#ask-input')
-        return { filled: input.value === input.placeholder, focused: document.activeElement === input, searchShown: [...document.querySelectorAll('#ask form button[type="submit"]')].some(button => /Search/.test(button.textContent)), useGone: !document.querySelector('[data-use-suggestion]'), didNotSearch: !document.querySelector('[data-search-results]') && !/Searching|result/.test(document.querySelector('#ask [aria-live]').textContent) }
+        return { filled: input.value === input.placeholder, wraps: input.scrollHeight <= input.clientHeight + 1, focused: document.activeElement === input, searchShown: [...document.querySelectorAll('#ask form button[type="submit"]')].some(button => /Search/.test(button.textContent)), useGone: !document.querySelector('[data-use-suggestion]'), didNotSearch: !document.querySelector('[data-search-results]') && !/Searching|result/.test(document.querySelector('#ask [aria-live]').textContent) }
       })
-      await page.evaluate(() => { const input = document.querySelector('#ask-input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ''); input.dispatchEvent(new Event('input', { bubbles: true })) }); await pause(150)
+      await page.evaluate(() => { const input = document.querySelector('#ask-input'); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(input, ''); input.dispatchEvent(new Event('input', { bubbles: true })) }); await pause(150)
       const line = { ...lineBefore, ...lineAfter }
-      check(line.empty && line.shown && line.whole && line.didNotSearch && line.filled && line.focused && line.searchShown && line.useGone, `${width}: the empty line shows its whole suggestion, and a button puts it in the box, ready to edit or send, without searching ${JSON.stringify(line)}`)
+      check(line.empty && line.shown && line.whole && line.didNotSearch && line.filled && line.wraps && line.focused && line.searchShown && line.useGone, `${width}: the empty line shows its whole suggestion, and a button puts it in the box, ready to edit or send, without searching ${JSON.stringify(line)}`)
       const example = await page.evaluate(() => { const button = document.querySelector('[data-search-examples] button'); const text = button.textContent; button.click(); return text })
       check(example.split(/\s+/).length >= 4, `${width}: the examples beside the box are problems in a reader's words, not categories ("${example}")`)
       await page.waitForFunction(() => document.querySelector('[data-search-results="main"]:not(.opacity-60)') || /Search failed|Nothing we/.test(document.querySelector('#ask').innerText), { timeout: 60000 })

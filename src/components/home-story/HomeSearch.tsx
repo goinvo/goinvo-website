@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { cloudfrontImage, cn } from '@/lib/utils'
@@ -67,7 +67,15 @@ export function HomeSearch() {
   const [failed, setFailed] = useState(false)
   const abort = useRef<AbortController | null>(null)
   const form = useRef<HTMLFormElement | null>(null)
-  const field = useRef<HTMLInputElement | null>(null)
+  const field = useRef<HTMLTextAreaElement | null>(null)
+
+  // The box wraps and grows with what is in it, so a phone shows the whole question.
+  useLayoutEffect(() => {
+    const box = field.current
+    if (!box) return
+    box.style.height = 'auto'
+    box.style.height = `${box.scrollHeight}px`
+  }, [input])
 
   async function run(query: string) {
     const trimmed = query.trim()
@@ -142,17 +150,19 @@ export function HomeSearch() {
       <form ref={form} role="search" className="relative z-10 mt-12 scroll-mt-24 md:mt-16" onSubmit={event => { event.preventDefault(); run(input) }}>
         <label htmlFor="ask-input" className="sr-only">Describe what you’re working on</label>
         <div className="flex items-end gap-6 border-b-2 border-current focus-within:border-secondary">
-          {/* Empty, the line shows a suggestion. A one-line field cannot wrap it, so it is drawn
-              as text (a phone shows all of it) with the field laid over it; the placeholder still
-              carries it for screen readers. */}
+          {/* A text area, so the question wraps (a phone shows all of it); Enter still searches
+              and a pasted line break becomes a space. Empty, the line shows a suggestion, drawn
+              as text with the box laid over it, since a placeholder does not grow the box; the
+              placeholder still carries it for screen readers. */}
           <div className="relative min-w-0 flex-1">
             {input === '' && <span aria-hidden data-line-suggestion className={cn('pointer-events-none block select-none py-4 text-gray', type.title)}>{LINE_SUGGESTION.query}</span>}
-            <input
-              ref={field} id="ask-input" type="text" value={input} maxLength={200} autoComplete="off" enterKeyHint="search"
-              onChange={event => setInput(event.target.value)}
+            <textarea
+              ref={field} id="ask-input" rows={1} value={input} maxLength={200} autoComplete="off" enterKeyHint="search"
+              onChange={event => setInput(event.target.value.replace(/\s*\n\s*/g, ' '))}
+              onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); form.current?.requestSubmit() } }}
               placeholder={LINE_SUGGESTION.query}
               aria-describedby="ask-note"
-              className={cn('w-full border-0 bg-transparent py-4 text-inherit outline-none placeholder:text-transparent', input === '' && 'absolute inset-x-0 top-0', type.title)}
+              className={cn('block w-full resize-none overflow-hidden border-0 bg-transparent py-4 text-inherit outline-none placeholder:text-transparent', input === '' && 'absolute inset-x-0 top-0', type.title)}
             />
           </div>
           {/* The button for the line's state: the suggestion goes in the box (edit it, or press
