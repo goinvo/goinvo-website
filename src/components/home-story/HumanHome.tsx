@@ -447,7 +447,7 @@ function ServiceRow({ offering, low }: { offering: typeof humanOfferings[number]
 }
 
 function Services({ low }: { low: boolean }) {
-  return <Section id="services" aria-labelledby="services-title">
+  return <Section tone="dark" id="services" aria-labelledby="services-title">
     <div className="grid items-start gap-8 md:grid-cols-[0.8fr_1.2fr] md:gap-16">
       <div className={cn(!low && 'md:sticky md:top-[16vh]')}>
         <SectionHeading id="services-title" sweep reduced={low} text="Make the next move." className="max-w-[12ch]" />

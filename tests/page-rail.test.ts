@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { railBox } from '@/components/home-story/HumanPageControls'
+import { railBands, railBox } from '@/components/home-story/HumanPageControls'
 
 /** Rule: the homepage's side rail never runs into the footer. */
 describe('page rail', () => {
@@ -18,5 +18,15 @@ describe('page rail', () => {
     const box = railBox(1000, 300)
     expect(box.height).toBe(160)
     expect(box.top + box.height).toBeLessThanOrEqual(300 - 32)
+  })
+
+  it('turns light exactly where a dark band passes behind it', () => {
+    const rail = { top: 200, height: 400 }
+    // A band from 300 to 500 covers the middle half of the rail.
+    expect(railBands(rail, [{ top: 300, bottom: 500 }])).toEqual([{ start: 25, end: 75 }])
+    // Overhanging either end is clipped to the rail.
+    expect(railBands(rail, [{ top: 0, bottom: 260 }])).toEqual([{ start: 0, end: 15 }])
+    // A band off screen does not draw.
+    expect(railBands(rail, [{ top: 900, bottom: 1400 }])).toEqual([])
   })
 })

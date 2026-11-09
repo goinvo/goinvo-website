@@ -233,7 +233,7 @@ try {
       // The side rail ends above the footer at the very bottom of the page, every dot on it.
       const railFrom = await page.evaluate(() => scrollY)
       await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })); await pause(400)
-      const rail = await page.evaluate(() => { const nav = document.querySelector('[data-page-rail]').getBoundingClientRect(), footer = document.querySelector('footer').getBoundingClientRect(), dots = [...document.querySelectorAll('[data-page-rail] button span:first-child')].map(dot => dot.getBoundingClientRect()); return { railBottom: Math.round(nav.bottom), footerTop: Math.round(footer.top), lowestDot: Math.round(Math.max(...dots.map(dot => dot.bottom))), height: Math.round(nav.height) } })
+      const rail = await page.evaluate(() => { const nav = document.querySelector('[data-page-rail]').getBoundingClientRect(), footer = document.querySelector('footer').getBoundingClientRect(), dots = [...document.querySelectorAll('[data-rail-ink="ink"] [data-rail-dot]')].map(dot => dot.getBoundingClientRect()); return { railBottom: Math.round(nav.bottom), footerTop: Math.round(footer.top), lowestDot: Math.round(Math.max(...dots.map(dot => dot.bottom))), height: Math.round(nav.height) } })
       check(rail.railBottom <= rail.footerTop - 16 && rail.lowestDot <= rail.footerTop - 16 && rail.height >= 150, `${width}: at the bottom of the page the side rail ends above the footer ${JSON.stringify(rail)}`)
       const accessOnTop = await page.evaluate(() => { const button = document.querySelector('[aria-label="Accessibility settings"]'), r = button.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return button === hit || button.contains(hit) })
       check(accessOnTop, `${width}: at the bottom of the page the accessibility button stays above the footer`)
@@ -243,11 +243,20 @@ try {
       const aimBox = await page.evaluate(index => { const r = document.querySelectorAll('[data-page-rail] button')[index].getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } }, aim)
       await page.mouse.move(aimBox.x, aimBox.y); await pause(400)
       const aimed = await page.evaluate(index => {
-        const items = [...document.querySelectorAll('[data-page-rail] button')], look = item => { const dot = item.querySelector('[data-rail-dot]'), label = item.querySelector('[data-rail-label]'); return { state: item.dataset.railItem, dot: Math.round(dot.getBoundingClientRect().width), label: getComputedStyle(label).opacity, arrow: label.textContent.includes('→'), weight: getComputedStyle(label).fontWeight } }
+        const items = [...document.querySelectorAll('[data-page-rail] button')], look = item => { const dot = document.querySelector(`[data-rail-ink="ink"] [data-rail-dot="${items.indexOf(item)}"]`), label = item.querySelector('[data-rail-label]'); return { state: item.dataset.railItem, dot: Math.round(dot.getBoundingClientRect().width), label: getComputedStyle(label).opacity, arrow: label.textContent.includes('→'), weight: getComputedStyle(label).fontWeight } }
         return { aimed: look(items[index]), current: look(items.find(item => item.hasAttribute('aria-current'))), rest: look(items.find((item, i) => i !== index && !item.hasAttribute('aria-current'))) }
       }, aim)
       check(aimed.aimed.state === 'aimed' && aimed.aimed.arrow && aimed.aimed.label === '1' && aimed.aimed.dot > aimed.rest.dot && aimed.current.state === 'current' && !aimed.current.arrow && Number(aimed.current.weight) >= 600 && aimed.current.dot > aimed.rest.dot && !aimed.rest.arrow, `${width}: the rail item under the pointer comes forward (bigger teal dot, label with an arrow), apart from the current section and the rest ${JSON.stringify(aimed)}`)
       await page.mouse.move(5, 5); await pause(200)
+      // Over the slate band the rail turns light, exactly where the band is behind it.
+      await page.evaluate(() => { const band = document.querySelector('[data-tone="dark"]'); scrollTo({ top: scrollY + band.getBoundingClientRect().top - innerHeight * 0.5, behavior: 'instant' }) }); await pause(500)
+      const banded = await page.evaluate(() => {
+        const rail = document.querySelector('[data-page-rail]').getBoundingClientRect(), band = document.querySelector('[data-tone="dark"]').getBoundingClientRect(), light = document.querySelector('[data-rail-ink="light"]')
+        const expected = Math.max(0, Math.min(100, (band.top - rail.top) / rail.height * 100)), clip = light ? Number(/inset\(([\d.]+)%/.exec(light.style.clipPath)?.[1]) : null
+        return { light: !!light, expected: +expected.toFixed(1), clip, bandColour: getComputedStyle(document.querySelector('[data-tone="dark"]')).backgroundColor }
+      })
+      check(banded.light && Math.abs(banded.clip - banded.expected) < 1.5 && banded.bandColour === 'rgb(36, 67, 77)', `${width}: the rail turns light where the slate band passes behind it ${JSON.stringify(banded)}`)
+      await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), railFrom); await pause(300)
       await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), railFrom); await pause(300)
     }
     if (width === 1440) {
