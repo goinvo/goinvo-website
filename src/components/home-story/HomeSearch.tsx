@@ -142,19 +142,28 @@ export function HomeSearch() {
       <form ref={form} role="search" className="relative z-10 mt-12 scroll-mt-24 md:mt-16" onSubmit={event => { event.preventDefault(); run(input) }}>
         <label htmlFor="ask-input" className="sr-only">Describe what you’re working on</label>
         <div className="flex items-end gap-6 border-b-2 border-current focus-within:border-secondary">
-          <input
-            ref={field} id="ask-input" type="text" value={input} maxLength={200} autoComplete="off" enterKeyHint="search"
-            onChange={event => setInput(event.target.value)}
-            placeholder={LINE_SUGGESTION.query}
-            aria-describedby="ask-note"
-            className={cn('min-w-0 flex-1 border-0 bg-transparent py-4 text-inherit outline-none placeholder:text-gray', type.title)}
-          />
-          {/* Empty, the line shows a suggestion: this puts it in the box (edit it, or press Enter). */}
+          {/* Empty, the line shows a suggestion. A one-line field cannot wrap it, so it is drawn
+              as text (a phone shows all of it) with the field laid over it; the placeholder still
+              carries it for screen readers. */}
+          <div className="relative min-w-0 flex-1">
+            {input === '' && <span aria-hidden data-line-suggestion className={cn('pointer-events-none block select-none py-4 text-gray', type.title)}>{LINE_SUGGESTION.query}</span>}
+            <input
+              ref={field} id="ask-input" type="text" value={input} maxLength={200} autoComplete="off" enterKeyHint="search"
+              onChange={event => setInput(event.target.value)}
+              placeholder={LINE_SUGGESTION.query}
+              aria-describedby="ask-note"
+              className={cn('w-full border-0 bg-transparent py-4 text-inherit outline-none placeholder:text-transparent', input === '' && 'absolute inset-x-0 top-0', type.title)}
+            />
+          </div>
+          {/* The button for the line's state: the suggestion goes in the box (edit it, or press
+              Enter), a search, or clear. Keyed apart, so a press never lands on the button that
+              replaces it (React would reuse the element, and a type="submit" swapped in
+              mid-click submits the form). */}
           {answered
-            ? <button type="button" onClick={clear} className={cn(textLinkClass, 'mb-3 shrink-0 border-0 bg-transparent p-0', type.label)}><span data-link-label className="group-hover:underline">Clear</span></button>
-            : input.trim() === ''
-            ? <button type="button" data-use-suggestion onClick={fillSuggestion} aria-label={`Use this suggestion: ${LINE_SUGGESTION.query}`} className={cn(textLinkClass, 'mb-3 shrink-0 border-0 bg-transparent p-0', type.label)}><span data-link-label className="group-hover:underline group-focus-visible:underline">Use this</span></button>
-            : <button type="submit" className={cn(textLinkClass, 'mb-3 shrink-0 border-0 bg-transparent p-0', type.label)}><span data-link-label className="group-hover:underline group-focus-visible:underline">Search</span><Arrow /></button>}
+            ? <button key="clear" type="button" onClick={clear} className={cn(textLinkClass, 'mb-3 shrink-0 border-0 bg-transparent p-0', type.label)}><span data-link-label className="group-hover:underline">Clear</span></button>
+            : input === ''
+            ? <button key="use" type="button" data-use-suggestion onClick={fillSuggestion} aria-label={`Use this suggestion: ${LINE_SUGGESTION.query}`} className={cn(textLinkClass, 'mb-3 shrink-0 border-0 bg-transparent p-0', type.label)}><span data-link-label className="group-hover:underline group-focus-visible:underline">Use this</span></button>
+            : <button key="search" type="submit" className={cn(textLinkClass, 'mb-3 shrink-0 border-0 bg-transparent p-0', type.label)}><span data-link-label className="group-hover:underline group-focus-visible:underline">Search</span><Arrow /></button>}
         </div>
         <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
           <p data-search-examples className={cn('m-0 flex flex-wrap items-baseline gap-x-5', type.label)}>
