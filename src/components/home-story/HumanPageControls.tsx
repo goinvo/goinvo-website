@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 
 const chapters = [
@@ -76,7 +77,10 @@ export function HumanPageControls({ low, ready, toggleMotion, largerText, setLar
 
   if (!ready) return null
 
-  return (
+  // Rendered straight into <body>: inside the page's wrapper, which is its own stacking
+  // layer, z-index 70 only ranked within that layer and the footer painted over the
+  // rail and the accessibility button. They only exist after load (ready), so a portal is safe.
+  return createPortal(
     <aside data-ui aria-label="Reading and accessibility tools" className="pointer-events-none fixed inset-0 z-[70] text-black">
       <progress aria-label="Page reading progress" value={reading.percent} max={100} className="sr-only" />
       <nav aria-label="Page timeline" data-page-rail style={{ color: reading.dark ? 'var(--color-white)' : 'var(--color-black)', ...(reading.rail ? { top: reading.rail.top, height: reading.rail.height } : {}) }} className="group/rail pointer-events-auto absolute right-3 top-[26vh] hidden h-[48vh] w-12 md:block">
@@ -103,7 +107,8 @@ export function HumanPageControls({ low, ready, toggleMotion, largerText, setLar
         <button type="button" role="switch" aria-checked={low} disabled={!ready} onClick={toggleMotion} className={cn(control, 'mb-3 w-full justify-between gap-4 px-3 text-base')}><span>Low motion</span><span aria-hidden="true" className={cn('flex h-6 w-10 items-center rounded-full p-1', low ? 'bg-secondary' : 'bg-gray-medium')}><span className={cn('h-4 w-4 rounded-full bg-white', low && 'translate-x-4')} /></span></button>
         <label className={cn(control, 'w-full justify-between gap-4 px-3 text-base')}><span>Larger body text</span><input type="checkbox" checked={largerText} onChange={event => setLargerText(event.target.checked)} className="h-5 w-5 accent-secondary" /></label>
       </dialog>
-    </aside>
+    </aside>,
+    document.body,
   )
 }
 

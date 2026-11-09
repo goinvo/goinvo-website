@@ -235,6 +235,8 @@ try {
       await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })); await pause(400)
       const rail = await page.evaluate(() => { const nav = document.querySelector('[data-page-rail]').getBoundingClientRect(), footer = document.querySelector('footer').getBoundingClientRect(), dots = [...document.querySelectorAll('[data-page-rail] button span:first-child')].map(dot => dot.getBoundingClientRect()); return { railBottom: Math.round(nav.bottom), footerTop: Math.round(footer.top), lowestDot: Math.round(Math.max(...dots.map(dot => dot.bottom))), height: Math.round(nav.height) } })
       check(rail.railBottom <= rail.footerTop - 16 && rail.lowestDot <= rail.footerTop - 16 && rail.height >= 150, `${width}: at the bottom of the page the side rail ends above the footer ${JSON.stringify(rail)}`)
+      const accessOnTop = await page.evaluate(() => { const button = document.querySelector('[aria-label="Accessibility settings"]'), r = button.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return button === hit || button.contains(hit) })
+      check(accessOnTop, `${width}: at the bottom of the page the accessibility button stays above the footer`)
       await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), railFrom); await pause(300)
     }
     if (width === 1440) {
