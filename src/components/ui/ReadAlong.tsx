@@ -17,8 +17,17 @@ function ScrubWord({ word, progress, range, variant = 'opacity', reduced = false
   const reduce = useReducedMotion()
   const opacity = useTransform(progress, range, reduce || reduced || variant === 'ink' ? [1, 1] : [0.18, 1])
   const color = useTransform(progress, range, reduce || reduced ? ['#153d3b', '#153d3b'] : ['#596c66', '#153d3b'])
-  const clipPath = useTransform(progress, range, ['inset(0 100% 0 0)', 'inset(0 0% 0 0)'])
-  if (variant === 'sweep') return <span className="inline-block whitespace-pre"><span className="relative inline-block">{word}<motion.span data-word-fill aria-hidden="true" className="pointer-events-none absolute inset-0 text-secondary" style={{ clipPath: reduced || reduce ? 'inset(0)' : clipPath }}>{word}</motion.span></span>{' '}</span>
+  // The sweep: two drawn copies of the word, ink and teal, each clipped to the side of
+  // the moving edge it owns, so they never overlap (overlapping copies leave a dark rim
+  // at every glyph edge). Their boxes reach 0.25em past the word on every side, because
+  // the serif's glyphs do (the "?" dot, ascenders, a "y" tail); clipped to the word's own
+  // box those parts stayed ink. The word itself stays in place, invisible, for layout,
+  // selection and screen readers.
+  const fill = useTransform(progress, range, [0, 100])
+  const filled = reduced || reduce
+  const teal = useTransform(fill, value => `inset(0 ${100 - value}% 0 0)`)
+  const ink = useTransform(fill, value => `inset(0 0 0 ${value}%)`)
+  if (variant === 'sweep') return <span className="inline-block whitespace-pre"><span className="relative inline-block"><span className="text-transparent">{word}</span><motion.span aria-hidden="true" className="pointer-events-none absolute -inset-[0.25em] p-[0.25em]" style={{ clipPath: filled ? 'inset(0 0 0 100%)' : ink }}>{word}</motion.span><motion.span data-word-fill aria-hidden="true" className="pointer-events-none absolute -inset-[0.25em] p-[0.25em] text-secondary" style={{ clipPath: filled ? 'inset(0)' : teal }}>{word}</motion.span></span>{' '}</span>
   return <motion.span style={variant === 'ink' ? { color } : { opacity }}>{word} </motion.span>
 }
 

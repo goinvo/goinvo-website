@@ -17,6 +17,32 @@ const cases = [
 ]
 const response = await fetch(route)
 check(response.status === 200 && (await response.text()).includes('noindex'), 'Review reachable and unindexed')
+/** Once a sweep heading has filled, the pixels still in ink (every channel under 60: full
+ * teal is 0,115,133 and its edges only blend toward white). The serif's glyphs reach past
+ * each word's box, so a fill clipped to the box left ink slivers on word edges and tails. */
+async function sweepInk(page) {
+  const ids = await page.$$eval('h2', headings => headings.filter(h => h.querySelector('[data-word-fill]')).map((h, i) => (h.id ||= `sweep-${i}`)))
+  const counts = {}
+  for (const id of ids) {
+    await page.evaluate(id => { const el = document.getElementById(id); scrollTo({ top: scrollY + el.getBoundingClientRect().top - innerHeight * 0.2, behavior: 'instant' }) }, id)
+    await pause(1500)
+    const box = await page.evaluate(id => { const r = document.getElementById(id).getBoundingClientRect(); return { x: r.left + scrollX - 20, y: r.top + scrollY - 20, width: r.width + 40, height: r.height + 40 } }, id)
+    const shot = await page.screenshot({ clip: box, encoding: 'base64' })
+    const counter = await page.browser().newPage()
+    counts[id] = await counter.evaluate(async src => {
+      const img = new Image(); img.src = src; await img.decode()
+      const canvas = Object.assign(document.createElement('canvas'), { width: img.width, height: img.height }), ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0)
+      const data = ctx.getImageData(0, 0, img.width, img.height).data
+      let count = 0
+      for (let i = 0; i < data.length; i += 4) if (Math.max(data[i], data[i + 1], data[i + 2]) < 60) count++
+      return count
+    }, 'data:image/png;base64,' + shot)
+    await counter.close()
+  }
+  return counts
+}
+
 /** Every result picture against its frame: one that would lose more than 40% of the image
  * to the crop must be shown whole (src/lib/search/picture.ts), so lettering is never cut. */
 async function pictureCrops(page) {
@@ -204,6 +230,8 @@ try {
     // The AI search: once per run (each query is a model call). An example returns our
     // work; a query nothing fits says so, with the 404 illustration, and lists nothing.
     if (width === 1440) {
+      const ink = await sweepInk(page)
+      check(Object.keys(ink).length > 0 && Object.values(ink).every(count => count === 0), `${width}: every sweep heading fills completely, no ink left on word edges or tails ${JSON.stringify(ink)}`)
       await page.evaluate(() => document.querySelector('#ask').scrollIntoView()); await pause(400)
       // A real press, not element.click(): a scripted click let a submit button swapped in
       // mid-press go unnoticed, while a mouse submitted the form.
