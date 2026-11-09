@@ -229,6 +229,14 @@ try {
     check(await page.$('[data-view-picker]') === null && !new URLSearchParams(await page.evaluate(() => location.search)).has('view'), `${width}: views belong to the scene that has them`)
     // The AI search: once per run (each query is a model call). An example returns our
     // work; a query nothing fits says so, with the 404 illustration, and lists nothing.
+    if (width >= 768) {
+      // The side rail ends above the footer at the very bottom of the page, every dot on it.
+      const railFrom = await page.evaluate(() => scrollY)
+      await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })); await pause(400)
+      const rail = await page.evaluate(() => { const nav = document.querySelector('[data-page-rail]').getBoundingClientRect(), footer = document.querySelector('footer').getBoundingClientRect(), dots = [...document.querySelectorAll('[data-page-rail] button span:first-child')].map(dot => dot.getBoundingClientRect()); return { railBottom: Math.round(nav.bottom), footerTop: Math.round(footer.top), lowestDot: Math.round(Math.max(...dots.map(dot => dot.bottom))), height: Math.round(nav.height) } })
+      check(rail.railBottom <= rail.footerTop - 16 && rail.lowestDot <= rail.footerTop - 16 && rail.height >= 150, `${width}: at the bottom of the page the side rail ends above the footer ${JSON.stringify(rail)}`)
+      await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), railFrom); await pause(300)
+    }
     if (width === 1440) {
       const ink = await sweepInk(page)
       check(Object.keys(ink).length > 0 && Object.values(ink).every(count => count === 0), `${width}: every sweep heading fills completely, no ink left on word edges or tails ${JSON.stringify(ink)}`)

@@ -12,12 +12,23 @@ const chapters = [
   { id: 'evidence', label: 'Work at scale' },
   { id: 'contact', label: 'Contact' },
 ]
+/** The rail's box in the window: centred, 48% of the height, until the footer comes up.
+ * Then it shortens so it always ends above the footer (every dot stays on it, closer
+ * together), and below RAIL_MIN it slides up instead. */
+const RAIL_MIN = 160
+const RAIL_GAP = 32
+export function railBox(viewportHeight: number, footerTop: number) {
+  const top = viewportHeight * 0.26
+  const floor = Math.min(top + viewportHeight * 0.48, footerTop - RAIL_GAP)
+  const height = Math.max(RAIL_MIN, floor - top)
+  return { top: Math.min(top, floor - height), height }
+}
 const control = 'flex h-12 min-w-12 cursor-pointer items-center justify-center bg-transparent text-black hover:bg-tertiary-lightest focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary disabled:cursor-default disabled:opacity-35'
 
 export function HumanPageControls({ low, ready, toggleMotion, largerText, setLargerText }: {
   low: boolean; ready: boolean; toggleMotion: () => void; largerText: boolean; setLargerText: (value: boolean) => void
 }) {
-  const [reading, setReading] = useState({ percent: 0, chapter: 0, dark: false, positions: chapters.map((_, index) => index / (chapters.length - 1) * 100) })
+  const [reading, setReading] = useState({ percent: 0, chapter: 0, dark: false, positions: chapters.map((_, index) => index / (chapters.length - 1) * 100), rail: null as { top: number; height: number } | null })
   const dialog = useRef<HTMLDialogElement>(null)
   const menu = useRef<HTMLDetailsElement>(null)
 
@@ -38,7 +49,10 @@ export function HumanPageControls({ low, ready, toggleMotion, largerText, setLar
         const el = document.getElementById(chapter.id)
         return el && max > 0 ? Math.max(1, Math.min(99, (el.getBoundingClientRect().top + scrollY) / max * 100)) : 0
       })
-      setReading(previous => previous.percent === percent && previous.chapter === current && previous.dark === dark && previous.positions.every((value, index) => Math.abs(value - positions[index]) < 0.05) ? previous : { percent, chapter: current, dark, positions })
+      const footer = document.querySelector('footer')
+      const rail = railBox(innerHeight, footer ? footer.getBoundingClientRect().top : Infinity)
+      const sameRail = (a: typeof rail | null) => !!a && Math.abs(a.top - rail.top) < 0.5 && Math.abs(a.height - rail.height) < 0.5
+      setReading(previous => previous.percent === percent && previous.chapter === current && previous.dark === dark && sameRail(previous.rail) && previous.positions.every((value, index) => Math.abs(value - positions[index]) < 0.05) ? previous : { percent, chapter: current, dark, positions, rail })
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
     measure()
@@ -65,7 +79,7 @@ export function HumanPageControls({ low, ready, toggleMotion, largerText, setLar
   return (
     <aside data-ui aria-label="Reading and accessibility tools" className="pointer-events-none fixed inset-0 z-[70] text-black">
       <progress aria-label="Page reading progress" value={reading.percent} max={100} className="sr-only" />
-      <nav aria-label="Page timeline" style={{ color: reading.dark ? 'var(--color-white)' : 'var(--color-black)' }} className="group/rail pointer-events-auto absolute right-3 top-1/2 hidden h-[48vh] w-12 -translate-y-1/2 md:block">
+      <nav aria-label="Page timeline" data-page-rail style={{ color: reading.dark ? 'var(--color-white)' : 'var(--color-black)', ...(reading.rail ? { top: reading.rail.top, height: reading.rail.height } : {}) }} className="group/rail pointer-events-auto absolute right-3 top-[26vh] hidden h-[48vh] w-12 md:block">
         <div aria-hidden="true" className="absolute bottom-0 left-1/2 top-0 w-[2px] -translate-x-1/2 bg-current opacity-20" />
         <div aria-hidden="true" style={{ transform: `scaleY(${reading.percent / 100})` }} className="absolute bottom-0 left-1/2 top-0 w-[2px] origin-top -translate-x-1/2 bg-current" />
         {chapters.map((chapter, index) => <button key={chapter.id} aria-label={`Go to ${chapter.label}`} aria-current={reading.chapter === index ? 'location' : undefined} onClick={() => go(index)} style={{ top: `${reading.positions[index]}%` }} className={cn('absolute left-0 flex h-12 w-12 -translate-y-1/2 cursor-pointer items-center justify-center bg-transparent text-inherit focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-current')}><span aria-hidden="true" className={cn('rounded-full bg-current transition-transform duration-200 motion-reduce:transition-none', reading.chapter === index ? 'h-2 w-2 scale-125' : 'h-1 w-1')} /><span aria-hidden="true" className={cn('pointer-events-none absolute right-11 whitespace-nowrap border-l-4 border-secondary bg-white px-4 py-2 text-[18px] leading-snug text-black opacity-0 transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none', reading.chapter === index && 'font-semibold')}>{chapter.label}</span></button>)}
