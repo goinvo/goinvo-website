@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
-import { EMPTY_STATE_QUERIES, EXAMPLE_QUERIES, SUGGESTED_QUERIES, storedAnswer } from '@/lib/search/suggested'
+import { EXAMPLE_QUERIES, LINE_SUGGESTION, SUGGESTED_QUERIES, storedAnswer } from '@/lib/search/suggested'
 
 /**
  * Rule: every search the homepage suggests has a stored answer (instant, no model call),
@@ -9,9 +9,16 @@ import { EMPTY_STATE_QUERIES, EXAMPLE_QUERIES, SUGGESTED_QUERIES, storedAnswer }
  * Rebuild with scripts/build-search-suggestions.mjs.
  */
 describe('suggested searches', () => {
-  it('offers examples beside the box and suggestions for when nothing fits', () => {
+  it('offers one suggestion on the empty line and the others beside the box', () => {
+    expect(SUGGESTED_QUERIES).toContain(LINE_SUGGESTION)
     expect(EXAMPLE_QUERIES.length).toBeGreaterThan(0)
-    expect(EMPTY_STATE_QUERIES.length).toBeGreaterThan(0)
+    expect(EXAMPLE_QUERIES).not.toContain(LINE_SUGGESTION)
+  })
+
+  it.each(SUGGESTED_QUERIES.map(item => [item.label, item]))('suggests a problem in a reader\'s own words, not a category: %s', (_, item) => {
+    // What the reader sees is exactly what is searched, and it is a sentence, not a topic.
+    expect(item.query).toBe(item.label)
+    expect(item.label.split(/\s+/).length, `"${item.label}" reads as a category`).toBeGreaterThanOrEqual(4)
   })
 
   it.each(SUGGESTED_QUERIES.map(item => [item.query]))('has a stored, AI-selected answer: %s', query => {
@@ -23,7 +30,7 @@ describe('suggested searches', () => {
   })
 
   it('finds a stored answer however the question is typed', () => {
-    const [first] = EMPTY_STATE_QUERIES
+    const [first] = SUGGESTED_QUERIES
     expect(storedAnswer(`  ${first.query.toUpperCase()}?  `)).toBe(storedAnswer(first.query))
   })
 

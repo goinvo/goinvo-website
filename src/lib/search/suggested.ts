@@ -12,13 +12,14 @@ import data from './suggested.json'
 export interface SuggestedQuery {
   label: string
   query: string
-  /** example: a shortcut beside the search box; empty: offered when nothing fits. */
-  use: 'example' | 'empty'
 }
 
+/** Problems in a reader's own words, never categories: what you see is what is searched. */
 export const SUGGESTED_QUERIES = data.queries as SuggestedQuery[]
-export const EXAMPLE_QUERIES = SUGGESTED_QUERIES.filter(item => item.use === 'example')
-export const EMPTY_STATE_QUERIES = SUGGESTED_QUERIES.filter(item => item.use === 'empty')
+/** The one the empty search line shows, with a button to use it. */
+export const LINE_SUGGESTION = SUGGESTED_QUERIES[0]
+/** The rest, offered beside the box. (When nothing fits, all of them are offered.) */
+export const EXAMPLE_QUERIES = SUGGESTED_QUERIES.slice(1)
 
 /** Case, spacing and trailing punctuation never make a different question. */
 export function normalizeQuery(query: string): string {

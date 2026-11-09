@@ -10,7 +10,7 @@ import { Arrow } from '@/components/ui/Arrow'
 import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { TextLink, focusRing, textLinkClass } from '@/components/ui/TextLink'
-import { EMPTY_STATE_QUERIES, EXAMPLE_QUERIES } from '@/lib/search/suggested'
+import { EXAMPLE_QUERIES, LINE_SUGGESTION, SUGGESTED_QUERIES } from '@/lib/search/suggested'
 import { edgeBlock, focusPosition, leadBlockColor, pictureFit, SEARCH_PICTURE_FRAME, type PictureEdges, type PictureFocus } from '@/lib/search/picture'
 
 /**
@@ -67,6 +67,7 @@ export function HomeSearch() {
   const [failed, setFailed] = useState(false)
   const abort = useRef<AbortController | null>(null)
   const form = useRef<HTMLFormElement | null>(null)
+  const field = useRef<HTMLInputElement | null>(null)
 
   async function run(query: string) {
     const trimmed = query.trim()
@@ -106,6 +107,17 @@ export function HomeSearch() {
     }
   }
 
+  /** The line's suggestion, put in the box to edit or send as it is. */
+  function fillSuggestion() {
+    setInput(LINE_SUGGESTION.query)
+    requestAnimationFrame(() => {
+      const input = field.current
+      if (!input) return
+      input.focus()
+      input.setSelectionRange(input.value.length, input.value.length)
+    })
+  }
+
   function clear() {
     abort.current?.abort()
     setInput(''); setSubmitted(''); setResponse(null); setProvisional(null); setFailed(false); setLoading(false)
@@ -131,20 +143,23 @@ export function HomeSearch() {
         <label htmlFor="ask-input" className="sr-only">Describe what you’re working on</label>
         <div className="flex items-end gap-6 border-b-2 border-current focus-within:border-secondary">
           <input
-            id="ask-input" type="text" value={input} maxLength={200} autoComplete="off" enterKeyHint="search"
+            ref={field} id="ask-input" type="text" value={input} maxLength={200} autoComplete="off" enterKeyHint="search"
             onChange={event => setInput(event.target.value)}
-            placeholder="Clinicians don’t trust our AI’s suggestions"
+            placeholder={LINE_SUGGESTION.query}
             aria-describedby="ask-note"
             className={cn('min-w-0 flex-1 border-0 bg-transparent py-4 text-inherit outline-none placeholder:text-gray', type.title)}
           />
+          {/* Empty, the line shows a suggestion: this puts it in the box (edit it, or press Enter). */}
           {answered
             ? <button type="button" onClick={clear} className={cn(textLinkClass, 'mb-3 shrink-0 border-0 bg-transparent p-0', type.label)}><span data-link-label className="group-hover:underline">Clear</span></button>
+            : input.trim() === ''
+            ? <button type="button" data-use-suggestion onClick={fillSuggestion} aria-label={`Use this suggestion: ${LINE_SUGGESTION.query}`} className={cn(textLinkClass, 'mb-3 shrink-0 border-0 bg-transparent p-0', type.label)}><span data-link-label className="group-hover:underline group-focus-visible:underline">Use this</span></button>
             : <button type="submit" className={cn(textLinkClass, 'mb-3 shrink-0 border-0 bg-transparent p-0', type.label)}><span data-link-label className="group-hover:underline group-focus-visible:underline">Search</span><Arrow /></button>}
         </div>
         <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
-          <p className={cn('m-0 flex flex-wrap items-baseline gap-x-5', type.label)}>
+          <p data-search-examples className={cn('m-0 flex flex-wrap items-baseline gap-x-5', type.label)}>
             <span data-hand-note className="text-gray">Or try</span>
-            {EXAMPLE_QUERIES.map(example => <button key={example.label} type="button" onClick={() => run(example.query)} className={cn('min-h-12 cursor-pointer border-0 bg-transparent p-0 text-inherit underline decoration-1 underline-offset-4 hover:text-secondary', focusRing)}>{example.label}</button>)}
+            {EXAMPLE_QUERIES.map(example => <button key={example.label} type="button" onClick={() => run(example.query)} className={cn('min-h-12 cursor-pointer border-0 bg-transparent p-0 text-left text-inherit underline decoration-1 underline-offset-4 hover:text-secondary', focusRing)}>{example.label}</button>)}
           </p>
           <p id="ask-note" className={cn('m-0 text-gray', type.caption)}>Experimental: an AI reads what you type and answers only from our published work.</p>
         </div>
@@ -334,7 +349,7 @@ function EmptyState({ kind, title, note, run, retry }: { kind: 'none' | 'error';
             <TextLink href="/work" className={type.label}>Or browse all the work</TextLink>
           </div>
           <ul className="m-0 mt-3 list-none p-0">
-            {EMPTY_STATE_QUERIES.map(item => <li key={item.query}>
+            {SUGGESTED_QUERIES.map(item => <li key={item.query}>
               <button type="button" data-rule onClick={() => run(item.query)} className={cn('group flex w-full cursor-pointer items-baseline justify-between gap-6 border-x-0 border-b-0 border-t border-solid border-black/15 bg-transparent px-0 py-3 text-left text-inherit', focusRing)}>
                 <span className={cn('transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.lead)}>“{item.label}”</span>
                 <span className={cn('shrink-0', nudge)}><Arrow /></span>

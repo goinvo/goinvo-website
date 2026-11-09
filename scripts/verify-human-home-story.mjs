@@ -205,7 +205,17 @@ try {
     // work; a query nothing fits says so, with the 404 illustration, and lists nothing.
     if (width === 1440) {
       await page.evaluate(() => document.querySelector('#ask').scrollIntoView()); await pause(400)
-      await page.evaluate(() => [...document.querySelectorAll('#ask form button')].find(button => button.textContent === 'Government').click())
+      const line = await page.evaluate(async () => {
+        const input = document.querySelector('#ask-input'), use = document.querySelector('[data-use-suggestion]')
+        const before = { empty: input.value === '', shown: !!use && use.getBoundingClientRect().width > 0 }
+        use?.click(); await new Promise(resolve => setTimeout(resolve, 300))
+        const after = { filled: input.value === input.placeholder, focused: document.activeElement === input, searchShown: [...document.querySelectorAll('#ask form button[type="submit"]')].some(button => /Search/.test(button.textContent)), useGone: !document.querySelector('[data-use-suggestion]') }
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ''); input.dispatchEvent(new Event('input', { bubbles: true })); await new Promise(resolve => setTimeout(resolve, 100))
+        return { ...before, ...after }
+      })
+      check(line.empty && line.shown && line.filled && line.focused && line.searchShown && line.useGone, `${width}: the empty line's suggestion has a button that puts it in the box, ready to edit or send ${JSON.stringify(line)}`)
+      const example = await page.evaluate(() => { const button = document.querySelector('[data-search-examples] button'); const text = button.textContent; button.click(); return text })
+      check(example.split(/\s+/).length >= 4, `${width}: the examples beside the box are problems in a reader's words, not categories ("${example}")`)
       await page.waitForFunction(() => document.querySelector('[data-search-results="main"]:not(.opacity-60)') || /Search failed|Nothing we/.test(document.querySelector('#ask').innerText), { timeout: 60000 })
       const found = await page.evaluate(() => ({ titles: [...document.querySelectorAll('[data-search-results="main"] h3')].length, live: document.querySelector('#ask [aria-live]').textContent, links: [...document.querySelectorAll('[data-search-results="main"] a')].every(a => a.getAttribute('href')?.startsWith('/')) }))
       check(found.titles > 0 && /results? for/.test(found.live) && found.links, `${width}: an example search returns our own work and announces it ${JSON.stringify(found)}`)
