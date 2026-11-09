@@ -65,38 +65,50 @@ export function focusPosition(focus?: PictureFocus, position?: string): string {
  * side of a tall one. The block takes the colour of the picture's own edge on that side. */
 export type PictureEdges = { side: 'tb' | 'lr'; colors: [string, string] }
 
-/** The two edge strips to sample, as Sanity rect=x,y,w,h in source pixels (inside the
- * editor's crop): 2% of the picture deep, its full length. */
-export function edgeRects(width: number, height: number, crop: { top?: number; bottom?: number; left?: number; right?: number } | undefined, frameAspect: number): { side: PictureEdges['side']; rects: [number[], number[]] } | undefined {
+/** How to ask Sanity for a picture's edge colours: the image (inside the editor's crop)
+ * shrunk to one pixel across its depth, 50 along it, so the first and last pixels are its
+ * two edges, each the average of a 2% band. (Sampling a thin rect=… strip instead failed
+ * near the bottom of some JPEGs, "bad extract area", and read the wrong colour on others.) */
+export function edgeSampleQuery(width: number, height: number, crop: { top?: number; bottom?: number; left?: number; right?: number } | undefined, frameAspect: number): { side: PictureEdges['side']; query: string } | undefined {
   const left = Math.round(width * (crop?.left ?? 0)), top = Math.round(height * (crop?.top ?? 0))
   const w = Math.round(width * (1 - (crop?.left ?? 0) - (crop?.right ?? 0))), h = Math.round(height * (1 - (crop?.top ?? 0) - (crop?.bottom ?? 0)))
   if (w < 1 || h < 1) return undefined
-  if (w / h >= frameAspect) {
-    const depth = Math.max(1, Math.round(h * 0.02))
-    return { side: 'tb', rects: [[left, top, w, depth], [left, top + h - depth, w, depth]] }
-  }
-  const depth = Math.max(1, Math.round(w * 0.02))
-  return { side: 'lr', rects: [[left, top, depth, h], [left + w - depth, top, depth, h]] }
+  const rect = w === width && h === height ? '' : `rect=${left},${top},${w},${h}&`
+  return w / h >= frameAspect
+    ? { side: 'tb', query: `${rect}w=1&h=50&fit=scale&fm=png` }
+    : { side: 'lr', query: `${rect}w=50&h=1&fit=scale&fm=png` }
 }
 
-/** The one pixel of a 1×1 PNG as #rrggbb (8-bit truecolour, with or without alpha). With a
- * single pixel every row filter reduces to the raw bytes, so this needs no decoder. */
-export function onePixelColor(png: Uint8Array, inflate: (data: Uint8Array) => Uint8Array): string | undefined {
+/** The first and last pixels of a small 8-bit truecolour PNG (with or without alpha), as
+ * #rrggbb. Undoes the five PNG row filters; the caller passes zlib's inflate, so this file
+ * stays free of Node imports. */
+export function pngEndColors(png: Uint8Array, inflate: (data: Uint8Array) => Uint8Array): [string, string] | undefined {
   const view = new DataView(png.buffer, png.byteOffset, png.byteLength)
-  let offset = 8, colorType = -1, bitDepth = 0
+  let offset = 8, width = 0, height = 0, colorType = -1, bitDepth = 0
   const data: Uint8Array[] = []
   while (offset + 8 <= png.length) {
     const length = view.getUint32(offset), kind = String.fromCharCode(...png.subarray(offset + 4, offset + 8)), body = png.subarray(offset + 8, offset + 8 + length)
-    if (kind === 'IHDR') { if (view.getUint32(offset + 8) !== 1 || view.getUint32(offset + 12) !== 1) return undefined; bitDepth = body[8]; colorType = body[9] }
+    if (kind === 'IHDR') { width = view.getUint32(offset + 8); height = view.getUint32(offset + 12); bitDepth = body[8]; colorType = body[9] }
     if (kind === 'IDAT') data.push(body)
     offset += 12 + length
   }
-  if (bitDepth !== 8 || (colorType !== 2 && colorType !== 6) || data.length === 0) return undefined
+  if (bitDepth !== 8 || (colorType !== 2 && colorType !== 6) || data.length === 0 || width * height < 1 || width * height > 4096) return undefined
   const joined = new Uint8Array(data.reduce((sum, part) => sum + part.length, 0))
   data.reduce((at, part) => (joined.set(part, at), at + part.length), 0)
-  const raw = inflate(joined)
-  if (raw.length < 4) return undefined
-  return '#' + [raw[1], raw[2], raw[3]].map(value => value.toString(16).padStart(2, '0')).join('')
+  const raw = inflate(joined), bpp = colorType === 6 ? 4 : 3, stride = width * bpp
+  if (raw.length < height * (stride + 1)) return undefined
+  const pixels = new Uint8Array(height * stride)
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)]
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? pixels[y * stride + x - bpp] : 0, b = y ? pixels[(y - 1) * stride + x] : 0, c = x >= bpp && y ? pixels[(y - 1) * stride + x - bpp] : 0
+      const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c)
+      const predicted = filter === 1 ? a : filter === 2 ? b : filter === 3 ? (a + b) >> 1 : filter === 4 ? (pa <= pb && pa <= pc ? a : pb <= pc ? b : c) : 0
+      pixels[y * stride + x] = (raw[y * (stride + 1) + 1 + x] + predicted) & 255
+    }
+  }
+  const hex = (at: number) => '#' + [0, 1, 2].map(k => pixels[at + k].toString(16).padStart(2, '0')).join('')
+  return [hex(0), hex((width * height - 1) * bpp)]
 }
 
 /** The frame's background behind a whole picture: each edge's colour on its own half. */

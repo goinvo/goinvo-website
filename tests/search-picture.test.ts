@@ -1,18 +1,25 @@
 import { inflateSync, deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
-import { cropLoss, edgeBlock, edgeRects, focusPosition, imageShape, onePixelColor, pictureFit, MAX_PICTURE_CROP, SEARCH_PICTURE_FRAME } from '@/lib/search/picture'
+import { cropLoss, edgeBlock, edgeSampleQuery, focusPosition, imageShape, pictureFit, pngEndColors, MAX_PICTURE_CROP, SEARCH_PICTURE_FRAME } from '@/lib/search/picture'
 
 const FRAME = SEARCH_PICTURE_FRAME
 
-/** A 1×1 truecolour PNG, as Sanity serves an edge strip shrunk to one pixel. */
-function onePixelPng(rgb: [number, number, number], colorType = 2): Uint8Array {
+/** A small truecolour PNG, each row written with the given row filter, as Sanity might. */
+function png(rows: number[][][], filter = 0, colorType = 2): Uint8Array {
   const chunk = (kind: string, body: Buffer) => {
     const length = Buffer.alloc(4); length.writeUInt32BE(body.length)
     return Buffer.concat([length, Buffer.from(kind, 'ascii'), body, Buffer.alloc(4)])
   }
-  const header = Buffer.alloc(13); header.writeUInt32BE(1, 0); header.writeUInt32BE(1, 4); header[8] = 8; header[9] = colorType
-  const row = Buffer.from([0, ...rgb, ...(colorType === 6 ? [255] : [])])
-  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(row)), chunk('IEND', Buffer.alloc(0))])
+  const bpp = colorType === 6 ? 4 : 3, width = rows[0].length
+  const flat = rows.map(row => row.flatMap(pixel => colorType === 6 ? [...pixel, 255] : pixel))
+  const encoded = flat.flatMap((row, y) => [filter, ...row.map((value, x) => {
+    const a = x >= bpp ? row[x - bpp] : 0, b = y ? flat[y - 1][x] : 0, c = x >= bpp && y ? flat[y - 1][x - bpp] : 0
+    const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c)
+    const predicted = filter === 1 ? a : filter === 2 ? b : filter === 3 ? (a + b) >> 1 : filter === 4 ? (pa <= pb && pa <= pc ? a : pb <= pc ? b : c) : 0
+    return (value - predicted) & 255
+  })])
+  const header = Buffer.alloc(13); header.writeUInt32BE(width, 0); header.writeUInt32BE(rows.length, 4); header[8] = 8; header[9] = colorType
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(Buffer.from(encoded))), chunk('IEND', Buffer.alloc(0))])
 }
 
 describe('search result pictures', () => {
@@ -53,20 +60,21 @@ describe('search result pictures', () => {
     expect(pictureFit(Number.NaN, FRAME)).toBe('fill')
   })
 
-  it('samples the edges a whole picture leaves showing, inside the editor crop', () => {
-    // Wide: the frame shows above and below, so the top and bottom strips.
-    expect(edgeRects(1200, 435, undefined, FRAME)).toEqual({ side: 'tb', rects: [[0, 0, 1200, 9], [0, 426, 1200, 9]] })
-    // Tall (a square in a 16:10 frame): either side.
-    expect(edgeRects(1000, 1000, undefined, FRAME)).toEqual({ side: 'lr', rects: [[0, 0, 20, 1000], [980, 0, 20, 1000]] })
-    // Cropped: the strips sit inside what is kept.
-    expect(edgeRects(2000, 1000, { top: 0.1, bottom: 0, left: 0.25, right: 0 }, FRAME)?.rects[0]).toEqual([500, 100, 1500, 18])
+  it("asks for a wide picture's top and bottom edges, a tall one's sides, inside the editor crop", () => {
+    expect(edgeSampleQuery(1200, 435, undefined, FRAME)).toEqual({ side: 'tb', query: 'w=1&h=50&fit=scale&fm=png' })
+    expect(edgeSampleQuery(1000, 1000, undefined, FRAME)).toEqual({ side: 'lr', query: 'w=50&h=1&fit=scale&fm=png' })
+    expect(edgeSampleQuery(2000, 1000, { top: 0.1, bottom: 0, left: 0.25, right: 0 }, FRAME)?.query).toBe('rect=500,100,1500,900&w=1&h=50&fit=scale&fm=png')
   })
 
-  it('reads the colour of a one-pixel PNG, with or without alpha', () => {
+  it('reads the first and last pixels of a PNG under every row filter, with or without alpha', () => {
     const inflate = (data: Uint8Array) => inflateSync(data)
-    expect(onePixelColor(onePixelPng([254, 251, 255]), inflate)).toBe('#fefbff')
-    expect(onePixelColor(onePixelPng([7, 20, 33], 6), inflate)).toBe('#071421')
-    expect(onePixelColor(new Uint8Array([1, 2, 3]), inflate)).toBeUndefined()
+    const column = [[[254, 251, 255]], [[120, 60, 30]], [[7, 20, 33]]]
+    const row = [[[86, 86, 86], [200, 10, 90], [127, 125, 123]]]
+    for (const filter of [0, 1, 2, 3, 4]) {
+      expect(pngEndColors(png(column, filter), inflate)).toEqual(['#fefbff', '#071421'])
+      expect(pngEndColors(png(row, filter, 6), inflate)).toEqual(['#565656', '#7f7d7b'])
+    }
+    expect(pngEndColors(new Uint8Array([1, 2, 3]), inflate)).toBeUndefined()
   })
 
   it('fills the rest of the frame with each edge colour on its own half', () => {
