@@ -19,6 +19,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { DrawnLine } from '@/components/ui/DrawnLine'
 import { detailInsight, prototypeScenes, sceneView } from './prototypeContent'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
+import { projectNoteHref } from '@/lib/contactPrefill'
 import { HomeSearch } from './HomeSearch'
 import { ease } from '@/lib/motion'
 
@@ -513,14 +514,16 @@ function Evidence({ low }: { low: boolean }) {
   </Section>
 }
 
-function Contact({ selected }: { selected: PrototypeId }) {
+/** The form arrives with the visitor's last search already in it (asked), so nobody types
+ * their problem twice; the email note carries it too. */
+function Contact({ selected, asked }: { selected: PrototypeId; asked: string }) {
   const challenge = prototypeScenes.find(item => item.id === selected)?.challenge || 'A new project'
-  const note = `mailto:info@goinvo.com?subject=${encodeURIComponent(`A project with GoInvo: ${challenge}`)}&body=${encodeURIComponent("What I'm working on:\n\nWhat I'd like to change:\n\n")}`
+  const note = projectNoteHref('info@goinvo.com', challenge, asked)
   return (
     <Section spacing="none" aria-label="Contact" id="contact" className="scroll-mt-24 pb-7 pt-24 md:pt-36">
       <div className="grid items-start gap-10 md:grid-cols-2 md:gap-16">
         <Reveal style="settle" duration={0.7}><SectionHeading text="What are you working on?" className="max-w-[13ch]" /><p className={cn('mb-0 mt-7 max-w-[34ch]', type.body)}>A question or a rough idea is enough. No meeting required.</p><p className={cn('mb-0 mt-7', type.label)}>Prefer to talk? <InlineLink href="https://calendly.com/goinvo/open-office-hours">Book a conversation.</InlineLink></p></Reveal>
-        <div data-inquiry-form><ContactFormEmbed showHeader={false} variant="inline" /><p className={cn('mb-0 mt-4', type.label)}>Or <InlineLink href={note}>send a project note by email</InlineLink>.</p></div>
+        <div data-inquiry-form><ContactFormEmbed showHeader={false} variant="inline" message={asked || undefined} /><p className={cn('mb-0 mt-4', type.label)}>Or <InlineLink href={note}>send a project note by email</InlineLink>.</p></div>
       </div>
     </Section>
   )
@@ -540,6 +543,8 @@ export function HumanHome({ work }: { work?: string }) {
     return prototypeScenes.some(scene => scene.id === wanted) ? wanted as PrototypeId : 'clinical'
   })
   const [view, setView] = useState<string | null>(() => params.get('view'))
+  // The visitor's last search, carried down into the contact form.
+  const [asked, setAsked] = useState('')
   function choose(id: PrototypeId) {
     setSelected(id)
     setView(null)
@@ -583,8 +588,8 @@ export function HumanHome({ work }: { work?: string }) {
   return (
     <MotionConfig reducedMotion={low ? 'always' : 'never'}>
       <div data-human-home data-motion={low ? 'low' : 'full'} style={{ color: ink, background: paper }} className={cn("relative mx-auto min-h-svh w-[calc(100%_-_56px)] pb-24 font-sans selection:bg-secondary selection:text-white md:w-full", largerText && "[&_p.text-base]:text-[20px] [&_p.text-base]:leading-relaxed [&_[data-story-task]]:text-[20px]")}>
-        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headlineFor(params.get('headline'))} subline={sublineFor(params.get('subline'))} /><HomeSearch /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
-        <Contact selected={selected} />
+        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headlineFor(params.get('headline'))} subline={sublineFor(params.get('subline'))} /><HomeSearch onAsked={setAsked} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
+        <Contact selected={selected} asked={asked} />
         <NextPrompt low={low} />
         <HumanPageControls low={low} ready={ready} toggleMotion={toggleMotion} largerText={largerText} setLargerText={value => { setLargerText(value); try { localStorage.setItem('goinvo-human-large-text', String(value)) } catch { /* Optional storage. */ } }} />
       </div>

@@ -237,6 +237,18 @@ try {
       check(band.colour !== 'plain' && band.touches && band.toEdge && band.sameBottom && band.worst >= 7 && band.overflow <= 1, `${width}: the lead's words sit on a block of its picture's colour, joined to the picture and running off the right edge, every line at 7:1 or better ${JSON.stringify(band)}`)
       const crops = await pictureCrops(page)
       check(crops.length >= 2 && (crops.some(row => row.fit === 'whole') ? crops.some(row => row.block) : true) && crops.every(row => !row.unloaded && (row.loss < 0.24 ? row.shown === 'cover' : row.loss > 0.26 ? row.fit === 'whole' && row.shown === 'contain' : true)), `${width}: no result picture loses more than a quarter of itself to the crop; the rest show whole on their own edge colours ${JSON.stringify(crops)}`)
+      // The search hands the visitor's words to the contact form: read the filled field back
+      // out of the live JotForm form.
+      await page.evaluate(() => document.querySelector('#contact').scrollIntoView())
+      await page.waitForFunction(() => /[?&]howCan=/.test(document.querySelector('iframe[data-contact-form]')?.src || ''), { timeout: 15000 }).catch(() => {})
+      const handOff = await (async () => {
+        const frame = await (await page.$('iframe[data-contact-form]'))?.contentFrame()
+        if (!frame) return { field: null }
+        await frame.waitForSelector('#input_5', { timeout: 30000 }).catch(() => {})
+        return { field: await frame.$eval('#input_5', el => el.value).catch(() => null), offer: await page.evaluate(() => !!document.querySelector('[data-search-to-contact]')) }
+      })()
+      check(handOff.field === example && handOff.offer, `${width}: the search's words arrive in the contact form, and the answer offers it ${JSON.stringify({ ...handOff, example })}`)
+      await page.evaluate(() => document.querySelector('#ask').scrollIntoView()); await pause(300)
       await page.$eval('#ask-input', input => { input.value = '' }); await page.click('#ask-input', { clickCount: 3 }); await page.type('#ask-input', 'knitting patterns for zebras'); await page.keyboard.press('Enter')
       await page.waitForSelector('[data-search-empty] img', { timeout: 60000 })
       check(await page.evaluate(() => !document.querySelector('[data-search-results]') && /No strong matches/.test(document.querySelector('#ask [aria-live]').textContent) && decodeURIComponent(document.querySelector('[data-search-empty] img').getAttribute('src')).includes('404-ai') && document.querySelector('[data-search-empty]').innerText.includes('No results')), `${width}: a search nothing fits says so honestly, with the no-results illustration`)

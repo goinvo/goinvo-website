@@ -58,7 +58,7 @@ interface SearchResponse {
   error?: string
 }
 
-export function HomeSearch() {
+export function HomeSearch({ onAsked }: { onAsked?: (query: string) => void } = {}) {
   const reduced = useReducedMotion() ?? false
   const [input, setInput] = useState('')
   const [submitted, setSubmitted] = useState('')
@@ -86,6 +86,7 @@ export function HomeSearch() {
     abort.current = controller
     setInput(trimmed)
     setSubmitted(trimmed)
+    onAsked?.(trimmed)
     setLoading(true)
     setFailed(false)
     setResponse(null)
@@ -205,10 +206,21 @@ export function HomeSearch() {
             items={response.results}
           />
           {response.alsoRelated && response.alsoRelated.length > 0 && <Results label="Also related" items={response.alsoRelated} quiet />}
-          <TextLink href="/work" className="mt-12">See all the work</TextLink>
+          <ToContact />
         </>}
       </div>
     </Section>
+  )
+}
+
+/** The way on from an answer: the contact form, which already holds their words, and the
+ * whole portfolio. */
+function ToContact() {
+  return (
+    <div className="mt-12 flex flex-wrap items-baseline gap-x-10 gap-y-4">
+      <p className={cn('m-0', type.label)}><TextLink href="#contact" data-search-to-contact>Tell us about yours</TextLink> <span className="text-gray">Your words are already in the form.</span></p>
+      <TextLink href="/work" className={type.label}>See all the work</TextLink>
+    </div>
   )
 }
 
@@ -376,6 +388,7 @@ function EmptyState({ kind, title, note, run, retry }: { kind: 'none' | 'error';
               </button>
             </li>)}
           </ul>
+          <p className={cn('mb-0 mt-6', type.label)}><TextLink href="#contact" data-search-to-contact>Or tell us about yours</TextLink> <span className="text-gray">Your words are already in the form.</span></p>
         </div>
       </div>
     </div>
