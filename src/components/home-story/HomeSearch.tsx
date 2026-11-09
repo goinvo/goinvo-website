@@ -378,7 +378,8 @@ function EmptyState({ kind, title, note, run, retry }: { kind: 'none' | 'error';
           </p>
           <div className="mt-10 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
             <p data-hand-note className={cn('m-0 text-gray', type.label)}>Try one of these</p>
-            <TextLink href="/work" className={type.label}>Or browse all the work</TextLink>
+            {/* When nothing fits, telling us beats browsing: the form already holds their words. */}
+            <TextLink href="#contact" data-search-to-contact title="Your words are already in the form" className={type.label}>Or tell us about yours</TextLink>
           </div>
           <ul className="m-0 mt-3 list-none p-0">
             {SUGGESTED_QUERIES.map(item => <li key={item.query}>
@@ -388,7 +389,6 @@ function EmptyState({ kind, title, note, run, retry }: { kind: 'none' | 'error';
               </button>
             </li>)}
           </ul>
-          <p className={cn('mb-0 mt-6', type.label)}><TextLink href="#contact" data-search-to-contact>Or tell us about yours</TextLink> <span className="text-gray">Your words are already in the form.</span></p>
         </div>
       </div>
     </div>
