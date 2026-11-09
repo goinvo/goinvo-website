@@ -3,7 +3,8 @@ import { client } from '@/sanity/lib/client'
 import { urlForImage } from '@/sanity/lib/image'
 import { headingAnchorId } from '@/lib/headingAnchor'
 import type { SanityImage } from '@/types'
-import { imageShape, type PictureFocus } from './picture'
+import { inflateSync } from 'node:zlib'
+import { edgeRects, imageShape, onePixelColor, pictureFit, SEARCH_PICTURE_FRAME, type PictureEdges, type PictureFocus } from './picture'
 
 /**
  * Project index for the AI search band: every publicly listed case study and
@@ -23,6 +24,8 @@ export interface SearchIndexItem {
   imageFocus?: PictureFocus
   /** The editor's card position (heroPosition), as the site's cards use it. */
   imagePosition?: string
+  /** For a picture shown whole: the colours of its edges, which fill the rest of the frame. */
+  imageEdges?: PictureEdges
   kind: 'work' | 'vision'
   /** Curated retrieval vocabulary (see PROJECT_KEYWORDS) — searched, never displayed. */
   keywords?: string[]
@@ -175,6 +178,38 @@ function picture(image?: SanityImage, heroPosition?: string): Pick<SearchIndexIt
   }
 }
 
+/** Edge colours, by asset and crop: they never change for a given image, so index rebuilds
+ * do not ask again. A failed read is not cached (the next rebuild tries again). */
+const edgeCache = new Map<string, PictureEdges>()
+
+/** The colour of each edge a whole picture leaves showing: Sanity shrinks a 2% strip of
+ * that edge to one pixel. Fail-open: no colour, the frame keeps its plain tint. */
+async function pictureEdges(image?: SanityImage): Promise<PictureEdges | undefined> {
+  const ref = image?.asset?._ref ?? ''
+  const size = /-(\d+)x(\d+)-[a-z0-9]+$/i.exec(ref)
+  if (!image || !size || pictureFit(imageShape(image).aspect, SEARCH_PICTURE_FRAME) !== 'whole') return undefined
+  const crop = (image as { crop?: { top?: number; bottom?: number; left?: number; right?: number } }).crop
+  const key = `${ref}|${JSON.stringify(crop ?? null)}`
+  const known = edgeCache.get(key)
+  if (known) return known
+  const plan = edgeRects(Number(size[1]), Number(size[2]), crop, SEARCH_PICTURE_FRAME)
+  if (!plan) return undefined
+  try {
+    const base = urlForImage({ asset: image.asset } as SanityImage).url()
+    const colors = await Promise.all(plan.rects.map(async (rect) => {
+      const response = await fetch(`${base}?rect=${rect.join(',')}&w=1&h=1&fm=png`, { signal: AbortSignal.timeout(3000) })
+      if (!response.ok) return undefined
+      return onePixelColor(new Uint8Array(await response.arrayBuffer()), (data) => inflateSync(data))
+    }))
+    if (!colors[0] || !colors[1]) return undefined
+    const edges: PictureEdges = { side: plan.side, colors: [colors[0], colors[1]] }
+    edgeCache.set(key, edges)
+    return edges
+  } catch {
+    return undefined
+  }
+}
+
 function cleanCategories(categories?: (string | null)[]): string[] {
   return (categories ?? []).filter((c): c is string => typeof c === 'string' && c.length > 0)
 }
@@ -221,7 +256,14 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       sections: f.externalLink ? [] : normalizeSections(f.sectionBlocks),
     }))
 
-  const items = [...caseStudies, ...features]
+  const images = new Map<string, SanityImage | undefined>([
+    ...(data.caseStudies ?? []).map((cs) => [cs.slug, cs.image] as const),
+    ...(data.features ?? []).map((f) => [f.slug, f.image] as const),
+  ])
+  const items = await Promise.all([...caseStudies, ...features].map(async (item) => {
+    const imageEdges = await pictureEdges(images.get(item.slug))
+    return imageEdges ? { ...item, imageEdges } : item
+  }))
   if (items.length > 0) cache = { at: Date.now(), items }
   return items
 }

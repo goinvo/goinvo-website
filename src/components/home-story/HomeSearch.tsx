@@ -11,7 +11,7 @@ import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { TextLink, focusRing, textLinkClass } from '@/components/ui/TextLink'
 import { EMPTY_STATE_QUERIES, EXAMPLE_QUERIES } from '@/lib/search/suggested'
-import { focusPosition, pictureFit, type PictureFocus } from '@/lib/search/picture'
+import { edgeBlock, focusPosition, pictureFit, SEARCH_PICTURE_FRAME, type PictureEdges, type PictureFocus } from '@/lib/search/picture'
 
 /**
  * "Not on the list? Describe yours." The opening offers three situations; this lets
@@ -36,6 +36,7 @@ interface SearchResult {
   caption: string
   image?: string
   imageAspect?: number
+  imageEdges?: PictureEdges
   imageFocus?: PictureFocus
   imagePosition?: string
   kind?: 'work' | 'vision'
@@ -238,17 +239,16 @@ const lift = 'transition-transform duration-700 ease-out-expo group-hover:scale-
 const opensAt = (item: SearchResult) => item.anchorTitle ? `Opens at “${item.anchorTitle}”` : item.kind === 'vision' ? 'Read it' : 'Read the case study'
 
 /** Frames, width over height. */
-const FEATURE_FRAME = 16 / 10
-const CARD_FRAME = 16 / 10
+const FEATURE_FRAME = SEARCH_PICTURE_FRAME
+const CARD_FRAME = SEARCH_PICTURE_FRAME
 
-/** Fills its frame, positioned as the editor set it for the site's cards. Only a picture
- * that would lose a big share of itself (picture.ts) shows whole, over a soft blurred copy
- * of itself, so wide lettering is never cut mid-word. */
+/** Fills its frame, positioned as the editor set it for the site's cards. A picture that
+ * would lose more than a quarter of itself (picture.ts) shows whole instead, on a block of
+ * its own edge colours, so the frame still reads as full and nothing is cut mid-word. */
 function ResultPicture({ item, frame, sizes, className, feature = false }: { item: SearchResult; frame: number; sizes: string; className?: string; feature?: boolean }) {
   const fit = pictureFit(item.imageAspect, frame)
   return (
-    <div data-search-picture={feature ? 'feature' : 'card'} data-picture-fit={fit} style={{ aspectRatio: frame }} className={cn('relative overflow-hidden bg-tertiary-lightest', className)}>
-      {item.image && fit === 'whole' && <Image src={item.image} alt="" fill sizes={sizes} className="scale-125 object-cover opacity-30 blur-2xl" />}
+    <div data-search-picture={feature ? 'feature' : 'card'} data-picture-fit={fit} data-picture-block={fit === 'whole' && item.imageEdges ? item.imageEdges.side : undefined} style={{ aspectRatio: frame, background: fit === 'whole' ? edgeBlock(item.imageEdges) : undefined }} className={cn('relative overflow-hidden bg-tertiary-lightest', className)}>
       {item.image && <Image src={item.image} alt="" fill sizes={sizes} style={fit === 'fill' ? { objectPosition: focusPosition(item.imageFocus, item.imagePosition) } : undefined} className={cn(fit === 'whole' ? 'object-contain' : 'object-cover', lift)} />}
     </div>
   )
