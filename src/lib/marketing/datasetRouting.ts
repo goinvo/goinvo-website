@@ -91,6 +91,9 @@ export const INTERNAL_MARKETING_TYPES: readonly string[] = [
   // the same change that introduced them.
   'marketingStrategyIntent',
   'marketingTerrainScan',
+  // What visitors type into the homepage search, and what it answered. Their own
+  // words, so private; listed in the same change that introduced the type.
+  'marketingSiteSearch',
 ]
 
 export function isInternalMarketingType(type: string): boolean {

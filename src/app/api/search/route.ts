@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { designSwitchEnabled } from '@/lib/designSwitch'
 import { storedAnswer } from '@/lib/search/suggested'
 import { createHash } from 'node:crypto'
@@ -7,6 +7,9 @@ import type { PictureEdges, PictureFocus } from '@/lib/search/picture'
 import { recall } from '@/lib/search/lexical'
 import { selectAndDescribe } from '@/lib/search/aiSearch'
 import { groundedBlurb, searchCacheKey, type BlurbSource } from '@/lib/search/grounding'
+import { searchLogEntry, searchVia, type SearchAnswer, type SearchSource, type SearchVia } from '@/lib/search/searchLog'
+import { deploymentEnv, recordSearch } from '@/lib/search/searchLog.server'
+import { isLikelyBot } from '@/lib/marketing/botFilter'
 
 export const maxDuration = 30
 
@@ -163,9 +166,11 @@ export async function POST(request: NextRequest) {
   let instant = false
   let fresh = false
   let simulate: SimulatedState | null = null
+  let via: SearchVia = 'typed'
   try {
-    const body = JSON.parse(raw) as { query?: unknown; instant?: unknown; fresh?: unknown; simulate?: unknown }
+    const body = JSON.parse(raw) as { query?: unknown; instant?: unknown; fresh?: unknown; simulate?: unknown; via?: unknown }
     query = typeof body.query === 'string' ? body.query.trim() : ''
+    via = searchVia(body.via)
     instant = body.instant === true
     fresh = body.fresh === true
     // Review only: never honoured in production, where the design switch is off.
@@ -177,17 +182,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'query must be 2–200 characters' }, { status: 400 })
   }
 
+  // Every answered search is kept for analytics (searchLog.ts), written after the reply
+  // goes out. Not kept: the instant first paint (the full answer follows it), rebuilds of
+  // the stored suggestions, review-only simulated states, and bots and headless browsers.
+  const startedAt = Date.now()
+  const keep = !instant && !fresh && !simulate && !isLikelyBot(request.headers.get('user-agent'))
+  const answer = (payload: object, source: SearchSource) => {
+    if (keep) after(() => recordSearch(searchLogEntry({ query, via, source, answer: payload as SearchAnswer, latencyMs: Date.now() - startedAt, env: deploymentEnv() })))
+    return NextResponse.json(payload)
+  }
+
   // The searches we suggest have their answers stored (suggested.ts): at once, no
   // model call. `fresh` skips it, for scripts/build-search-suggestions.mjs to rebuild them.
   if (simulate === 'error' && !instant) return NextResponse.json({ error: 'simulated failure' }, { status: 500 })
   const stored = fresh || simulate ? null : storedAnswer(query)
-  if (stored) return NextResponse.json({ ...(await withCurrentPictures(stored)), cached: 'stored' })
+  if (stored) return answer({ ...(await withCurrentPictures(stored)), cached: 'stored' }, 'stored')
 
   const index = await getSearchIndex()
   const shortlist = recall(query, index, 20)
 
   if (shortlist.length === 0) {
-    return NextResponse.json({ results: [], aiGenerated: false, reason: 'no-matches' })
+    return answer({ results: [], aiGenerated: false, reason: 'no-matches' }, 'none')
   }
 
   // Instant pass: lexical-only, no AI, no KV — the client's first paint while
@@ -206,7 +221,7 @@ export async function POST(request: NextRequest) {
   const cached = fresh || simulate ? null : ((await kv(['GET', cacheKey])) as string | null)
   if (cached) {
     try {
-      return NextResponse.json({ ...(await withCurrentPictures(JSON.parse(cached) as object)), cached: true })
+      return answer({ ...(await withCurrentPictures(JSON.parse(cached) as Record<string, unknown>)), cached: true }, 'cache')
     } catch {
       /* fall through to fresh compute */
     }
@@ -218,11 +233,11 @@ export async function POST(request: NextRequest) {
   const selection = limited || simulate === 'ai-unavailable' ? null : await selectAndDescribe(query, shortlist.map((s) => s.item))
 
   if (!selection) {
-    return NextResponse.json({
+    return answer({
       results: shortlist.slice(0, 9).map((s) => toResponseItem(s.item)),
       aiGenerated: false,
       reason: limited ? 'rate-limited' : 'ai-unavailable',
-    })
+    }, 'keyword')
   }
 
   const bySlug = new Map(shortlist.map((s) => [s.item.slug, s.item]))
@@ -256,7 +271,7 @@ export async function POST(request: NextRequest) {
       gapNote: selection.gapNote,
     }
     await kv(['SET', cacheKey, JSON.stringify(payload), 'EX', CACHE_TTL_SECONDS])
-    return NextResponse.json(payload)
+    return answer(payload, 'none')
   }
 
   // Sparse selections read as thin inventory: backfill with the next lexical
@@ -280,5 +295,5 @@ export async function POST(request: NextRequest) {
   }
 
   await kv(['SET', cacheKey, JSON.stringify(payload), 'EX', CACHE_TTL_SECONDS])
-  return NextResponse.json(payload)
+  return answer(payload, 'ai')
 }

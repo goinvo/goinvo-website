@@ -11,6 +11,7 @@ import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { TextLink, focusRing, textLinkClass } from '@/components/ui/TextLink'
 import { EXAMPLE_QUERIES, LINE_SUGGESTION, SUGGESTED_QUERIES } from '@/lib/search/suggested'
+import type { SearchVia } from '@/lib/search/searchLog'
 import { edgeBlock, focusPosition, leadBlockColor, pictureFit, SEARCH_PICTURE_FRAME, type PictureEdges, type PictureFocus } from '@/lib/search/picture'
 
 /**
@@ -77,7 +78,7 @@ export function HomeSearch() {
     box.style.height = `${box.scrollHeight}px`
   }, [input])
 
-  async function run(query: string) {
+  async function run(query: string, via: SearchVia = 'typed') {
     const trimmed = query.trim()
     if (trimmed.length < 2) return
     abort.current?.abort()
@@ -94,7 +95,7 @@ export function HomeSearch() {
 
     // Review only (the route ignores it in production): ?search-state=ai-unavailable|rate-limited|error.
     const simulate = new URLSearchParams(location.search).get('search-state') || undefined
-    const post = (body: object) => fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, simulate }), signal: controller.signal })
+    const post = (body: object) => fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, via, simulate }), signal: controller.signal })
     // First paint: the keyword pass, shown only until the AI answer lands.
     post({ query: trimmed, instant: true })
       .then(async res => {
@@ -147,7 +148,7 @@ export function HomeSearch() {
         <p className={cn('m-0 max-w-[40ch]', type.lead)}>Tell us what you’re up against, in your own words. We’ll find the work of ours that comes closest.</p>
       </div>
 
-      <form ref={form} role="search" className="relative z-10 mt-12 scroll-mt-24 md:mt-16" onSubmit={event => { event.preventDefault(); run(input) }}>
+      <form ref={form} role="search" className="relative z-10 mt-12 scroll-mt-24 md:mt-16" onSubmit={event => { event.preventDefault(); run(input, input.trim() === LINE_SUGGESTION.query ? 'line-suggestion' : 'typed') }}>
         <label htmlFor="ask-input" className="sr-only">Describe what you’re working on</label>
         <div className="flex items-end gap-6 border-b-2 border-current focus-within:border-secondary">
           {/* A text area, so the question wraps (a phone shows all of it); Enter still searches
@@ -178,7 +179,7 @@ export function HomeSearch() {
         <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
           <p data-search-examples className={cn('m-0 flex flex-wrap items-baseline gap-x-5', type.label)}>
             <span data-hand-note className="text-gray">Or try</span>
-            {EXAMPLE_QUERIES.map(example => <button key={example.label} type="button" onClick={() => run(example.query)} className={cn('min-h-12 cursor-pointer border-0 bg-transparent p-0 text-left text-inherit underline decoration-1 underline-offset-4 hover:text-secondary', focusRing)}>{example.label}</button>)}
+            {EXAMPLE_QUERIES.map(example => <button key={example.label} type="button" onClick={() => run(example.query, 'example')} className={cn('min-h-12 cursor-pointer border-0 bg-transparent p-0 text-left text-inherit underline decoration-1 underline-offset-4 hover:text-secondary', focusRing)}>{example.label}</button>)}
           </p>
           <p id="ask-note" className={cn('m-0 text-gray', type.caption)}>Experimental: an AI reads what you type and answers only from our published work.</p>
         </div>
@@ -192,7 +193,7 @@ export function HomeSearch() {
           ? <Results label="First matches" note="Narrowing these down and writing why each fits…" items={provisional.slice(0, 6)} faded />
           : <Skeleton />)}
 
-        {!loading && failed && <EmptyState kind="error" title="Search failed" note="Something broke on our side." run={run} retry={() => run(submitted)} />}
+        {!loading && failed && <EmptyState kind="error" title="Search failed" note="Something broke on our side." run={run} retry={() => run(submitted, 'retry')} />}
 
         {!loading && response && response.results.length === 0 && <EmptyState kind="none" title="No results" note={response.gapNote || 'Nothing we’ve published fits that closely.'} run={run} />}
 
@@ -340,7 +341,7 @@ function Skeleton() {
  * illustration, large enough to own the moment, and beside it the words and searches that do
  * have answers (stored, so they come back at once, even while the search itself is failing),
  * quoted as the page quotes a reader's concerns. */
-function EmptyState({ kind, title, note, run, retry }: { kind: 'none' | 'error'; title: string; note: string; run: (query: string) => void; retry?: () => void }) {
+function EmptyState({ kind, title, note, run, retry }: { kind: 'none' | 'error'; title: string; note: string; run: (query: string, via: SearchVia) => void; retry?: () => void }) {
   return (
     <div data-search-empty={kind} className="mt-12 lg:mt-8">
       {/* Roughly 70 / 20 / 10: the girl carries the block, the words come second, the
@@ -369,7 +370,7 @@ function EmptyState({ kind, title, note, run, retry }: { kind: 'none' | 'error';
           </div>
           <ul className="m-0 mt-3 list-none p-0">
             {SUGGESTED_QUERIES.map(item => <li key={item.query}>
-              <button type="button" data-rule onClick={() => run(item.query)} className={cn('group flex w-full cursor-pointer items-baseline justify-between gap-6 border-x-0 border-b-0 border-t border-solid border-black/15 bg-transparent px-0 py-3 text-left text-inherit', focusRing)}>
+              <button type="button" data-rule onClick={() => run(item.query, 'empty-suggestion')} className={cn('group flex w-full cursor-pointer items-baseline justify-between gap-6 border-x-0 border-b-0 border-t border-solid border-black/15 bg-transparent px-0 py-3 text-left text-inherit', focusRing)}>
                 <span className={cn('transition-colors duration-300 group-hover:text-secondary motion-reduce:transition-none', type.lead)}>“{item.label}”</span>
                 <span className={cn('shrink-0', nudge)}><Arrow /></span>
               </button>
