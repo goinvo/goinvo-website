@@ -138,7 +138,7 @@ export function HumanPageControls({ low, ready, toggleMotion, largerText, setLar
             <span aria-hidden="true" data-rail-label style={{ top: `${(reading.positions[index] - hit.start) / (hit.end - hit.start) * 100}%` }} className={cn('pointer-events-none absolute right-11 flex -translate-y-1/2 items-center gap-2 whitespace-nowrap border-l-4 px-4 py-2 text-[18px] leading-snug opacity-0 transition-[opacity,transform,background-color] duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 motion-reduce:transition-none', aimed ? '-translate-x-1 border-secondary bg-tertiary-lightest text-black underline decoration-1 underline-offset-4' : current ? 'border-secondary bg-white font-semibold text-black' : 'border-gray-medium bg-white text-gray')}>{chapter.label}{aimed && <span className="no-underline">→</span>}</span>
           </button>
         })}
-        <span aria-hidden="true" className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs tabular-nums text-black opacity-0 transition-opacity group-hover/rail:opacity-100 group-focus-within/rail:opacity-100">{reading.percent}%</span>
+        <span aria-hidden="true" className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-white px-1 text-xs tabular-nums text-black opacity-0 transition-opacity group-hover/rail:opacity-100 group-focus-within/rail:opacity-100">{reading.percent}%</span>
       </nav>
       {/* Sits above the site's chat widget, which owns the bottom-right corner. */}
       <div className="pointer-events-auto absolute bottom-24 right-0 flex flex-col items-center gap-1 bg-white md:bottom-24 md:right-4 md:flex-row">
