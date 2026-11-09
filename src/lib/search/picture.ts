@@ -80,7 +80,7 @@ export function edgeSampleQuery(width: number, height: number, crop: { top?: num
 }
 
 /** The first and last pixels of a small 8-bit truecolour PNG (with or without alpha), as
- * #rrggbb. Undoes the five PNG row filters; the caller passes zlib's inflate, so this file
+ * #rrggbb; nothing when either is see-through. Undoes the five PNG row filters; the caller passes zlib's inflate, so this file
  * stays free of Node imports. */
 export function pngEndColors(png: Uint8Array, inflate: (data: Uint8Array) => Uint8Array): [string, string] | undefined {
   const view = new DataView(png.buffer, png.byteOffset, png.byteLength)
@@ -108,7 +108,10 @@ export function pngEndColors(png: Uint8Array, inflate: (data: Uint8Array) => Uin
     }
   }
   const hex = (at: number) => '#' + [0, 1, 2].map(k => pixels[at + k].toString(16).padStart(2, '0')).join('')
-  return [hex(0), hex((width * height - 1) * bpp)]
+  const last = (width * height - 1) * bpp
+  // A see-through edge has no colour of its own: the frame's tint shows around it as through it.
+  if (bpp === 4 && (pixels[3] < 250 || pixels[last + 3] < 250)) return undefined
+  return [hex(0), hex(last)]
 }
 
 /** The frame's background behind a whole picture: each edge's colour on its own half. */

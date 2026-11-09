@@ -5,13 +5,13 @@ import { cropLoss, edgeBlock, edgeSampleQuery, focusPosition, imageShape, pictur
 const FRAME = SEARCH_PICTURE_FRAME
 
 /** A small truecolour PNG, each row written with the given row filter, as Sanity might. */
-function png(rows: number[][][], filter = 0, colorType = 2): Uint8Array {
+function png(rows: number[][][], filter = 0, colorType = 2, alpha = 255): Uint8Array {
   const chunk = (kind: string, body: Buffer) => {
     const length = Buffer.alloc(4); length.writeUInt32BE(body.length)
     return Buffer.concat([length, Buffer.from(kind, 'ascii'), body, Buffer.alloc(4)])
   }
   const bpp = colorType === 6 ? 4 : 3, width = rows[0].length
-  const flat = rows.map(row => row.flatMap(pixel => colorType === 6 ? [...pixel, 255] : pixel))
+  const flat = rows.map(row => row.flatMap(pixel => colorType === 6 ? [...pixel, alpha] : pixel))
   const encoded = flat.flatMap((row, y) => [filter, ...row.map((value, x) => {
     const a = x >= bpp ? row[x - bpp] : 0, b = y ? flat[y - 1][x] : 0, c = x >= bpp && y ? flat[y - 1][x - bpp] : 0
     const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c)
@@ -75,6 +75,8 @@ describe('search result pictures', () => {
       expect(pngEndColors(png(row, filter, 6), inflate)).toEqual(['#565656', '#7f7d7b'])
     }
     expect(pngEndColors(new Uint8Array([1, 2, 3]), inflate)).toBeUndefined()
+    // A transparent edge (the guidelines diagram) reads as black; it gets no block, not a black one.
+    expect(pngEndColors(png([[[0, 0, 0]], [[0, 0, 0]]], 0, 6, 0), inflate)).toBeUndefined()
   })
 
   it('fills the rest of the frame with each edge colour on its own half', () => {
