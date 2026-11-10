@@ -1,8 +1,11 @@
 'use client'
 
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { FormEvent, useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { siteConfig } from '@/lib/config'
+import type { ChatCard } from '@/lib/chat/presets'
+import { ChatPresetCard } from '@/components/chat/ChatPresetCard'
 import {
   CHAT_ATTACHMENT_ACCEPT,
   MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES,
@@ -56,11 +59,20 @@ interface ChatMessage {
   authorName?: string
   text: string
   createdAt: string
+  /** An instant reply (greeting, citation, license table) the server drew as a card. */
+  card?: ChatCard
   attachments?: Pick<
     ChatAttachment,
     'filename' | 'contentType' | 'size' | 'uploadStatus' | 'slackPermalink'
   >[]
 }
+
+/** Before a conversation starts, a piece of work offers the two questions the chat answers instantly. */
+const PIECE_PAGE = /^\/(vision|work)\/[a-z0-9-]+\/?$/
+const PIECE_STARTERS = [
+  { label: 'How do I cite this?', message: 'How do I cite this?' },
+  { label: 'Can I reuse this?', message: 'What license is this under? Can I reuse it?' },
+]
 
 interface StoredThread {
   threadId: string
@@ -122,6 +134,11 @@ export function ChatWidget() {
   const initialAttachmentInputRef = useRef<HTMLInputElement>(null)
   const replyAttachmentInputRef = useRef<HTMLInputElement>(null)
   const entryFlowRef = useRef<ChatEntryFlow | null>(null)
+  const initialMessageRef = useRef<HTMLTextAreaElement>(null)
+  // Chip presses go out one at a time, in order, and a press made while a reply is still
+  // in flight waits for it instead of being dropped.
+  const chipQueue = useRef<Promise<unknown>>(Promise.resolve())
+  const pathname = usePathname()
 
   const beginPosterInquiry = useCallback(() => {
     setIsOpen(true)
@@ -334,17 +351,26 @@ export function ChatWidget() {
 
   const handleSendReply = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!thread) return
+    if (await sendReply(replyMessage, replyAttachment)) {
+      setReplyMessage('')
+      setReplyAttachment(null)
+      if (replyAttachmentInputRef.current) replyAttachmentInputRef.current.value = ''
+    }
+  }
+
+  const sendReply = async (text: string, attachment: File | null) => {
+    if (!thread) return false
 
     setError(null)
     setIsSubmitting(true)
+    const replyAttachment = attachment
 
     try {
       const data = await sendChatRequest(
         `/api/chat/threads/${encodeURIComponent(thread.threadId)}`,
         {
           visitorKey: thread.visitorKey,
-          message: replyMessage,
+          message: text,
         },
         replyAttachment,
       )
@@ -369,11 +395,10 @@ export function ChatWidget() {
         setThreadStatus(uploadedData.status)
         setMessages(uploadedData.messages || [])
       }
-      setReplyMessage('')
-      setReplyAttachment(null)
-      if (replyAttachmentInputRef.current) replyAttachmentInputRef.current.value = ''
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to send message')
+      return false
     } finally {
       setIsSubmitting(false)
     }
@@ -663,11 +688,29 @@ export function ChatWidget() {
                 <div className="min-w-0 max-w-[calc(100%-3rem)] rounded-[18px] rounded-bl-none border border-gray-medium bg-white px-3 py-2 text-sm leading-6 text-black">
                   <p className="mb-1 font-semibold leading-6">{siteConfig.chat.introTitle}</p>
                   <p className="mb-0 leading-6 text-gray">{siteConfig.chat.introText}</p>
+                  {PIECE_PAGE.test(pathname || '') && (
+                    <div data-chat-starters className="mt-2 flex flex-wrap gap-1.5">
+                      {PIECE_STARTERS.map((starter) => (
+                        <button
+                          key={starter.label}
+                          type="button"
+                          data-chat-starter={starter.label}
+                          onClick={() => {
+                            setInitialMessage(starter.message)
+                            initialMessageRef.current?.focus()
+                          }}
+                          className="min-h-8 cursor-pointer rounded-full border border-secondary bg-white px-3 text-xs font-semibold leading-5 text-secondary transition-colors hover:bg-secondary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+                        >
+                          {starter.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
               <div className="space-y-3">
-                {messages.map((message) => {
+                {messages.map((message, messageIndex) => {
                   const isVisitor = message.authorType === 'visitor'
                   const teamAvatarSrc = isVisitor
                     ? undefined
@@ -685,7 +728,17 @@ export function ChatWidget() {
                             : 'max-w-[calc(100%-3rem)] rounded-bl-none border border-gray-medium bg-white text-black'
                         }`}
                       >
-                        <div className="whitespace-pre-wrap break-words">{message.text}</div>
+                        {message.card ? (
+                          <ChatPresetCard
+                            card={message.card}
+                            live={messageIndex === messages.length - 1}
+                            onChip={(chipMessage) => {
+                              chipQueue.current = chipQueue.current.then(() => sendReply(chipMessage, null))
+                            }}
+                          />
+                        ) : (
+                          <div className="whitespace-pre-wrap break-words">{message.text}</div>
+                        )}
                         {Boolean(message.attachments?.length) && (
                           <div className="mt-2 space-y-1">
                             {message.attachments?.map((attachment) => (
@@ -762,6 +815,7 @@ export function ChatWidget() {
                     className="hidden"
                   />
                   <textarea
+                    ref={initialMessageRef}
                     value={initialMessage}
                     onChange={(event) => setInitialMessage(event.target.value)}
                     placeholder="Write a message"

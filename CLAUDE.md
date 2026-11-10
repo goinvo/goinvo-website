@@ -727,6 +727,44 @@ Protocol** to recover the rest.
   feature is inert until the secret exists. Privacy: only experiment dimensions + the GA
   client_id the visitor's own GA cookie already holds — no new identifiers.
 
+## Website chat instant replies (built 2026-11-10)
+
+The visitor chat answers three things on its own, before a person: a bare hello ("Hi",
+"Testing", "What's up, chat?") is greeted back once; "how do I cite X" asks for a format
+(APA / MLA / Chicago / Harvard / AMA / Vancouver / BibTeX) and formats it; "can I use / share /
+print this, what license" shows a table of what the piece's license allows, the rows the
+visitor asked about first and highlighted. No model call — every answer is a lookup.
+
+- **Licenses are never inferred.** They come only from `PIECE_RIGHTS` in
+  `src/lib/chat/pieceRights.ts`, each entry quoting where GoInvo states it (page, repo or CMS
+  article). A page-sourced quote must literally appear in the page file
+  (`tests/chat-presets.test.ts`). An unlisted piece gets "I couldn't find a license stated for
+  it" and stays waiting on a person. Do NOT scrape license sentences: the Primary Self-Care
+  page names CC licenses that belong to the third-party models it cites.
+- **Citations** take title/authors/date from the CMS (`feature`/`caseStudy` by slug); a
+  `PIECE_RIGHTS` entry overrides where the publisher's own citation differs (Determinants of
+  Health: the repo README's suggested citation says 2019, the CMS card Apr.2020).
+- **Code:** pure `src/lib/chat/presets.ts` (detection, cards) + `citation.ts`; server
+  `presets.server.ts` (`planPresetReply`, piece resolution); card UI
+  `src/components/chat/ChatPresetCard.tsx`. Stored on the thread as `fallbackKind: 'preset'`
+  + `presetKind` + `presetCard` (JSON). Route-level liveness: `tests/chat-presets-route.test.ts`.
+- **The team still sees everything:** each instant reply posts an "Answered automatically" bot
+  note in the conversation's Slack thread (bot posts are skipped when Slack replies are copied
+  back to the visitor). A visitor's format pick is posted without the channel ping.
+- A preset is not a person: it never suppresses a greeting check or counts as "the team
+  replied", and the "nobody has responded" clock starts at the first visitor message after the
+  last preset answer (`firstUnansweredVisitorMessage`).
+- **Gotchas found in the browser, not the unit tests:** the create route REWRITES `messages`
+  once Slack answers, so the preset must ride in that array too (falsified in the route test);
+  and the 3s poll can draw a card while the reply that produced it is still in flight — a chip
+  disabled "while submitting" then silently swallowed the press. Chips lock per card after
+  their own press and queue behind an in-flight reply (`.audit`-style reproduction: hold the
+  POST response with CDP `Fetch` at the Response stage, press a chip on the polled card).
+- **Testing locally writes real `chatThread` docs and posts to the team's Slack.** Start the
+  server with `SLACK_BOT_TOKEN= SLACK_CHAT_CHANNEL_ID= SLACK_CHANNEL_ID=` and delete the
+  threads afterwards (filter on `source.pageUrl` = your localhost origin). In a worktree with a
+  junctioned `node_modules`, Turbopack refuses to start; `next dev --webpack` works.
+
 ## Key checks & scripts
 
 - `npm run check:charts` — chart-label alignment (catches dead-CSS / label-drift regressions).

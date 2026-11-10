@@ -1,11 +1,13 @@
 import type { ChatAttachment } from '@/lib/chat/attachments'
+import { parseCard, type ChatCard, type PresetKind } from '@/lib/chat/presets'
 
 export const MAX_CHAT_MESSAGE_LENGTH = 2000
 export const MAX_CHAT_NAME_LENGTH = 120
 export const MAX_CHAT_EMAIL_LENGTH = 254
 
 export type ChatAuthorType = 'visitor' | 'team' | 'system'
-export type ChatFallbackKind = 'noResponse'
+/** Messages the site wrote, not a person: the no-response note and the instant preset replies. */
+export type ChatFallbackKind = 'noResponse' | 'preset'
 
 export interface SanityChatMessage {
   _key: string
@@ -18,6 +20,9 @@ export interface SanityChatMessage {
   slackUserId?: string
   slackMessageTs?: string
   fallbackKind?: ChatFallbackKind
+  presetKind?: PresetKind
+  /** The preset's card as JSON (a citation, a license table), rendered by the widget. */
+  presetCard?: string
   attachments?: ChatAttachment[]
 }
 
@@ -27,6 +32,7 @@ export interface PublicChatMessage {
   authorName?: string
   text: string
   createdAt: string
+  card?: ChatCard
   attachments?: Pick<
     ChatAttachment,
     'filename' | 'contentType' | 'size' | 'uploadStatus' | 'slackPermalink'
@@ -71,6 +77,8 @@ export function createChatMessage(input: {
   slackUserId?: string
   slackMessageTs?: string
   fallbackKind?: ChatFallbackKind
+  presetKind?: PresetKind
+  presetCard?: ChatCard
   attachments?: ChatAttachment[]
 }): SanityChatMessage {
   return {
@@ -84,6 +92,8 @@ export function createChatMessage(input: {
     ...(input.slackUserId ? { slackUserId: input.slackUserId } : {}),
     ...(input.slackMessageTs ? { slackMessageTs: input.slackMessageTs } : {}),
     ...(input.fallbackKind ? { fallbackKind: input.fallbackKind } : {}),
+    ...(input.presetKind ? { presetKind: input.presetKind } : {}),
+    ...(input.presetCard ? { presetCard: JSON.stringify(input.presetCard) } : {}),
     ...(input.attachments?.length ? { attachments: input.attachments } : {}),
   }
 }
@@ -100,6 +110,7 @@ export function toPublicMessages(messages: SanityChatMessage[] | null | undefine
       authorName: message.authorName,
       text: message.text,
       createdAt: message.createdAt,
+      ...(parseCard(message.presetCard) ? { card: parseCard(message.presetCard) } : {}),
       ...(message.attachments?.length
         ? {
             attachments: message.attachments.map((attachment) => ({

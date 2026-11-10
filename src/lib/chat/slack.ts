@@ -593,15 +593,17 @@ export async function notifySlackVisitorReply(input: {
   visitorName?: string
   message: string
   replyInThread?: boolean
+  /** The reply only answered the chat's own question (a citation format); no ping, no broadcast. */
+  quiet?: boolean
 }) {
   const visitor = input.visitorName || 'Visitor'
-  const ping = getSlackChannelPing()
+  const ping = input.quiet ? '' : getSlackChannelPing()
   const shouldReplyInThread = input.replyInThread !== false && Boolean(input.threadTs)
 
   return postSlackMessage({
     channel: input.channel,
     threadTs: shouldReplyInThread ? input.threadTs : undefined,
-    replyBroadcast: shouldReplyInThread ? true : undefined,
+    replyBroadcast: shouldReplyInThread && !input.quiet ? true : undefined,
     text: `${ping} New website chat reply from ${visitor}: ${input.message}`,
     blocks: [
       {
@@ -610,6 +612,31 @@ export async function notifySlackVisitorReply(input: {
           type: 'mrkdwn',
           text: `${ping} *New website chat reply from ${escapeSlack(visitor)}*\n>${escapeSlack(input.message)}`,
         },
+      },
+    ],
+  })
+}
+
+/**
+ * Tells the team what the chat already answered on its own, in the conversation's thread.
+ * Posted by the bot, so fetchSlackTeamReplies (which skips bot messages) never mistakes it
+ * for a person's reply and copies it back to the visitor.
+ */
+export async function notifySlackPresetReply(input: {
+  channel?: string
+  threadTs?: string
+  replyInThread?: boolean
+  summary: string
+}) {
+  const shouldReplyInThread = input.replyInThread !== false && Boolean(input.threadTs)
+  return postSlackMessage({
+    channel: input.channel,
+    threadTs: shouldReplyInThread ? input.threadTs : undefined,
+    text: `Answered automatically: ${input.summary}`,
+    blocks: [
+      {
+        type: 'context',
+        elements: [{ type: 'mrkdwn', text: `:robot_face: Answered automatically: ${escapeSlack(input.summary)}` }],
       },
     ],
   })

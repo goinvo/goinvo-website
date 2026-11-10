@@ -173,8 +173,25 @@ export default defineType({
               readOnly: true,
               hidden: true,
               options: {
-                list: [{ title: 'No Response', value: 'noResponse' }],
+                list: [
+                  { title: 'No Response', value: 'noResponse' },
+                  { title: 'Instant reply', value: 'preset' },
+                ],
               },
+            },
+            {
+              name: 'presetKind',
+              title: 'Instant reply kind',
+              type: 'string',
+              readOnly: true,
+              hidden: true,
+            },
+            {
+              name: 'presetCard',
+              title: 'Instant reply card (JSON)',
+              type: 'text',
+              readOnly: true,
+              hidden: true,
             },
           ],
           preview: {
