@@ -18,9 +18,12 @@ import {
   buildGeneratedChatTitle,
   getVisitorLocationFromHeaders,
 } from '@/lib/chat/visitorIdentity'
+import { planPresetReply, presetMessage } from '@/lib/chat/presets.server'
+import { presetSlackSummary } from '@/lib/chat/presets'
 import {
   applySlackFileUploadResult,
   isSlackPostingConfigured,
+  notifySlackPresetReply,
   prepareSlackChatAttachmentUpload,
   startSlackChatConversation,
   uploadSlackChatAttachment,
@@ -112,6 +115,21 @@ export async function POST(request: NextRequest) {
     attachments: chatAttachment ? [chatAttachment] : undefined,
   })
 
+  // An instant answer when the message is a hello, a citation or a license question.
+  const preset = messageText
+    ? await planPresetReply({
+        client,
+        text: messageText,
+        history: [],
+        page: { url: asUrl(body.pageUrl), title: asString(body.pageTitle, 180) },
+        now: new Date(now),
+      }).catch((error) => {
+        console.error('Chat preset reply failed:', error)
+        return null
+      })
+    : null
+  const presetMessages = preset ? [presetMessage(preset, now)] : []
+
   const source = {
     ...(asUrl(body.pageUrl) ? { pageUrl: asUrl(body.pageUrl) } : {}),
     ...(asString(body.pageTitle, 180) ? { pageTitle: asString(body.pageTitle, 180) } : {}),
@@ -136,9 +154,9 @@ export async function POST(request: NextRequest) {
       ...(visitorEmail ? { email: visitorEmail } : {}),
     },
     source,
-    messages: [message],
+    messages: [message, ...presetMessages],
     firstMessageAt: now,
-    lastMessageAt: now,
+    lastMessageAt: presetMessages[0]?.createdAt || now,
     lastVisitorMessageAt: now,
     lastMessagePreview: previewText(visibleMessageText),
   })) as CreatedChatThread
@@ -153,8 +171,16 @@ export async function POST(request: NextRequest) {
     studioBaseUrl: request.nextUrl.origin,
   })
 
-  let responseMessages = [message]
+  let responseMessages = [message, ...presetMessages]
   let directUpload: DirectUploadResponse | undefined
+
+  if (slackResult && preset) {
+    await notifySlackPresetReply({
+      channel: slackResult.channel,
+      threadTs: slackResult.ts,
+      summary: presetSlackSummary(preset.reply),
+    }).catch((error) => console.error('Chat preset Slack note failed:', error))
+  }
 
   if (slackResult) {
     if (attachment && chatAttachment) {
@@ -169,6 +195,7 @@ export async function POST(request: NextRequest) {
           ...message,
           attachments: [applySlackFileUploadResult(chatAttachment, uploadResult)],
         },
+        ...presetMessages,
       ]
     } else if (pendingAttachment && chatAttachment) {
       const prepared = await prepareSlackChatAttachmentUpload({ attachment: pendingAttachment })
@@ -188,6 +215,7 @@ export async function POST(request: NextRequest) {
                 },
           ],
         },
+        ...presetMessages,
       ]
       if (prepared.ok) {
         directUpload = {
@@ -225,6 +253,7 @@ export async function POST(request: NextRequest) {
           },
         ],
       },
+      ...presetMessages,
     ]
     await client.patch(threadId).set({ messages: responseMessages }).commit()
   }

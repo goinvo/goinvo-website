@@ -1,5 +1,6 @@
 import { siteConfig } from '@/lib/config'
 import { normalizeVisitorEmail, previewText, type SanityChatMessage } from '@/lib/chat/validation'
+import { firstUnansweredVisitorMessage } from '@/lib/chat/noResponse'
 
 export const NO_RESPONSE_EMAIL_RETRY_MS = 60 * 60 * 1000
 
@@ -58,11 +59,11 @@ export function getNoResponseEmailDraft(thread: NoResponseEmailThread, now = new
   }
 
   const messages = thread.messages || []
-  if (messages.some((message) => message.authorType === 'team' && message.fallbackKind !== 'noResponse')) {
+  if (messages.some((message) => message.authorType === 'team' && !message.fallbackKind)) {
     return null
   }
 
-  const firstVisitorMessage = messages.find((message) => message.authorType === 'visitor')
+  const firstVisitorMessage = firstUnansweredVisitorMessage(messages)
   if (!firstVisitorMessage) return null
 
   const firstMessageTime = Date.parse(firstVisitorMessage.createdAt)

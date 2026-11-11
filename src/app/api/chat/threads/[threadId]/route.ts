@@ -9,6 +9,8 @@ import {
   sendNoResponseEmail,
 } from '@/lib/chat/email'
 import { getNoResponseFallback, type NoResponseFallbackVariant } from '@/lib/chat/noResponse'
+import { planPresetReply, presetMessage, type PresetPlan } from '@/lib/chat/presets.server'
+import { presetSlackSummary } from '@/lib/chat/presets'
 import {
   createChatMessage,
   extractEmailAddress,
@@ -24,6 +26,7 @@ import {
   getSlackConfig,
   getSlackUserDisplayName,
   isSlackPostingConfigured,
+  notifySlackPresetReply,
   notifySlackVisitorReply,
   prepareSlackChatAttachmentUpload,
   startSlackChatConversation,
@@ -43,7 +46,7 @@ interface PublicThread {
   status: string
   visitor?: { uid?: string; name?: string; email?: string }
   messages?: SanityChatMessage[]
-  source?: { pageUrl?: string }
+  source?: { pageUrl?: string; pageTitle?: string }
   slack?: { channelId?: string; channelName?: string; threadTs?: string; dedicatedChannel?: boolean }
   noResponseFallbackSentAt?: string
   noResponseFallbackVariant?: NoResponseFallbackVariant
@@ -157,13 +160,29 @@ export async function POST(request: NextRequest, context: RouteContext) {
     attachments: chatAttachment ? [chatAttachment] : undefined,
   })
 
+  // An instant answer: a citation format they picked, the piece we asked about, or a new
+  // citation / license question. Never a second greeting, never over a person's reply.
+  const preset: PresetPlan | null = messageText
+    ? await planPresetReply({
+        client,
+        text: messageText,
+        history: thread.messages || [],
+        page: { url: thread.source?.pageUrl, title: thread.source?.pageTitle },
+        now: new Date(now),
+      }).catch((error) => {
+        console.error('Chat preset reply failed:', error)
+        return null
+      })
+    : null
+  const presetMessages = preset ? [presetMessage(preset, now)] : []
+
   const patch = client
     .patch(threadId)
     .setIfMissing({ messages: [] })
-    .append('messages', [message])
+    .append('messages', [message, ...presetMessages])
     .set({
       status: 'open',
-      lastMessageAt: now,
+      lastMessageAt: presetMessages[0]?.createdAt || now,
       lastVisitorMessageAt: now,
       lastMessagePreview: previewText(visibleMessageText),
     })
@@ -196,7 +215,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
       visitorName: getThreadVisitorLabel(thread, extractedName),
       message: visibleMessageText,
       replyInThread: !isDedicatedSlackChannel,
+      quiet: preset?.answersPreset,
     })
+    if (preset) {
+      await notifySlackPresetReply({
+        channel: thread.slack.channelId,
+        threadTs: isDedicatedSlackChannel ? slackReply?.ts : thread.slack.threadTs,
+        summary: presetSlackSummary(preset.reply),
+      }).catch((error) => console.error('Chat preset Slack note failed:', error))
+    }
 
     if (attachment && chatAttachment) {
       const uploadResult = await uploadSlackChatAttachment({
@@ -278,6 +305,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
           error: 'Unable to start Slack thread for attachment',
         },
       ]
+    }
+
+    if (slackResult && preset) {
+    await notifySlackPresetReply({
+      channel: slackResult.channel,
+      threadTs: slackResult.ts,
+      summary: presetSlackSummary(preset.reply),
+    }).catch((error) => console.error('Chat preset Slack note failed:', error))
     }
 
     if (slackResult) {
