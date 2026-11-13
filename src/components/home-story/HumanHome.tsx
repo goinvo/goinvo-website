@@ -1,5 +1,7 @@
 'use client'
 
+import { sublineFor, taglineFor, type Subline, type Tagline } from '@/components/home-story/taglines'
+import { TaglinePicker, taglinePickerEnabled } from '@/components/home-story/TaglinePicker'
 import { useEffect, useId, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react'
 import { usePageTransition } from '@/context/PageTransitionContext'
 import { prototypeHeaderById } from '@/lib/prototypeHeaders'
@@ -45,29 +47,8 @@ function emphasizeAnnotation(text: string, phrase: string) {
   return <>{text.slice(0, start)}<em style={{ fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 'inherit' }}>{phrase}</em>{text.slice(start + phrase.length)}</>
 }
 
-/** Headline candidates, for review: `?headline=<key>` swaps the line in place,
- * in the real layout. Each carries the size that fits its line in the opening's
- * narrow column (longer lines run smaller). The first is the default. */
-const headlines = [
-  { key: 'ship', fit: 'min-[1100px]:max-w-[11ch] min-[1100px]:text-[clamp(2.75rem,4.3vw,6rem)] [@media(min-width:1100px)_and_(max-height:800px)]:text-[clamp(2.5rem,6.8svh,4.25rem)]', node: <>Designs that <em>ship</em>, with <em>stewardship</em>.</> },
-  { key: 'design', fit: 'min-[1100px]:max-w-[11ch] min-[1100px]:text-[clamp(2.75rem,4.3vw,6rem)] [@media(min-width:1100px)_and_(max-height:800px)]:text-[clamp(2.5rem,6.8svh,4.25rem)]', node: <>Design that <em>ships</em>, with <em>stewardship</em>.</> },
-  { key: 'stay', fit: 'min-[1100px]:max-w-[10ch] min-[1100px]:text-[clamp(3rem,4.6vw,6.5rem)] [@media(min-width:1100px)_and_(max-height:800px)]:text-[clamp(3rem,8.5svh,5rem)]', node: <>We ship. Then we stay.</> },
-  { key: 'machine', fit: 'min-[1100px]:max-w-[10ch] min-[1100px]:text-[clamp(2.75rem,4.3vw,6rem)] [@media(min-width:1100px)_and_(max-height:800px)]:text-[clamp(2.5rem,6.8svh,4.25rem)]', node: <>Make the machine make sense.</> },
-  { key: 'human', fit: 'min-[1100px]:max-w-[12ch] min-[1100px]:text-[clamp(3rem,4.6vw,6.5rem)] [@media(min-width:1100px)_and_(max-height:800px)]:text-[clamp(3rem,8.5svh,5rem)]', node: <>Complexity, made human.</> },
-] as const
-type Headline = typeof headlines[number]
-const headlineFor = (key: string | null): Headline => headlines.find(item => item.key === key) ?? headlines[0]
-
-/** Who we are and what we do, under the headline (the headline is the line people
- * remember; this one tells them who said it). `?subline=<key>` swaps it for review. */
-const sublines = [
-  { key: 'deep', node: <>A design studio, 20 years deep in healthcare, government and enterprise systems.</> },
-  { key: 'inside', node: <>For 20 years, our design studio has made complex systems work for the people inside them.</> },
-  { key: 'clinics', node: <>A design studio for complex systems, from clinics to state agencies, for over 20 years.</> },
-  { key: 'ai', node: <>AI knows how <em>software</em> works.<br />We know how <em>people</em> do.</> },
-] as const
-type Subline = typeof sublines[number]
-const sublineFor = (key: string | null): Subline => sublines.find(item => item.key === key) ?? sublines[0]
+// Headline and subline candidates live in taglines.tsx; TaglinePicker steps through them.
+type Headline = Tagline
 
 function Opening({ ready, selected, choose, view, chooseView, progress, live, openingRef, top, spacerRef, gap, headline, subline }: { headline: Headline; subline: Subline; low: boolean; ready: boolean; selected: PrototypeId; choose: (id: PrototypeId) => void; view: string | null; chooseView: (id: PrototypeId) => void; progress: MotionValue<number>; live: boolean; openingRef: RefObject<HTMLDivElement | null>; top?: MotionValue<number>; spacerRef: RefObject<HTMLDivElement | null>; gap?: MotionValue<number> }) {
   const opacity = useTransform(progress, value => 1 - Math.min(1, value / 0.4))
@@ -557,6 +538,22 @@ export function HumanHome({ work }: { work?: string }) {
     return prototypeScenes.some(scene => scene.id === wanted) ? wanted as PrototypeId : 'clinical'
   })
   const [view, setView] = useState<string | null>(() => params.get('view'))
+  // Review only: the headline and the line under it (`?headline=`, `?subline=`).
+  const [headlineKey, setHeadlineKey] = useState<string | null>(() => params.get('headline'))
+  const [sublineKey, setSublineKey] = useState<string | null>(() => params.get('subline'))
+  const headline = taglineFor(headlineKey)
+  const subline = sublineFor(sublineKey, headline)
+  function chooseTagline(nextHeadline: string, nextSubline: string | null) {
+    setHeadlineKey(nextHeadline)
+    setSublineKey(nextSubline)
+    const url = new URL(window.location.href)
+    url.searchParams.set('headline', nextHeadline)
+    if (nextSubline) url.searchParams.set('subline', nextSubline)
+    else url.searchParams.delete('subline')
+    window.history.replaceState(window.history.state, '', url)
+    // The headline is at the top: bring it into view when choosing from further down.
+    if (window.scrollY > window.innerHeight * 0.5) window.scrollTo({ top: 0, behavior: low ? 'auto' : 'smooth' })
+  }
   // The visitor's last search, carried down into the contact form.
   const [asked, setAsked] = useState('')
   function choose(id: PrototypeId) {
@@ -602,9 +599,10 @@ export function HumanHome({ work }: { work?: string }) {
   return (
     <MotionConfig reducedMotion={low ? 'always' : 'never'}>
       <div data-human-home data-motion={low ? 'low' : 'full'} style={{ color: ink, background: paper }} className={cn("relative mx-auto min-h-svh w-[calc(100%_-_56px)] pb-24 font-sans selection:bg-secondary selection:text-white md:w-full", largerText && "[&_p.text-base]:text-[20px] [&_p.text-base]:leading-relaxed [&_p.text-body]:text-[20px] [&_p.text-body]:leading-relaxed")}>
-        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headlineFor(params.get('headline'))} subline={sublineFor(params.get('subline'))} /><HomeSearch onAsked={setAsked} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
+        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headline} subline={subline} /><HomeSearch onAsked={setAsked} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
         <Contact selected={selected} asked={asked} />
         <NextPrompt low={low} />
+        {ready && taglinePickerEnabled && params.get('picker') !== 'off' && <TaglinePicker tagline={headline} subline={subline} choose={chooseTagline} />}
         <HumanPageControls low={low} ready={ready} toggleMotion={toggleMotion} largerText={largerText} setLargerText={value => { setLargerText(value); try { localStorage.setItem('goinvo-human-large-text', String(value)) } catch { /* Optional storage. */ } }} />
       </div>
     </MotionConfig>
