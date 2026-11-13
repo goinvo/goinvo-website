@@ -45,7 +45,7 @@ export function TaglinePicker({ tagline, subline, choose, placement }: {
       {/* Floating top right, it sits over a corner of the preview (one big link), clear of the
           hero's controls; bottom left, it sat on the Ipsos view links and swallowed the press. */}
       {open && (
-        <div className="max-h-[min(60vh,520px)] overflow-y-auto px-4 pb-4 pt-3 max-md:max-h-[45vh]">
+        <div className="max-h-[min(520px,calc(100svh-var(--spacing-header-height)-260px))] min-h-40 overflow-y-auto px-4 pb-4 pt-3 max-md:max-h-[45vh]">
           <label className="block text-[12px] leading-tight text-gray">
             Line under it
             <select
