@@ -15,6 +15,8 @@ import {
   type DigestFollowUp,
 } from '@/lib/marketing/slackDelegation'
 import { readRunway } from '@/lib/marketing/runway.server'
+import { abDigestLine, abThreadBlocks, abThreadText } from '@/lib/marketing/abWeekly'
+import { loadAbWeeklyReport, saveAbSnapshot, type AbWeeklyReport } from '@/lib/marketing/abWeekly.server'
 import { buildMoneyAndDirectionBlocks } from '@/lib/marketing/strategyCheck'
 import { loadStrategySnapshot, type StrategyLoad } from '@/lib/marketing/strategyCheck.server'
 import { ideasNeedingReview } from '@/lib/marketing/ideaCapture.server'
@@ -700,6 +702,16 @@ async function handle(request: NextRequest) {
     ).values(),
   )
 
+  // The week's A/B results: one line here, the report in the thread. Best-effort — a
+  // test that cannot be read must never cost the team its Monday plan.
+  let abWeekly: AbWeeklyReport | null = null
+  try {
+    abWeekly = await loadAbWeeklyReport(getOutreachClient(), now)
+  } catch (error) {
+    console.error('[digest] A/B report could not be read', error)
+  }
+  const abBlocks = abWeekly ? abThreadBlocks(abWeekly.reports, studioBaseUrl, !abWeekly.hasPrevious) : []
+
   const budgetMinutes = plan?.budgetMinutes || resolveWeeklyMinutes(data?.weeklyHours)
   const blocks = buildWeeklyDigestBlocks({
     sitrep: digestSitrep(latestScan, intent || null, now),
@@ -740,6 +752,7 @@ async function handle(request: NextRequest) {
     ideasTotal: (pendingIdeas || []).length,
     unmappedOwners,
     studioBaseUrl,
+    abLine: abWeekly ? abDigestLine(abWeekly.reports) : null,
   })
 
   // Slack builds the notification from `text`, so the asks' mentions lead it —
@@ -770,10 +783,12 @@ async function handle(request: NextRequest) {
       asks: askSummary,
       // Asks this week's digest already made: shown again, never recorded again.
       repeatedAsks: repeated,
+    abTests: abWeekly?.reports.length ?? null,
       exhausted,
       unmappedOwners,
       text,
       blocks,
+      abThread: abBlocks,
     })
   }
 
@@ -822,6 +837,27 @@ async function handle(request: NextRequest) {
     result = null
   }
 
+  // The A/B report goes in the plan's thread, and only once it is there is the week's
+  // snapshot kept: next Monday's "this week" numbers are measured from what people saw.
+  let abThreadPosted = false
+  if (result && abWeekly && abBlocks.length) {
+    try {
+      const reply = await postSlackMessage({
+        channel: result.channel || channel,
+        threadTs: result.ts,
+        username: MARQUETA_IDENTITY.username,
+        iconEmoji: MARQUETA_IDENTITY.iconEmoji,
+        unfurl: false,
+        text: abThreadText(abWeekly.reports),
+        blocks: abBlocks,
+      })
+      abThreadPosted = Boolean(reply)
+      if (reply) await saveAbSnapshot(getOutreachClient(), abWeekly, now)
+    } catch (error) {
+      console.error('[digest] A/B thread reply failed', error)
+    }
+  }
+
   // Only an ask that actually reached the channel is remembered. Recording one
   // from a failed post would count a question nobody saw towards the two asks
   // that turn a task into "still worth doing?" — and would stop that person
@@ -868,6 +904,8 @@ async function handle(request: NextRequest) {
     followUpCount: followUps.length,
     asks: askSummary,
     repeatedAsks: repeated,
+    abTests: abWeekly?.reports.length ?? null,
+    abThreadPosted,
     asksRecorded,
   })
 }

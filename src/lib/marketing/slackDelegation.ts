@@ -339,6 +339,8 @@ export type DigestInput = {
   ideasTotal?: number
   unmappedOwners?: string[]
   studioBaseUrl?: string
+  /** "🧪 2 A/B tests running · results in the thread": the report itself is the thread reply. */
+  abLine?: string | null
 }
 
 /** The groups that give way, in this order, when the message would pass Slack's fifty blocks. */
@@ -451,6 +453,8 @@ function composeDigest(input: DigestInput, trimmed: Set<TrimGroup>): Block[] {
   if (money.length) blocks.push({ type: 'divider' }, ...money)
 
   const closing: Block[] = []
+  const abLine = clean(input.abLine)
+  if (abLine) closing.push(context(abLine))
   const ideas = ideaReviewLine(input.ideas || [], input.ideasTotal, base)
   if (ideas) closing.push(context(ideas))
   closing.push(...buildIdentityPromptBlocks(input.unmappedOwners || []))

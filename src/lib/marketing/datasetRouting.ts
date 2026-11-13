@@ -91,6 +91,9 @@ export const INTERNAL_MARKETING_TYPES: readonly string[] = [
   // the same change that introduced them.
   'marketingStrategyIntent',
   'marketingTerrainScan',
+  // Each Monday's A/B counts, kept so the next report can say what changed in the
+  // week. Test results and traffic are the studio's own; listed in the same change.
+  'marketingAbSnapshot',
 ]
 
 export function isInternalMarketingType(type: string): boolean {

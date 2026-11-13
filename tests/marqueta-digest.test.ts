@@ -31,7 +31,7 @@ const mocks = vi.hoisted(() => {
     chain.commit = () => commit(record)
     return chain
   })
-  const client = () => ({ fetch: vi.fn(), patch, createIfNotExists: vi.fn(), transaction: vi.fn() })
+  const client = () => ({ fetch: vi.fn(), patch, createIfNotExists: vi.fn(), createOrReplace: vi.fn(), transaction: vi.fn() })
   return {
     patches,
     commit,
@@ -272,6 +272,9 @@ const store: {
   availability: unknown
   tasks: unknown[]
   heartbeats: Map<string, Record<string, any>>
+  /** Running A/B tests (the Studio's shape) and last week's A/B snapshot. */
+  experiments?: unknown[] | Error
+  abSnapshot?: unknown
 } = { data: null, availability: [], tasks: [], heartbeats: new Map() }
 
 function routeOutreach() {
@@ -284,6 +287,11 @@ function routeOutreach() {
       if (store.availability instanceof Error) throw store.availability
       return store.availability
     }
+    if (query.includes('_type == "marketingExperiment"')) {
+      if (store.experiments instanceof Error) throw store.experiments
+      return store.experiments ?? []
+    }
+    if (query.includes('week < $week')) return store.abSnapshot ?? null
     if (query.includes('_type == "marketingOperation" && _id == $id')) {
       return store.tasks.length > 1 ? store.tasks.shift() : store.tasks[0] ?? null
     }
@@ -384,6 +392,9 @@ beforeEach(() => {
   store.availability = AVAILABILITY
   store.tasks = []
   store.heartbeats = new Map()
+  store.experiments = []
+  store.abSnapshot = null
+  mocks.outreach.createOrReplace.mockReset()
   routeOutreach()
   mocks.calendar.fetch.mockResolvedValue([
     { title: 'LinkedIn: pilots <5%', publishAt: '2026-09-23T14:00:00Z' },
@@ -1293,5 +1304,104 @@ describe('the tick', () => {
     const digest = calls.find((call) => call.url.includes('/api/marketing/slack/digest'))!
     expect(digest.body.planRecorded).toBe(false)
     expect(digest.body.plan).toBeUndefined()
+  })
+})
+
+// ── The A/B report: one line in the plan, the report in its thread ──────────
+
+/** A running test shaped like the live homepage hero test: 1,000 visitors a version. */
+function heroExperiment(counts = { control: 40, variant: 62 }) {
+  return {
+    _id: 'experiment-hero',
+    title: 'Homepage hero: Ipsos vs Everything is designed',
+    status: 'running',
+    targetPath: '/',
+    measurementStart: '2026-09-01T00:00:00.000Z',
+    variants: [
+      { _key: 'v1', key: 'control', label: 'Current hero' },
+      { _key: 'v2', key: 'runway', label: 'Runway hero' },
+    ],
+    primaryMetric: 'qualified-discovery-call-clicks',
+    trackedMetrics: [{ _key: 'm1', key: 'qualified-discovery-call-clicks', label: 'Qualified discovery-call clicks', role: 'primary', source: 'vercelEvent', eventName: 'qualified_discovery_call_click', unit: 'events' }],
+    successTrackers: [],
+    performanceSignals: [{
+      _id: 'signal-hero',
+      title: 'Hero readout',
+      provider: 'vercel',
+      experiment: { _id: 'experiment-hero' },
+      metricDate: '2026-09-20',
+      metrics: [
+        { _key: 'c-exp', label: 'Current hero unique visitors / exposures', eventName: 'experiment_exposure', unit: 'visitors', value: 1000, variantKey: 'control' },
+        { _key: 'v-exp', label: 'Runway hero unique visitors / exposures', eventName: 'experiment_exposure', unit: 'visitors', value: 1000, variantKey: 'runway' },
+        { _key: 'c-q', label: 'Current hero Qualified discovery-call clicks', eventName: 'qualified_discovery_call_click', unit: 'events', value: counts.control, variantKey: 'control' },
+        { _key: 'v-q', label: 'Runway hero Qualified discovery-call clicks', eventName: 'qualified_discovery_call_click', unit: 'events', value: counts.variant, variantKey: 'runway', change: `+${Math.round((counts.variant / counts.control - 1) * 100)}% vs control` },
+      ],
+    }],
+  }
+}
+
+const abLineOf = (blocks: Block[]) => blocks.map((block) => String(block.elements?.[0]?.text || '')).find((text) => text.includes('A/B test'))
+
+describe('the weekly A/B report', () => {
+  it('puts one line in the plan and the whole report in a preview, writing nothing', async () => {
+    store.experiments = [heroExperiment()]
+    const body = (await dryRun()) as DryRun & { abThread: Block[] }
+    expect(abLineOf(body.blocks)).toBe(':test_tube: 1 A/B test running · 1 with a significant primary or guardrail result · results in the thread')
+    expectValidSlackBlocks(body.abThread)
+    const report = sectionText(body.abThread[0])
+    expect(report).toContain('*Homepage hero: Ipsos vs Everything is designed*')
+    expect(report).toContain('Qualified discovery-call clicks _(primary)_: 40 (4.0%) vs 62 (6.2%)')
+    expect(report).toContain('significant at 95% (p = 0.03)')
+    expect(buttonsOf(body.abThread).map((button) => [button.text.text, button.url])).toEqual([['Open Measure', `${BASE}/studio/marketing?view=abTesting`]])
+    expect(mocks.outreach.createOrReplace).not.toHaveBeenCalled()
+  })
+
+  it('posts the report in the plan’s thread, then keeps the week’s counts for next Monday', async () => {
+    store.experiments = [heroExperiment()]
+    mocks.postSlackMessage.mockResolvedValue({ channel: CHANNEL, ts: '9.9' })
+    const body = await (await POST(digestRequest())).json()
+    expect(body).toMatchObject({ posted: true, abTests: 1, abThreadPosted: true })
+    expect(mocks.postSlackMessage).toHaveBeenCalledTimes(2)
+    const [plan, thread] = mocks.postSlackMessage.mock.calls.map((call) => call[0])
+    expect(plan.threadTs).toBeUndefined()
+    expect(thread).toMatchObject({ channel: CHANNEL, threadTs: '9.9', username: 'Marqueta' })
+    expect(sectionText(thread.blocks[0])).toContain('Runway hero')
+    const saved = mocks.outreach.createOrReplace.mock.calls[0][0]
+    expect(saved).toMatchObject({ _id: `marketingAbSnapshot.${WEEK}`, _type: 'marketingAbSnapshot', week: WEEK })
+    expect(JSON.parse(saved.countsJson)).toEqual({
+      'experiment-hero': { visitors: { control: 1000, runway: 1000 }, m1: { control: 40, runway: 62 } },
+    })
+  })
+
+  it('says what changed in the week, from last Monday’s snapshot', async () => {
+    store.experiments = [heroExperiment()]
+    store.abSnapshot = { week: LAST_WEEK, takenAt: '2026-09-14T13:00:00Z', countsJson: json({ 'experiment-hero': { visitors: { control: 880, runway: 875 }, m1: { control: 35, runway: 50 } } }) }
+    const body = (await dryRun()) as DryRun & { abThread: Block[] }
+    const report = sectionText(body.abThread[0])
+    expect(report).toContain('Visitors: Current hero 1,000 (+120 this week) · Runway hero 1,000 (+125 this week)')
+    expect(report).toContain('(this week 5 vs 12)')
+  })
+
+  it('keeps nothing when Slack refuses the thread reply', async () => {
+    store.experiments = [heroExperiment()]
+    mocks.postSlackMessage.mockResolvedValueOnce({ channel: CHANNEL, ts: '9.9' }).mockResolvedValueOnce(null)
+    const body = await (await POST(digestRequest())).json()
+    expect(body).toMatchObject({ posted: true, abThreadPosted: false })
+    expect(mocks.outreach.createOrReplace).not.toHaveBeenCalled()
+  })
+
+  it('never costs the team its plan: a test that cannot be read leaves just the plan', async () => {
+    store.experiments = new Error('dataset unavailable')
+    mocks.postSlackMessage.mockResolvedValue({ channel: CHANNEL, ts: '9.9' })
+    const body = await (await POST(digestRequest())).json()
+    expect(body).toMatchObject({ posted: true, abTests: null, abThreadPosted: false })
+    expect(mocks.postSlackMessage).toHaveBeenCalledTimes(1)
+    expect(abLineOf(mocks.postSlackMessage.mock.calls[0][0].blocks)).toBeUndefined()
+  })
+
+  it('says nothing about tests when none are running', async () => {
+    const body = (await dryRun()) as DryRun & { abThread: Block[] }
+    expect(abLineOf(body.blocks)).toBeUndefined()
+    expect(body.abThread).toEqual([])
   })
 })

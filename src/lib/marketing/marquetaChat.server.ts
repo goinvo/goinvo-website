@@ -53,6 +53,8 @@
  * Every reply is data (`MarquetaReply`); posting it — the thread, the
  * follow-up, the ephemeral — is the route's job.
  */
+import { abThreadBlocks, abThreadText } from '@/lib/marketing/abWeekly'
+import { loadAbWeeklyReport } from '@/lib/marketing/abWeekly.server'
 import 'server-only'
 import { getSlackUserProfile } from '@/lib/chat/slack'
 import {
@@ -591,6 +593,13 @@ function stepLines(record: HeartbeatRecord | null | undefined, now: Date): strin
  * that reports ok while planning nothing is the exact shape of an inert
  * mechanism, and this codebase has been caught by that class of bug before.
  */
+/** The same report Monday's thread carries, read now: counts since last Monday's snapshot. */
+async function answerAbTests(now: Date): Promise<MarquetaReply> {
+  const report = await loadAbWeeklyReport(getOutreachClient(), now)
+  if (!report.reports.length) return { text: 'No A/B tests are running right now.' }
+  return { text: abThreadText(report.reports), blocks: abThreadBlocks(report.reports, studioBase(), !report.hasPrevious) }
+}
+
 async function answerHeartbeat(now: Date): Promise<MarquetaReply> {
   const data = await getOutreachClient().fetch<{
     tick?: HeartbeatRecord | null
@@ -1558,6 +1567,8 @@ export async function answerMarqueta(input: {
           return answerIdeas()
         case 'heartbeat':
           return answerHeartbeat(now)
+        case 'abTests':
+          return answerAbTests(now)
         default:
           return { text: marquetaHelpText({ dms: dmsWired() }) }
       }

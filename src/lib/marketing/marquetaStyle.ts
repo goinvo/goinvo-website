@@ -47,7 +47,7 @@ export const STATE_EMOJI = { done: ':white_check_mark:', away: ':palm_tree:', ri
  * `MARKETING_TOOL_VIEWS` in tests, so renaming a tab cannot leave Slack
  * sending people to a name they will not find.
  */
-export const VIEW_TITLE = { thisWeek: 'This week', outreach: 'Outreach', calendar: 'Calendar' } as const
+export const VIEW_TITLE = { thisWeek: 'This week', outreach: 'Outreach', calendar: 'Calendar', abTesting: 'Measure' } as const
 export type MarquetaView = keyof typeof VIEW_TITLE
 
 /**

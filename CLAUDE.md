@@ -648,6 +648,28 @@ in-memory dataset (groq-js) and a fake Slack workspace with signed requests. It 
 missed (the `&gt;` draft miss, blocked tasks invisible on Monday, weekend follow-ups) — rerun it when
 changing message shapes (it lived in the session scratchpad; see the PR for how it was built).
 
+## Marqueta's weekly A/B report (built 2026-11-13)
+
+Monday's plan carries ONE line (`🧪 2 A/B tests running · results in the thread`); the report is a
+reply in the plan's thread, and `Marqueta, ab tests` answers it any day (gated like the other work
+topics). The plan was near Slack's 50-block cap, which is why the report is not in it.
+
+- **Verdicts are the Studio's.** The A/B verdict code moved verbatim from the Studio's
+  `domain.ts` into `src/lib/marketing/abResults.ts` (39 declarations, found by a compiler-API
+  closure; `domain.ts` imports and re-exports them). Never fork it: Slack and the Measure tab must
+  not disagree. `domain.ts` itself must not be imported server-side (`@sanity/icons`, Studio schemas).
+- **Stats on top** (`abWeekly.ts`): two-proportion z-test on visitors who did each thing; Fisher's
+  exact test when an expected count is under 5 (the z-test called 0 vs 6 "p = 0.03"); "more
+  visitors per version to tell" at 80% power; under 20 events a significant result is worded as
+  "a lead to confirm" (several metrics are checked each week). Under 100 visitors, or events >
+  visitors, no test is run.
+- **Week-over-week** comes from `marketingAbSnapshot.<ISO week>` (outreach dataset, in
+  `INTERNAL_MARKETING_TYPES`), counts as `countsJson` keyed by metric `_key`. Written ONLY after the
+  thread reply reached Slack. The first Monday has totals only and says so.
+- Tests: `tests/ab-weekly.test.ts` (Fisher against the tea-tasting table and an exact
+  enumeration), the A/B block in `tests/marqueta-digest.test.ts` (route-level, snapshot rule
+  falsified once).
+
 ## Runway — the number the whole strategy is derived from (built 2026-08-27)
 
 The financial posture used to be a hand-picked bin with a timestamp. A bin does

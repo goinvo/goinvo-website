@@ -52,6 +52,7 @@ export type MarquetaIntent =
   | { kind: 'runway' }
   | { kind: 'ideas' }
   | { kind: 'heartbeat' }
+  | { kind: 'abTests' }
   | { kind: 'capture'; text: string; explicit: boolean }
   | { kind: 'availability'; text: string }
   /** `more`: the second page — ideas, capture, and what she listens for. */
@@ -138,7 +139,7 @@ export type MarquetaIntent =
   | { kind: 'mine' }
 
 /** A question about one of her topics, answered from the records. */
-export type TopicIntent = Extract<MarquetaIntent, { kind: 'mine' | 'week' | 'runway' | 'strategy' | 'pipeline' | 'ideas' | 'heartbeat' }>
+export type TopicIntent = Extract<MarquetaIntent, { kind: 'mine' | 'week' | 'runway' | 'strategy' | 'pipeline' | 'ideas' | 'heartbeat' | 'abTests' }>
 
 /**
  * Slack wraps a mention as <@U…>; strip it so the rest parses as plain text.
@@ -774,8 +775,14 @@ const looksLikeAQuestion = (plain: string) => plain.includes('?') || QUESTION_OP
  * list; "plan" and "what's on" still mean the week. "The board", "status",
  * "agenda", "digest" and "check-in" are what people call the week too.
  */
+/** "ab tests", "a/b test results", "how are the split tests doing": the weekly A/B report. */
+const AB_TESTS = /(?:^|[^a-z])(?:a\/b|ab|split)[ -]?tests?\b|(?:^|[^a-z])a\/b(?:[^a-z]|$)|\b(?:experiment|test) results\b/
+
 function topicOf(lower: string): TopicIntent | null {
   if (matchesAny(lower, MINE)) return { kind: 'mine' }
+  // Before "how are we doing" (strategy) and "week": "how are the A/B tests doing
+  // this week?" asks about the tests.
+  if (AB_TESTS.test(lower)) return { kind: 'abTests' }
   // Keywords, plus the openers people actually type that name nothing at
   // all: "what's on?" is a question about the week even though the word
   // "week" never appears in it.
@@ -1180,7 +1187,7 @@ export function marquetaHelpText(opts: { more?: boolean; guest?: boolean; dms?: 
     `*Calls* ${askMarqueta('prep Jane Doe at MGB')} · ${askMarqueta('my calls')} · ${askMarqueta('called Jane, left a voicemail')}`,
     `*Tasks* ${askMarqueta('my tasks')} · ${askMarqueta('week')} · ${askMarqueta('away next week')}`,
     `*Money* ${askMarqueta('runway')} · ${askMarqueta('strategy')} · ${askMarqueta('pipeline')}`,
-    `*Strategy* ${askMarqueta('sitrep')} · ${askMarqueta('terrain')} · ${askMarqueta('intent')}`,
+    `*Strategy* ${askMarqueta('sitrep')} · ${askMarqueta('terrain')} · ${askMarqueta('intent')} · ${askMarqueta('ab tests')}`,
     `${askMarqueta('help more')} for ideas, capture, suggestions and what I listen for.`,
   ].join('\n')
 }
