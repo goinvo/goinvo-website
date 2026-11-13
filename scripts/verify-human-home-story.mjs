@@ -136,7 +136,7 @@ try {
     check(choiceStyle.fonts.length > 0 && choiceStyle.fonts.every(size => size >= 18 && size <= 22), `${width}: problem statements on the type scale ${JSON.stringify(choiceStyle)}`)
     if (width >= 768) check(choiceStyle.rowGap === (wide && height <= 800 ? 12 : 16) && choiceStyle.columnGap === 32 && choiceStyle.padding === (wide && height <= 800 ? 8 : 12), `${width}: roomier choices have measured gaps and padding (tighter on short screens)`)
     // Too much text at first sight: the preview speaks for itself; its name and task stay for screen readers.
-    check(await page.evaluate(() => { const name = document.querySelector('#work-title'), task = document.querySelector('[data-story-task]'), hidden = el => { const r = el.getBoundingClientRect(); return r.width <= 1 && r.height <= 1 }; return name.tagName === 'H2' && name.textContent.length > 0 && hidden(name) && hidden(task) && document.querySelector('#work').getAttribute('aria-labelledby') === 'work-title' }), `${width}: the prototype's name and task are not shown above the preview, but still name it for screen readers`)
+    check(await page.evaluate(() => { const name = document.querySelector('#work-title'), task = document.querySelector('[data-story-task]'), box = document.querySelector('[data-story-heading]'), r = box.getBoundingClientRect(); return name.tagName === 'H2' && name.textContent.length > 0 && task.textContent.length > 0 && box.contains(name) && box.contains(task) && r.width <= 1 && r.height <= 1 && getComputedStyle(box).clipPath.startsWith('inset(50%') && document.querySelector('#work').getAttribute('aria-labelledby') === 'work-title' }), `${width}: the prototype's name and task are not shown above the preview, but still name it for screen readers`)
     if (width >= 768) {
       const dot = await page.evaluate(() => { const dots = document.querySelectorAll('[data-challenge-dot]'), label = document.querySelector('label[for="challenge-clinical"]').getBoundingClientRect(), r = dots[0]?.getBoundingClientRect(); return { count: dots.length, left: r && r.left - label.left, color: dots[0] && getComputedStyle(dots[0]).backgroundColor } })
       check(dot.count === 1 && dot.left < -8 && dot.color === 'rgb(184, 74, 14)' && await page.evaluate(() => Math.abs(document.querySelector('label[for="challenge-clinical"] [data-situation]').getBoundingClientRect().left - document.querySelector('#challenge-label').getBoundingClientRect().left) < 1), `${width}: one orange dot hangs in the margin; the situations align with the prompt ${JSON.stringify(dot)}`)
@@ -355,7 +355,7 @@ try {
     await page.evaluate(() => scrollTo(0, 0)); await pause(220)
     await page.click('[aria-label="Accessibility settings"]')
     await page.click('dialog input[type=checkbox]')
-    check(await page.evaluate(() => [...document.querySelectorAll('[data-human-home] p.text-base')].some(el => el.getBoundingClientRect().height > 0 && parseFloat(getComputedStyle(el).fontSize) === 20)), `${width}: larger text setting`)
+    check(await page.evaluate(() => [...document.querySelectorAll('[data-human-home] p.text-body')].some(el => el.getBoundingClientRect().height > 0 && parseFloat(getComputedStyle(el).fontSize) === 20)), `${width}: larger text setting`)
     await page.click('dialog input[type=checkbox]')
     await page.focus('dialog [role=switch]'); await page.keyboard.press('Space'); await page.keyboard.press('Escape')
     check(await page.$eval('[data-human-home]', el => el.dataset.motion === 'low'), `${width}: keyboard low-motion setting`)

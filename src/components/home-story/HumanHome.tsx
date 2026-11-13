@@ -601,7 +601,7 @@ export function HumanHome({ work }: { work?: string }) {
 
   return (
     <MotionConfig reducedMotion={low ? 'always' : 'never'}>
-      <div data-human-home data-motion={low ? 'low' : 'full'} style={{ color: ink, background: paper }} className={cn("relative mx-auto min-h-svh w-[calc(100%_-_56px)] pb-24 font-sans selection:bg-secondary selection:text-white md:w-full", largerText && "[&_p.text-base]:text-[20px] [&_p.text-base]:leading-relaxed [&_[data-story-task]]:text-[20px]")}>
+      <div data-human-home data-motion={low ? 'low' : 'full'} style={{ color: ink, background: paper }} className={cn("relative mx-auto min-h-svh w-[calc(100%_-_56px)] pb-24 font-sans selection:bg-secondary selection:text-white md:w-full", largerText && "[&_p.text-base]:text-[20px] [&_p.text-base]:leading-relaxed [&_p.text-body]:text-[20px] [&_p.text-body]:leading-relaxed")}>
         <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headlineFor(params.get('headline'))} subline={sublineFor(params.get('subline'))} /><HomeSearch onAsked={setAsked} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
         <Contact selected={selected} asked={asked} />
         <NextPrompt low={low} />
