@@ -135,7 +135,8 @@ try {
     })
     check(choiceStyle.fonts.length > 0 && choiceStyle.fonts.every(size => size >= 18 && size <= 22), `${width}: problem statements on the type scale ${JSON.stringify(choiceStyle)}`)
     if (width >= 768) check(choiceStyle.rowGap === (wide && height <= 800 ? 12 : 16) && choiceStyle.columnGap === 32 && choiceStyle.padding === (wide && height <= 800 ? 8 : 12), `${width}: roomier choices have measured gaps and padding (tighter on short screens)`)
-    check(await page.$eval('#work-title', el => parseFloat(getComputedStyle(el).fontSize) >= 32), `${width}: prototype name reads as a heading`)
+    // Too much text at first sight: the preview speaks for itself; its name and task stay for screen readers.
+    check(await page.evaluate(() => { const name = document.querySelector('#work-title'), task = document.querySelector('[data-story-task]'), hidden = el => { const r = el.getBoundingClientRect(); return r.width <= 1 && r.height <= 1 }; return name.tagName === 'H2' && name.textContent.length > 0 && hidden(name) && hidden(task) && document.querySelector('#work').getAttribute('aria-labelledby') === 'work-title' }), `${width}: the prototype's name and task are not shown above the preview, but still name it for screen readers`)
     if (width >= 768) {
       const dot = await page.evaluate(() => { const dots = document.querySelectorAll('[data-challenge-dot]'), label = document.querySelector('label[for="challenge-clinical"]').getBoundingClientRect(), r = dots[0]?.getBoundingClientRect(); return { count: dots.length, left: r && r.left - label.left, color: dots[0] && getComputedStyle(dots[0]).backgroundColor } })
       check(dot.count === 1 && dot.left < -8 && dot.color === 'rgb(184, 74, 14)' && await page.evaluate(() => Math.abs(document.querySelector('label[for="challenge-clinical"] [data-situation]').getBoundingClientRect().left - document.querySelector('#challenge-label').getBoundingClientRect().left) < 1), `${width}: one orange dot hangs in the margin; the situations align with the prompt ${JSON.stringify(dot)}`)
@@ -152,7 +153,7 @@ try {
       check(await page.$('[data-case-link]') === null && await page.$eval('[data-case-overlay]', (el, expected) => el.getAttribute('href') === expected.href && el.tabIndex === 0 && el.getAttribute('aria-label') === `Read the ${expected.title} case study`, item), `${width} ${item.id}: the preview itself is the one, labelled link to the case study`)
       check(await page.$('[data-case-summary]') === null && await page.$('[data-inspect-work]') === null, `${width} ${item.id}: no repeated result block and no hover inspection button`)
       check(await page.$eval(width >= 768 ? `label[for="challenge-${item.id}"] [data-situation]` : '[data-situation][aria-hidden=true]', (el, expected) => el.innerText.replace('•','').trim() === expected, item.situation), `${width} ${item.id}: situation is a first-person statement`)
-      check(await page.$eval('[data-story-task]', el => el.innerText.startsWith('We ') && el.getBoundingClientRect().height > 0), `${width} ${item.id}: task explains what we designed`)
+      check(await page.$eval('[data-story-task]', el => el.textContent.startsWith('We ')), `${width} ${item.id}: task explains what we designed (to screen readers)`)
       if (wide) {
         check(await page.$eval('#work [data-page-cell]', el => Math.abs(el.getBoundingClientRect().width - el.parentElement.getBoundingClientRect().width) < 1), `${width} ${item.id}: at rest the interface fills the whole preview area`)
         // In the hero, hover opens the layers; leaving closes them again.
@@ -230,33 +231,13 @@ try {
     // The AI search: once per run (each query is a model call). An example returns our
     // work; a query nothing fits says so, with the 404 illustration, and lists nothing.
     if (width >= 768) {
-      // The side rail ends above the footer at the very bottom of the page, every dot on it.
+      // No side picker: the page reads top to bottom. The accessibility button stays above the footer.
       const railFrom = await page.evaluate(() => scrollY)
+      check(await page.evaluate(() => !document.querySelector('[data-page-rail], [aria-label="Page sections"], [aria-label="Page timeline"]')), `${width}: no side picker of page sections`)
       await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' })); await pause(400)
-      const rail = await page.evaluate(() => { const nav = document.querySelector('[data-page-rail]').getBoundingClientRect(), footer = document.querySelector('footer').getBoundingClientRect(), dots = [...document.querySelectorAll('[data-rail-ink="ink"] [data-rail-dot]')].map(dot => dot.getBoundingClientRect()); return { railBottom: Math.round(nav.bottom), footerTop: Math.round(footer.top), lowestDot: Math.round(Math.max(...dots.map(dot => dot.bottom))), height: Math.round(nav.height) } })
-      check(rail.railBottom <= rail.footerTop - 16 && rail.lowestDot <= rail.footerTop - 16 && rail.height >= 150, `${width}: at the bottom of the page the side rail ends above the footer ${JSON.stringify(rail)}`)
       const accessOnTop = await page.evaluate(() => { const button = document.querySelector('[aria-label="Accessibility settings"]'), r = button.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return button === hit || button.contains(hit) })
       check(accessOnTop, `${width}: at the bottom of the page the accessibility button stays above the footer`)
-      // Aiming at a rail item says so: its dot grows teal and its label comes forward with an
-      // arrow, distinct from the section you are in and from the rest.
-      const aim = await page.$$eval('[data-page-rail] button', buttons => buttons.findIndex(button => !button.hasAttribute('aria-current')))
-      const aimBox = await page.evaluate(index => { const r = document.querySelectorAll('[data-page-rail] button')[index].getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } }, aim)
-      await page.mouse.move(aimBox.x, aimBox.y); await pause(400)
-      const aimed = await page.evaluate(index => {
-        const items = [...document.querySelectorAll('[data-page-rail] button')], look = item => { const dot = document.querySelector(`[data-rail-ink="ink"] [data-rail-dot="${items.indexOf(item)}"]`), label = item.querySelector('[data-rail-label]'); return { state: item.dataset.railItem, dot: Math.round(dot.getBoundingClientRect().width), label: getComputedStyle(label).opacity, arrow: label.textContent.includes('→'), weight: getComputedStyle(label).fontWeight } }
-        return { aimed: look(items[index]), current: look(items.find(item => item.hasAttribute('aria-current'))), rest: look(items.find((item, i) => i !== index && !item.hasAttribute('aria-current'))) }
-      }, aim)
-      check(aimed.aimed.state === 'aimed' && aimed.aimed.arrow && aimed.aimed.label === '1' && aimed.aimed.dot > aimed.rest.dot && aimed.current.state === 'current' && !aimed.current.arrow && Number(aimed.current.weight) >= 600 && aimed.current.dot > aimed.rest.dot && !aimed.rest.arrow, `${width}: the rail item under the pointer comes forward (bigger teal dot, label with an arrow), apart from the current section and the rest ${JSON.stringify(aimed)}`)
-      await page.mouse.move(5, 5); await pause(200)
-      // Over the slate band the rail turns light, exactly where the band is behind it.
-      await page.evaluate(() => { const band = document.querySelector('[data-tone="dark"]'); scrollTo({ top: scrollY + band.getBoundingClientRect().top - innerHeight * 0.5, behavior: 'instant' }) }); await pause(500)
-      const banded = await page.evaluate(() => {
-        const rail = document.querySelector('[data-page-rail]').getBoundingClientRect(), band = document.querySelector('[data-tone="dark"]').getBoundingClientRect(), light = document.querySelector('[data-rail-ink="light"]')
-        const expected = Math.max(0, Math.min(100, (band.top - rail.top) / rail.height * 100)), clip = light ? Number(/inset\(([\d.]+)%/.exec(light.style.clipPath)?.[1]) : null
-        return { light: !!light, expected: +expected.toFixed(1), clip, bandColour: getComputedStyle(document.querySelector('[data-tone="dark"]')).backgroundColor }
-      })
-      check(banded.light && Math.abs(banded.clip - banded.expected) < 1.5 && banded.bandColour === 'rgb(36, 67, 77)', `${width}: the rail turns light where the slate band passes behind it ${JSON.stringify(banded)}`)
-      await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), railFrom); await pause(300)
+      check(await page.evaluate(() => getComputedStyle(document.querySelector('[data-tone="dark"]')).backgroundColor === 'rgb(36, 67, 77)'), `${width}: the services section sits on the slate band`)
       await page.evaluate(top => scrollTo({ top, behavior: 'instant' }), railFrom); await pause(300)
     }
     if (width === 1440) {
@@ -374,7 +355,7 @@ try {
     await page.evaluate(() => scrollTo(0, 0)); await pause(220)
     await page.click('[aria-label="Accessibility settings"]')
     await page.click('dialog input[type=checkbox]')
-    check(await page.$eval('[data-story-task]', el => parseFloat(getComputedStyle(el).fontSize) === 20), `${width}: larger text setting`)
+    check(await page.evaluate(() => [...document.querySelectorAll('[data-human-home] p.text-base')].some(el => el.getBoundingClientRect().height > 0 && parseFloat(getComputedStyle(el).fontSize) === 20)), `${width}: larger text setting`)
     await page.click('dialog input[type=checkbox]')
     await page.focus('dialog [role=switch]'); await page.keyboard.press('Space'); await page.keyboard.press('Escape')
     check(await page.$eval('[data-human-home]', el => el.dataset.motion === 'low'), `${width}: keyboard low-motion setting`)

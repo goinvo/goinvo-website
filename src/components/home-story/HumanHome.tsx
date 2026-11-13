@@ -276,7 +276,7 @@ function Work({ low, ready, selected, choose, view, chooseView, headline, sublin
   // The chosen scene, seen through its chosen view (a scene with no views is its own).
   const item = sceneView(prototypeScenes.find(item => item.id === selected) || prototypeScenes[0], view)
   // The opening screen, measured. The two columns share a top line (headline and
-  // prototype name) and a bottom line (last choice and the preview), and together
+  // the tallest preview) and a bottom line (last choice and the preview), and together
   // sit centred between the nav bar and the prompt at the bottom. Whichever column
   // is shorter takes the difference in one spacer: under the line on the left,
   // above the preview on the right. A preview too tall for the screen shrinks to
@@ -290,7 +290,21 @@ function Work({ low, ready, selected, choose, view, chooseView, headline, sublin
   const leftGap = useMotionValue(0)
   const rightGap = useMotionValue(0)
   const [aligned, setAligned] = useState(false)
-  const [headingFloor, setHeadingFloor] = useState(0)
+  // The prototype's name and task are for screen readers only (the preview speaks for
+  // itself at first sight), so the line above the preview is empty at rest. Once the
+  // layers open, the insight needs room there: it opens as the scroll brings it in.
+  const insight = useRef<HTMLDivElement>(null)
+  const insightRoom = useMotionValue(0)
+  const headingRoom = useTransform(() => insightRoom.get() * clamp01((progress.get() - 0.08) / 0.27))
+  useEffect(() => {
+    const node = insight.current
+    if (!live || !node) return
+    const set = () => insightRoom.set(node.offsetHeight + 12)
+    set()
+    const observer = new ResizeObserver(set)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [live, insightRoom])
   const panelTop = useSettle(restTop, 96, progress)
   const panelBottom = useSettle(restBottom, 96, progress)
   const previewGap = useSettle(rightGap, 0, progress)
@@ -317,7 +331,6 @@ function Work({ low, ready, selected, choose, view, chooseView, headline, sublin
       const navHeight = headerHeight()
       const room = innerHeight - navHeight - promptRoom
       if (left > room) { setAligned(false); return }
-      if (title.offsetHeight > headingFloor) setHeadingFloor(title.offsetHeight)
       // Lay the screen out for the tallest prototype, so choosing another never
       // moves the column the reader is clicking in; only the preview's top glides.
       const natural = (id: PrototypeId) => preview.offsetWidth * prototypeSizes[id].height / prototypeSizes[id].width
@@ -340,27 +353,28 @@ function Work({ low, ready, selected, choose, view, chooseView, headline, sublin
     addEventListener('resize', measure)
     measure()
     return () => { observer.disconnect(); removeEventListener('resize', measure) }
-  }, [live, item.id, progress, restTop, restBottom, leftGap, rightGap, zoneRest, headingFloor])
+  }, [live, item.id, progress, restTop, restBottom, leftGap, rightGap, zoneRest])
   const panelStyle = !viewport.measured ? undefined : live ? { marginLeft, width } : { marginLeft: viewport.wide ? `${openingShare}%` : '0%', width: viewport.wide ? `${100 - openingShare}%` : '100%' }
   return <section ref={section} id="human" data-scene="component-assembly" data-story-live={live} aria-labelledby="human-title" className={cn('scene relative bg-white', live ? 'is-live h-[185svh]' : 'is-rest min-[1100px]:min-h-svh')}>
     {live && <span id="work-result" aria-hidden="true" className="absolute left-0 top-[80svh]" />}
     <Opening headline={headline} subline={subline} low={low} ready={ready} selected={selected} choose={select} view={view} chooseView={selectView} progress={progress} live={live} openingRef={opening} top={aligned ? restTop : undefined} spacerRef={leftSpacer} gap={aligned ? leftGap : undefined} />
     <motion.div ref={panel} id="work" role="region" aria-labelledby="work-title" style={{ ...panelStyle, ...(aligned ? { paddingTop: panelTop, paddingBottom: panelBottom } : {}) }} className={cn('relative ml-0 flex w-full flex-col px-5 pb-24 pt-8 md:px-[4vw] min-[1100px]:ml-[31%] min-[1100px]:w-[69%] min-[1100px]:pt-24', low || !viewport.wide ? 'min-h-svh' : 'h-svh min-h-[680px]', live && 'sticky top-0')}>
       {!live && <span id="work-result" aria-hidden="true" className={cn('absolute left-0', low ? 'top-0' : 'top-[80%]')} />}
-      <div ref={heading} style={aligned && headingFloor ? { minHeight: headingFloor } : undefined} className="relative z-20">
-        <motion.div data-story-heading style={live ? { opacity: titleOpacity } : undefined}>
-          <div className="flex min-h-12 items-end pr-36">
-            <h2 id="work-title" aria-live="polite" className={cn('m-0 max-w-[24ch]', type.title)}>{item.title}</h2>
-          </div>
-          <p id="work-task" data-story-task className={cn('mb-8 mt-3 max-w-[64ch]', type.body)}>{item.task}</p>
+      <motion.div ref={heading} style={live ? { minHeight: headingRoom } : undefined} className="relative z-20">
+        {/* Named for screen readers (the region's label, announced when the choice
+            changes); not shown, so the opening screen is the headline, the choices
+            and the preview. */}
+        <motion.div data-story-heading className="sr-only" style={live ? { opacity: titleOpacity } : undefined}>
+          <h2 id="work-title" aria-live="polite" className={cn('m-0', type.title)}>{item.title}</h2>
+          <p id="work-task" data-story-task className={cn('m-0', type.body)}>{item.task}</p>
         </motion.div>
-        {/* The insight takes the title's place once the layers open. */}
-        {live && <motion.div data-story-insight aria-hidden={!insightShown} style={{ opacity: insightOpacity }} className="pointer-events-none absolute inset-x-0 bottom-3 pr-40">
+        {/* The insight appears above the preview once the layers open. */}
+        {live && <motion.div ref={insight} data-story-insight aria-hidden={!insightShown} style={{ opacity: insightOpacity }} className="pointer-events-none absolute inset-x-0 bottom-3 pr-40">
           <p className={cn('mb-2 mt-0', type.label)}>{detailInsight.eyebrow}</p>
           <p className={cn('m-0 max-w-[40ch]', type.title)}>{detailInsight.statement}</p>
         </motion.div>}
-        <a href="#human" aria-hidden={!low && showExplore} tabIndex={low || !showExplore ? 0 : -1} onClick={event => { event.preventDefault(); jumpTo('human', low) }} className={cn(link, type.label, 'absolute right-0 top-0 text-inherit hover:underline', !low && showExplore && 'invisible')}>Choose another ↑</a>
-      </div>
+        <a href="#human" aria-hidden={!low && showExplore} tabIndex={low || !showExplore ? 0 : -1} onClick={event => { event.preventDefault(); jumpTo('human', low) }} className={cn(link, type.label, 'text-inherit hover:underline', low ? 'mb-3 ml-auto block w-fit' : 'absolute right-0 top-0', !low && showExplore && 'invisible')}>Choose another ↑</a>
+      </motion.div>
       {aligned && <motion.div aria-hidden="true" style={{ height: previewGap }} className="shrink-0" />}
       <motion.div ref={zone} data-inspection-zone data-inspecting={hovered && !low} onPointerMove={pointerMove} onPointerLeave={() => setHovered(false)} style={aligned ? { height: zoneHeight } : { aspectRatio: `${prototypeSizes[item.id].width}/${prototypeSizes[item.id].height}` }} className={cn('relative w-full', low || !viewport.wide ? 'my-6' : 'min-h-0 shrink')}>
         <PrototypeComposition item={item} low={low || still} spread={spread} annotationOpacity={annotationOpacity} featured delivery={delivery} onStall={() => setDelivery('still')} className="h-full" />
