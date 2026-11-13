@@ -1,25 +1,26 @@
 'use client'
 
-import { useRef, type ReactNode } from 'react'
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { useReducedMotion } from '@/lib/motion'
+import { ease, useReducedMotion } from '@/lib/motion'
 import { type } from '@/components/ui/type'
 import { Arrow } from '@/components/ui/Arrow'
 import { InlineLink, textLinkClass } from '@/components/ui/TextLink'
 import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
-import { DrawnLine } from '@/components/ui/DrawnLine'
 import { SmoothScrollLink } from '@/components/ui/SmoothScrollLink'
-import { OFFERINGS, REASONS, SECTORS, STATS, TIERS } from '@/app/(main)/services/content'
+import { SECTORS, STATS } from '@/app/(main)/services/content'
+import { JOURNEYS, LONG_TERM, type Journey } from '@/components/services/servicesJourneys'
 
 /**
- * The services page in the homepage study's design: white, ink type on one scale,
- * serif headings, quiet scroll motion, links instead of buttons. Same content as the
- * classic page (content.ts). Shown under the review switch (?design=human); see
- * src/app/(main)/services/page.tsx.
+ * The services page in the homepage study's design, told from the buyer's side: the
+ * services are the first thing on screen, each as the question a buyer is facing, and
+ * choosing one shows what working with us on it looks like, step by step, and what they
+ * hold at the end. Every line is already published (servicesJourneys.ts names where).
+ * Shown under the review switch (?design=human); see src/app/(main)/services/page.tsx.
  */
 
 /** The booking section's anchor. The classic page keeps #book; both are in the DOM
@@ -51,28 +52,127 @@ function Figure({ value }: { value: string }) {
   )
 }
 
+/** The services, first thing on screen: the question each one answers, as tabs. */
 function Opening({ low }: { low: boolean }) {
-  const figure = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({ target: figure, offset: ['start end', 'end start'] })
-  const scale = useTransform(scrollYProgress, [0, 1], [1.12, 1])
+  const [selected, setSelected] = useState(0)
+  const tabs = useRef<(HTMLButtonElement | null)[]>([])
+  const id = useId()
+  const choose = (index: number, focus = false) => {
+    const next = (index + JOURNEYS.length) % JOURNEYS.length
+    setSelected(next)
+    if (focus) tabs.current[next]?.focus()
+  }
+  const onKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const move = { ArrowRight: index + 1, ArrowDown: index + 1, ArrowLeft: index - 1, ArrowUp: index - 1, Home: 0, End: JOURNEYS.length - 1 }[event.key]
+    if (move === undefined) return
+    event.preventDefault()
+    choose(move, true)
+  }
+  const journey = JOURNEYS[selected]
+  return (
+    <Section spacing="none" aria-labelledby="services-title" className="pb-20 pt-[calc(var(--spacing-header-height)+1.75rem)] md:pb-28 md:pt-[calc(var(--spacing-header-height)+2.5rem)]">
+      <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end md:gap-16">
+        <div>
+          <p className={cn('mb-5 mt-0', type.label)}>Services</p>
+          <h1 id="services-title" className="m-0 max-w-[19ch] font-serif text-page-title font-normal">What’s between you and software people use?</h1>
+        </div>
+        <ActionLink href={`#${TALK}`} className={cn('max-md:hidden md:mb-2', type.lead)}>Schedule a chat</ActionLink>
+      </div>
+      <p className={cn('mb-0 mt-4 max-w-[54ch] md:mt-5', type.lead)}>Choose the question you’re facing. See how working with us on it goes, step by step, and what you’ll hold at the end.</p>
+
+      <div role="tablist" aria-label="The question you’re facing" data-journey-tabs className="mt-7 grid border-t border-black/15 md:mt-10 md:grid-cols-3">
+        {JOURNEYS.map((item, index) => {
+          const on = index === selected
+          return (
+            <button
+              key={item.id}
+              ref={(node) => { tabs.current[index] = node }}
+              role="tab"
+              type="button"
+              id={`${id}-tab-${item.id}`}
+              aria-selected={on}
+              aria-controls={`${id}-panel`}
+              tabIndex={on ? 0 : -1}
+              data-journey-tab={item.id}
+              onClick={() => choose(index)}
+              onKeyDown={(event) => onKey(event, index)}
+              className={cn('group relative flex cursor-pointer flex-col items-start border-b border-black/15 bg-transparent py-4 text-left text-black focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary md:border-b-0 md:py-6 md:pr-8', index > 0 && 'md:border-l md:pl-8')}
+            >
+              <span aria-hidden="true" className={cn('absolute -top-px left-0 h-[3px] bg-black transition-[width] duration-500 motion-reduce:transition-none', on ? 'w-full' : 'w-0 group-hover:w-8')} />
+              <span className={cn('flex items-center gap-3 text-gray', type.label)}>
+                <span aria-hidden="true" className={cn('h-2.5 w-2.5 rounded-full border border-current transition-colors', on && 'border-secondary bg-secondary')} />
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <span className={cn('mt-2 block transition-colors max-md:text-[1.5rem] max-md:leading-[1.15] md:mt-4', type.title, on ? 'text-black' : 'text-black/45 group-hover:text-black/75')}>{item.concern}</span>
+              {/* On a phone only the chosen question carries its answer: three would push the third question off the first screen. */}
+              <span className={cn('mt-2 transition-colors md:mt-3 md:block', on ? 'block' : 'hidden', type.body, on ? 'text-black' : 'text-gray')}>{item.title}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${journey.id}`} data-journey-panel={journey.id} className="mt-10 md:mt-12">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={journey.id} initial={low ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={low ? { opacity: 1 } : { opacity: 0, y: -6 }} transition={{ duration: low ? 0 : 0.35, ease: ease.outExpo }}>
+            <JourneyView journey={journey} low={low} />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </Section>
+  )
+}
+
+/** One journey: how it goes (the steps on a line that draws in), what you hold, and proof. */
+function JourneyView({ journey, low }: { journey: Journey; low: boolean }) {
+  const draw = low ? { initial: false as const } : { initial: { scaleX: 0 }, animate: { scaleX: 1 }, transition: { duration: 0.9, ease: ease.outExpo } }
   return (
     <>
-      <Section spacing="none" className="pb-12 pt-[calc(var(--spacing-header-height)+3.5rem)] md:pb-16 md:pt-[calc(var(--spacing-header-height)+6rem)]">
-        <p className={cn('mb-6 mt-0', type.label)}>Services</p>
-        <h1 className="m-0 max-w-[16ch] font-serif text-page-title font-normal">Disrupt from within. Reinvent the product. Change the market.</h1>
-        <div className="mt-10 grid items-end gap-8 md:mt-14 md:grid-cols-[1.3fr_0.7fr] md:gap-16">
-          <p className={cn('m-0 max-w-[44ch]', type.lead)}>We help you move fast, reduce risk, and deliver better systems across healthcare, government, enterprise, and AI. Tell us about your project and where GoInvo can help.</p>
-          <div className="flex flex-col items-start">
-            <ActionLink href={`#${TALK}`} className={type.lead}>Schedule a chat</ActionLink>
-            <InlineLink href="mailto:info@goinvo.com" className={type.label}>Or email info@goinvo.com</InlineLink>
-          </div>
+      <div className="grid gap-12 lg:grid-cols-[1.4fr_0.6fr] lg:gap-16">
+        <div>
+          <p className={cn('m-0', type.label)}>How it goes</p>
+          <p className={cn('mb-0 mt-3 max-w-[52ch]', type.lead)}>{journey.description}</p>
+          <ol data-journey-steps className="relative m-0 mt-10 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-0">
+            <motion.span aria-hidden="true" {...draw} className="absolute left-3 top-3 hidden h-px w-[calc(100%-1.5rem)] origin-left bg-black md:block" />
+            {journey.steps.map((step, index) => (
+              <motion.li
+                key={step.name}
+                data-journey-step
+                initial={low ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: low ? 0 : 0.45, delay: low ? 0 : 0.15 + index * 0.12, ease: ease.outExpo }}
+                className="relative pl-12 md:pl-0 md:pr-8"
+              >
+                <span aria-hidden="true" className="absolute left-0 top-0 flex h-6 w-6 items-center justify-center rounded-full border border-black bg-white text-[13px] tabular-nums leading-none md:relative">{index + 1}</span>
+                <h3 className={cn('mb-3 mt-0 md:mt-6', type.quote)}>{step.name}</h3>
+                <Dashes items={step.does} />
+              </motion.li>
+            ))}
+          </ol>
         </div>
-      </Section>
-      <div ref={figure} className="relative mx-5 aspect-[4/3] overflow-hidden md:mx-[6vw] md:aspect-[21/9]">
-        <motion.div style={{ scale: low ? 1 : scale }} className="absolute inset-0">
-          <Image src="/images/services/mitre-dashboard.jpg" alt="" fill priority sizes="(min-width:768px) 88vw, 100vw" className="object-cover" />
-        </motion.div>
+        <aside aria-label="What you hold at the end" data-journey-hold className="relative bg-tertiary-lightest p-7 md:p-9">
+          <p className={cn('m-0', type.label)}>At the end, you hold</p>
+          <h3 className={cn('mb-5 mt-2', type.title)}>{journey.youHoldLabel}</h3>
+          <Dashes items={journey.youHold} />
+          <dl className="m-0 mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-black/15 pt-6">
+            <div className="col-span-2"><dt className={type.caption}>Usually starts as</dt><dd className={cn('m-0', type.body)}>{journey.engagement.name}</dd></div>
+            <div><dt className={type.caption}>Length</dt><dd className={cn('m-0', type.body)}>{journey.engagement.length}</dd></div>
+            <div><dt className={type.caption}>Who’s in the room</dt><dd className={cn('m-0', type.body)}>{journey.engagement.team}</dd></div>
+            <div className="col-span-2"><dt className={type.caption}>Typical investment</dt><dd className="m-0 mt-1 font-serif text-[clamp(32px,2.6vw,44px)] leading-none tracking-[-0.03em]">{journey.engagement.investment}</dd></div>
+          </dl>
+          <ActionLink href={journey.engagement.href} className="mt-6">{journey.engagement.cta}</ActionLink>
+        </aside>
       </div>
+      {journey.outcome && (
+        <figure data-journey-outcome className="m-0 mt-14 grid gap-4 border-t border-black/15 pt-8 md:grid-cols-[auto_1fr_auto] md:items-end md:gap-12">
+          <p className="m-0 whitespace-nowrap font-serif text-[clamp(48px,5vw,80px)] leading-[0.9] tracking-[-0.04em]">{journey.outcome.figure}</p>
+          <figcaption className={cn('max-w-[46ch]', type.body)}>{journey.outcome.result}<span className={cn('mt-1 block text-gray', type.caption)}>{journey.outcome.client}</span></figcaption>
+          <ActionLink href={journey.outcome.href}>{journey.outcome.link}</ActionLink>
+        </figure>
+      )}
+      <p className={cn('mb-0 mt-10 text-gray', type.body)}>
+        Need a team for longer? An {LONG_TERM.name.toLowerCase()} runs {LONG_TERM.rows[0]} with a {LONG_TERM.rows[1].toLowerCase()}.{' '}
+        <SmoothScrollLink href={`#${TALK}`} className="text-inherit underline underline-offset-4 hover:text-black">Talk about a partnership</SmoothScrollLink>
+      </p>
     </>
   )
 }
@@ -88,87 +188,6 @@ function Proof() {
           </li>
         ))}
       </ul>
-    </Section>
-  )
-}
-
-function OfferingRow({ offering, index, low }: { offering: typeof OFFERINGS[number]; index: number; low: boolean }) {
-  const row = useRef<HTMLLIElement>(null)
-  const { scrollYProgress } = useScroll({ target: row, offset: ['start 0.9', 'start 0.3'] })
-  const y = useTransform(scrollYProgress, [0, 0.85], [28, 0])
-  return (
-    <li ref={row} data-rule className="border-t border-black/15 py-10 md:py-14">
-      <motion.div style={{ y: low ? 0 : y }}>
-        <p data-hand-note className={cn('mb-4 mt-0 text-gray', type.label)}>{String(index + 1).padStart(2, '0')}</p>
-        <h3 className={cn('m-0 mb-6', type.title)}><DrawnLine progress={scrollYProgress} low={low} start={0.15} end={0.9}>{offering.k}</DrawnLine></h3>
-        <Dashes items={offering.bullets} columns={2} />
-      </motion.div>
-    </li>
-  )
-}
-
-function WhatWeDo({ low }: { low: boolean }) {
-  return (
-    <Section aria-labelledby="services-what">
-      <div className="grid items-start gap-8 md:grid-cols-[0.8fr_1.2fr] md:gap-16">
-        <div className={cn(!low && 'md:sticky md:top-[16vh]')}>
-          <SectionHeading id="services-what" sweep reduced={low} text="What we do." className="max-w-[12ch]" />
-        </div>
-        <ul className="m-0 list-none p-0">{OFFERINGS.map((offering, index) => <OfferingRow key={offering.k} offering={offering} index={index} low={low} />)}</ul>
-      </div>
-    </Section>
-  )
-}
-
-function Reasons() {
-  return (
-    <Section tone="grey" aria-labelledby="services-why">
-      <p className={cn('mb-6 mt-0', type.label)}>Why clients hire us</p>
-      <h2 id="services-why" className={cn('m-0 max-w-[20ch]', type.heading)}>What you get is beautiful software. What you buy is certainty.</h2>
-      <ul className="m-0 mt-14 grid list-none gap-x-16 p-0 md:mt-20 md:grid-cols-2">
-        {REASONS.map((reason) => (
-          <li key={reason.t} data-rule className="border-t border-black/15 py-8">
-            <h3 className={cn('m-0', type.quote)}>{reason.t}</h3>
-            <p className={cn('mb-0 mt-3 max-w-[46ch]', type.body)}>{reason.d}</p>
-          </li>
-        ))}
-      </ul>
-    </Section>
-  )
-}
-
-function Engagements() {
-  return (
-    <Section aria-labelledby="services-ways">
-      <p className={cn('mb-6 mt-0', type.label)}>Engagement types</p>
-      <SectionHeading id="services-ways" text="Ways to work with us." className="max-w-[20ch]" />
-      <ul className="m-0 mt-14 grid list-none gap-12 p-0 md:mt-20 md:grid-cols-3 md:gap-0">
-        {TIERS.map((tier, index) => (
-          <li key={tier.name} className={cn('flex flex-col', index > 0 && 'md:border-l md:border-black/15 md:pl-10', index < TIERS.length - 1 && 'md:pr-10')}>
-            <p className={cn('mb-3 mt-0 min-h-7 text-secondary', type.label)}>{tier.featured && <span data-hand-circle>Most common</span>}</p>
-            <h3 className={cn('m-0', type.title)}>{tier.name}</h3>
-            <p className={cn('mb-8 mt-4 md:min-h-[3lh]', type.body)}>{tier.lead}</p>
-            <ul className="m-0 mb-10 list-none p-0">
-              {tier.rows.map((row) => <li key={row} data-rule className={cn('border-t border-black/15 py-3', type.body)}>{row}</li>)}
-            </ul>
-            <div className="mt-auto">
-              <p className={cn('m-0', type.label)}>Typical investment</p>
-              <p className="mb-4 mt-2 font-serif text-[clamp(40px,3.6vw,56px)] leading-none tracking-[-0.03em]">{tier.price}</p>
-              <ActionLink href={tier.href}>{tier.cta}</ActionLink>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <div data-rule className="mt-16 grid gap-6 border-t border-black/15 pt-8 md:grid-cols-[1fr_auto] md:items-end md:gap-16">
-        <div>
-          <p className={cn('m-0', type.label)}>Certified &amp; contracted</p>
-          <p className={cn('mb-0 mt-2 max-w-[52ch]', type.body)}>Prequalified for IT professional services as a trusted vendor for state and federal agencies.</p>
-        </div>
-        <dl className="m-0 flex flex-wrap gap-x-12 gap-y-4">
-          <div><dt className={type.caption}>State of MA</dt><dd className={cn('m-0', type.label)}>ITS81</dd></div>
-          <div><dt className={type.caption}>Federal</dt><dd className={cn('m-0', type.label)}>GSA 47QTCA26D001W</dd></div>
-        </dl>
-      </div>
     </Section>
   )
 }
@@ -234,6 +253,16 @@ function Talk({ booking }: { booking: ReactNode }) {
         </div>
       </div>
       <div data-rule className="mt-12 border-t border-black/15 pt-8 md:mt-16">{booking}</div>
+      <div data-rule className="mt-12 grid gap-6 border-t border-black/15 pt-8 md:grid-cols-[1fr_auto] md:items-end md:gap-16">
+        <div>
+          <p className={cn('m-0', type.label)}>Certified &amp; contracted</p>
+          <p className={cn('mb-0 mt-2 max-w-[52ch]', type.body)}>Prequalified for IT professional services as a trusted vendor for state and federal agencies.</p>
+        </div>
+        <dl className="m-0 flex flex-wrap gap-x-12 gap-y-4">
+          <div><dt className={type.caption}>State of MA</dt><dd className={cn('m-0', type.label)}>ITS81</dd></div>
+          <div><dt className={type.caption}>Federal</dt><dd className={cn('m-0', type.label)}>GSA 47QTCA26D001W</dd></div>
+        </dl>
+      </div>
     </Section>
   )
 }
@@ -244,9 +273,6 @@ export function ServicesHuman({ booking }: { booking: ReactNode }) {
     <div className="bg-white text-black">
       <Opening low={low} />
       <Proof />
-      <WhatWeDo low={low} />
-      <Reasons />
-      <Engagements />
       <Sectors low={low} />
       <Testimonial />
       <Talk booking={booking} />
