@@ -4,7 +4,7 @@ import { redactSearchText, searchLogEntry, searchVia } from '@/lib/search/search
 import { datasetForType } from '@/lib/marketing/datasetRouting'
 import { LINE_SUGGESTION } from '@/lib/search/suggested'
 
-const mocks = vi.hoisted(() => ({ afterQueue: [] as (() => unknown)[], recordSearch: vi.fn(async () => true) }))
+const mocks = vi.hoisted(() => ({ afterQueue: [] as (() => unknown)[], recordSearch: vi.fn(async (_entry: Record<string, unknown>) => true) }))
 vi.mock('next/server', async importOriginal => {
   const actual = await importOriginal<typeof import('next/server')>()
   return { ...actual, after: (task: () => unknown) => void mocks.afterQueue.push(task) }

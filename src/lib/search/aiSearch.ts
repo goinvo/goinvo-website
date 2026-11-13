@@ -1,5 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { after } from 'next/server'
+import { recordModelCall } from '@/lib/marketing/modelLedger.server'
+import { usageFromAnthropic, type ModelCall } from '@/lib/marketing/modelLedger'
 import type { SearchIndexItem } from './index'
+
+/** Every call reaches the spend ledger, written after the response so a visitor never waits on it. */
+function meter(call: ModelCall) {
+  try {
+    after(() => recordModelCall(call))
+  } catch {
+    // Outside a request (a script or test): record directly, best-effort.
+    void recordModelCall(call).catch(() => undefined)
+  }
+}
 
 /**
  * Claude selection + description stage. Replaces the Gatsby prototype's two
@@ -111,16 +124,23 @@ export async function selectAndDescribe(
     'PERSONA: always include your best guess (or null) even when results is empty.',
   ].join('\n')
 
+  const startedAt = Date.now()
   try {
     const client = new Anthropic({ apiKey, maxRetries: 1 })
-    const response = await client.messages.create(
-      {
-        model,
-        max_tokens: 900,
-        messages: [{ role: 'user', content: prompt }],
-      },
-      { signal: AbortSignal.timeout(TIMEOUT_MS) },
-    )
+    const response = await client.messages
+      .create(
+        {
+          model,
+          max_tokens: 900,
+          messages: [{ role: 'user', content: prompt }],
+        },
+        { signal: AbortSignal.timeout(TIMEOUT_MS) },
+      )
+      .catch((error: unknown) => {
+        meter({ feature: 'site-search', model, usage: { inputTokens: 0, outputTokens: 0 }, latencyMs: Date.now() - startedAt, ok: false, errorKind: (error as { constructor?: { name?: string } })?.constructor?.name || 'Error' })
+        throw error
+      })
+    meter({ feature: 'site-search', model, usage: usageFromAnthropic(response.usage), latencyMs: Date.now() - startedAt, ok: true, stopReason: response.stop_reason ?? null })
 
     const text = response.content
       .filter((block): block is Anthropic.TextBlock => block.type === 'text')
