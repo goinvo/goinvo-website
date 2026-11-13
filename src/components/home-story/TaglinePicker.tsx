@@ -14,7 +14,10 @@ export const taglinePickerEnabled = process.env.NEXT_PUBLIC_VERCEL_ENV !== 'prod
 
 const control = 'flex h-9 min-w-9 cursor-pointer items-center justify-center bg-transparent text-black hover:bg-tertiary-lightest focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary'
 
-export function TaglinePicker({ tagline, subline, choose }: {
+export function TaglinePicker({ tagline, subline, choose, placement }: {
+  /** `floating` on a desktop, top right; `inline` on a phone, in the page above the
+   * headline, because a phone has no corner free of the hero's controls. */
+  placement: 'floating' | 'inline'
   tagline: Tagline
   subline: Subline
   /** A null subline goes back to the one the headline was written over. */
@@ -29,7 +32,7 @@ export function TaglinePicker({ tagline, subline, choose }: {
   const paired = subline.key === (tagline.pair ?? SUBLINES[0].key)
 
   return (
-    <aside data-ui data-tagline-picker aria-label="Headline options (review only)" className="fixed bottom-4 left-4 z-[75] w-[min(380px,calc(100vw-32px))] bg-white text-black shadow-[0_4px_32px_#24434d33] max-md:bottom-[84px] max-md:w-[calc(100vw-88px)]">
+    <aside data-ui data-tagline-picker={placement} aria-label="Headline options (review only)" className={cn('bg-white text-black', placement === 'floating' ? 'fixed right-4 top-[calc(var(--spacing-header-height)+12px)] z-[75] w-[340px] shadow-[0_4px_32px_#24434d33] max-md:hidden' : 'relative mb-8 border border-black/15 md:hidden')}>
       <div className="flex items-center gap-1 px-2 py-1">
         <button type="button" className={control} aria-label="Previous headline" onClick={() => step(-1)}>‹</button>
         <p className="m-0 flex-1 truncate px-1 text-center text-[13px] leading-tight">
@@ -39,7 +42,8 @@ export function TaglinePicker({ tagline, subline, choose }: {
         <button type="button" className={cn(control, 'px-2 text-[13px]')} aria-expanded={open} onClick={() => setOpen((value) => !value)}>{open ? 'Hide' : 'All'}</button>
       </div>
       <p className="m-0 border-b border-black/10 px-4 pb-2.5 text-[13px] leading-snug text-gray" data-tagline-note>{tagline.note}</p>
-      {/* Phones keep it above the chat launcher and left of the accessibility button. */}
+      {/* Floating top right, it sits over a corner of the preview (one big link), clear of the
+          hero's controls; bottom left, it sat on the Ipsos view links and swallowed the press. */}
       {open && (
         <div className="max-h-[min(60vh,520px)] overflow-y-auto px-4 pb-4 pt-3 max-md:max-h-[45vh]">
           <label className="block text-[12px] leading-tight text-gray">

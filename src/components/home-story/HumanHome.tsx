@@ -50,11 +50,12 @@ function emphasizeAnnotation(text: string, phrase: string) {
 // Headline and subline candidates live in taglines.tsx; TaglinePicker steps through them.
 type Headline = Tagline
 
-function Opening({ ready, selected, choose, view, chooseView, progress, live, openingRef, top, spacerRef, gap, headline, subline }: { headline: Headline; subline: Subline; low: boolean; ready: boolean; selected: PrototypeId; choose: (id: PrototypeId) => void; view: string | null; chooseView: (id: PrototypeId) => void; progress: MotionValue<number>; live: boolean; openingRef: RefObject<HTMLDivElement | null>; top?: MotionValue<number>; spacerRef: RefObject<HTMLDivElement | null>; gap?: MotionValue<number> }) {
+function Opening({ ready, selected, choose, view, chooseView, progress, live, openingRef, top, spacerRef, gap, headline, subline, review }: { headline: Headline; subline: Subline; review?: ReactNode; low: boolean; ready: boolean; selected: PrototypeId; choose: (id: PrototypeId) => void; view: string | null; chooseView: (id: PrototypeId) => void; progress: MotionValue<number>; live: boolean; openingRef: RefObject<HTMLDivElement | null>; top?: MotionValue<number>; spacerRef: RefObject<HTMLDivElement | null>; gap?: MotionValue<number> }) {
   const opacity = useTransform(progress, value => 1 - Math.min(1, value / 0.4))
   const scene = prototypeScenes.find(item => item.id === selected)
   const current = scene ? sceneView(scene, view).viewId : null
   return <motion.div ref={openingRef} data-opening-copy style={{ opacity: live ? opacity : 1, paddingTop: top }} className="relative z-20 pb-8 pl-5 pr-5 pt-28 md:pl-[6vw] md:pr-[6vw] md:pt-24 min-[1100px]:absolute min-[1100px]:left-0 min-[1100px]:top-0 min-[1100px]:w-[31%] min-[1100px]:pr-8 [@media(min-width:1100px)_and_(max-height:800px)]:pb-6 [@media(min-width:1100px)_and_(max-height:800px)]:pt-[88px]">
+    {review}
     <h1 id="human-title" data-headline={headline.key} className={cn('relative m-0 font-serif text-[clamp(2.8rem,14.75vw,3.6rem)] font-normal leading-[0.94] tracking-[-0.05em] md:text-[clamp(3.6rem,7.5vw,9rem)]', headline.fit)}>{headline.node}</h1>
     <p className={cn('mb-0 mt-8', type.subhead, '[@media(min-width:1100px)_and_(max-height:800px)]:mt-4 [@media(min-width:1100px)_and_(max-height:800px)]:text-[20px]')}>{subline.node}</p>
     {gap && <motion.div ref={spacerRef} aria-hidden="true" style={{ height: gap }} />}
@@ -164,7 +165,7 @@ const promptRoom = 72
  * the min-[1100px] w-[31%] / ml-[31%] / w-[69%] classes (Tailwind needs literals). */
 const openingShare = 31
 
-function Work({ low, ready, selected, choose, view, chooseView, headline, subline }: { low: boolean; ready: boolean; selected: PrototypeId; choose: (id: PrototypeId) => void; view: string | null; chooseView: (id: PrototypeId) => void; headline: Headline; subline: Subline }) {
+function Work({ low, ready, selected, choose, view, chooseView, headline, subline, review }: { review?: ReactNode; low: boolean; ready: boolean; selected: PrototypeId; choose: (id: PrototypeId) => void; view: string | null; chooseView: (id: PrototypeId) => void; headline: Headline; subline: Subline }) {
   const section = useRef<HTMLElement>(null)
   const panel = useRef<HTMLDivElement>(null)
   const [viewport, setViewport] = useState({ width: 1440, wide: false, measured: false })
@@ -338,7 +339,7 @@ function Work({ low, ready, selected, choose, view, chooseView, headline, sublin
   const panelStyle = !viewport.measured ? undefined : live ? { marginLeft, width } : { marginLeft: viewport.wide ? `${openingShare}%` : '0%', width: viewport.wide ? `${100 - openingShare}%` : '100%' }
   return <section ref={section} id="human" data-scene="component-assembly" data-story-live={live} aria-labelledby="human-title" className={cn('scene relative bg-white', live ? 'is-live h-[185svh]' : 'is-rest min-[1100px]:min-h-svh')}>
     {live && <span id="work-result" aria-hidden="true" className="absolute left-0 top-[80svh]" />}
-    <Opening headline={headline} subline={subline} low={low} ready={ready} selected={selected} choose={select} view={view} chooseView={selectView} progress={progress} live={live} openingRef={opening} top={aligned ? restTop : undefined} spacerRef={leftSpacer} gap={aligned ? leftGap : undefined} />
+    <Opening headline={headline} subline={subline} review={review} low={low} ready={ready} selected={selected} choose={select} view={view} chooseView={selectView} progress={progress} live={live} openingRef={opening} top={aligned ? restTop : undefined} spacerRef={leftSpacer} gap={aligned ? leftGap : undefined} />
     <motion.div ref={panel} id="work" role="region" aria-labelledby="work-title" style={{ ...panelStyle, ...(aligned ? { paddingTop: panelTop, paddingBottom: panelBottom } : {}) }} className={cn('relative ml-0 flex w-full flex-col px-5 pb-24 pt-8 md:px-[4vw] min-[1100px]:ml-[31%] min-[1100px]:w-[69%] min-[1100px]:pt-24', low || !viewport.wide ? 'min-h-svh' : 'h-svh min-h-[680px]', live && 'sticky top-0')}>
       {!live && <span id="work-result" aria-hidden="true" className={cn('absolute left-0', low ? 'top-0' : 'top-[80%]')} />}
       <motion.div ref={heading} style={live ? { minHeight: headingRoom } : undefined} className="relative z-20">
@@ -542,6 +543,7 @@ export function HumanHome({ work }: { work?: string }) {
   const [headlineKey, setHeadlineKey] = useState<string | null>(() => params.get('headline'))
   const [sublineKey, setSublineKey] = useState<string | null>(() => params.get('subline'))
   const headline = taglineFor(headlineKey)
+  const showPicker = ready && taglinePickerEnabled && params.get('picker') !== 'off'
   const subline = sublineFor(sublineKey, headline)
   function chooseTagline(nextHeadline: string, nextSubline: string | null) {
     setHeadlineKey(nextHeadline)
@@ -599,10 +601,10 @@ export function HumanHome({ work }: { work?: string }) {
   return (
     <MotionConfig reducedMotion={low ? 'always' : 'never'}>
       <div data-human-home data-motion={low ? 'low' : 'full'} style={{ color: ink, background: paper }} className={cn("relative mx-auto min-h-svh w-[calc(100%_-_56px)] pb-24 font-sans selection:bg-secondary selection:text-white md:w-full", largerText && "[&_p.text-base]:text-[20px] [&_p.text-base]:leading-relaxed [&_p.text-body]:text-[20px] [&_p.text-body]:leading-relaxed")}>
-        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headline} subline={subline} /><HomeSearch onAsked={setAsked} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
+        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headline} subline={subline} review={showPicker ? <TaglinePicker placement="inline" tagline={headline} subline={subline} choose={chooseTagline} /> : null} /><HomeSearch onAsked={setAsked} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
         <Contact selected={selected} asked={asked} />
         <NextPrompt low={low} />
-        {ready && taglinePickerEnabled && params.get('picker') !== 'off' && <TaglinePicker tagline={headline} subline={subline} choose={chooseTagline} />}
+        {showPicker && <TaglinePicker placement="floating" tagline={headline} subline={subline} choose={chooseTagline} />}
         <HumanPageControls low={low} ready={ready} toggleMotion={toggleMotion} largerText={largerText} setLargerText={value => { setLargerText(value); try { localStorage.setItem('goinvo-human-large-text', String(value)) } catch { /* Optional storage. */ } }} />
       </div>
     </MotionConfig>
