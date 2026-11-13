@@ -71,12 +71,15 @@
   }
 
   /* Some page titles carry their lead inside the h1 (a span after a <br>, from the
-     hero config): set it as the lead, not as a small piece of the tight title. */
-  html[data-design='human'] [data-hero-text] h1 > br {
+     hero config): set it as the lead, not as a small piece of the tight title. Only a
+     span MARKED as the lead: About's title breaks its own lines with <br> and keeps
+     "design." together in a span, and a rule for every <br> and span ran its words
+     together ("purpose:better") and set "design." as a lead. */
+  html[data-design='human'] [data-hero-text] h1 > br:has(+ [data-hero-lead]) {
     display: none;
   }
 
-  html[data-design='human'] [data-hero-text] h1 > span:not(.text-primary) {
+  html[data-design='human'] [data-hero-text] h1 > [data-hero-lead] {
     display: block;
     font-family: var(--font-sans);
     font-size: var(--text-lead);

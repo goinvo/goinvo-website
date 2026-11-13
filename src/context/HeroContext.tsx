@@ -68,7 +68,7 @@ export const heroConfigs: Record<string, HeroConfig> = {
       <>
         Design that Delivers<span className="text-primary font-serif">.</span>
         <br />
-        <span className="font-serif text-[1.5rem] leading-[2.125rem]">
+        <span data-hero-lead className="font-serif text-[1.5rem] leading-[2.125rem]">
           Real projects, real users, real business outcomes.
         </span>
       </>
