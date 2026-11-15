@@ -3,7 +3,7 @@
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { ease, useReducedMotion } from '@/lib/motion'
 import { type } from '@/components/ui/type'
@@ -16,10 +16,10 @@ import { SECTORS, STATS } from '@/app/(main)/services/content'
 import { JOURNEYS, LONG_TERM, type Journey } from '@/components/services/servicesJourneys'
 
 /**
- * The services page in the homepage study's design, told from the buyer's side: the
- * services are the first thing on screen, each as the question a buyer is facing, and
- * choosing one shows what working with us on it looks like, step by step, and what they
- * hold at the end. Every line is already published (servicesJourneys.ts names where).
+ * The services page in the homepage study's design, told from the buyer's side. The first
+ * screen carries what a buyer needs to decide: the question each service answers, what
+ * they get, how long it takes and what it costs. Choosing one shows how working with us
+ * on it goes, step by step. The rest of the page is short: numbers, sectors, one quote. Every line is already published (servicesJourneys.ts names where).
  * Shown under the review switch (?design=human); see src/app/(main)/services/page.tsx.
  */
 
@@ -52,7 +52,7 @@ function Figure({ value }: { value: string }) {
   )
 }
 
-/** The services, first thing on screen: the question each one answers, as tabs. */
+/** The services, first thing on screen: each question with what you get, how long, how much. */
 function Opening({ low }: { low: boolean }) {
   const [selected, setSelected] = useState(0)
   const tabs = useRef<(HTMLButtonElement | null)[]>([])
@@ -70,17 +70,13 @@ function Opening({ low }: { low: boolean }) {
   }
   const journey = JOURNEYS[selected]
   return (
-    <Section spacing="none" aria-labelledby="services-title" className="pb-20 pt-[calc(var(--spacing-header-height)+1.75rem)] md:pb-28 md:pt-[calc(var(--spacing-header-height)+2.5rem)]">
+    <Section spacing="none" aria-labelledby="services-title" className="pb-16 pt-[calc(var(--spacing-header-height)+1.5rem)] md:pb-24 md:pt-[calc(var(--spacing-header-height)+2rem)]">
       <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end md:gap-16">
-        <div>
-          <p className={cn('mb-5 mt-0', type.label)}>Services</p>
-          <h1 id="services-title" className="m-0 max-w-[19ch] font-serif text-page-title font-normal">What’s between you and software people use?</h1>
-        </div>
+        <h1 id="services-title" className="m-0 max-w-[19ch] font-serif text-page-title font-normal">What’s between you and software people use?</h1>
         <ActionLink href={`#${TALK}`} className={cn('max-md:hidden md:mb-2', type.lead)}>Schedule a chat</ActionLink>
       </div>
-      <p className={cn('mb-0 mt-4 max-w-[54ch] md:mt-5', type.lead)}>Choose the question you’re facing. See how working with us on it goes, step by step, and what you’ll hold at the end.</p>
 
-      <div role="tablist" aria-label="The question you’re facing" data-journey-tabs className="mt-7 grid border-t border-black/15 md:mt-10 md:grid-cols-3">
+      <div role="tablist" aria-label="The question you’re facing" data-journey-tabs className="mt-6 grid border-t border-black/15 md:mt-9 md:grid-cols-3">
         {JOURNEYS.map((item, index) => {
           const on = index === selected
           return (
@@ -99,24 +95,37 @@ function Opening({ low }: { low: boolean }) {
               className={cn('group relative flex cursor-pointer flex-col items-start border-b border-black/15 bg-transparent py-4 text-left text-black focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary md:border-b-0 md:py-6 md:pr-8', index > 0 && 'md:border-l md:pl-8')}
             >
               <span aria-hidden="true" className={cn('absolute -top-px left-0 h-[3px] bg-black transition-[width] duration-500 motion-reduce:transition-none', on ? 'w-full' : 'w-0 group-hover:w-8')} />
-              <span className={cn('flex items-center gap-3 text-gray', type.label)}>
+              <span className={cn('flex items-center gap-3 max-md:hidden', type.label, on ? 'text-black' : 'text-gray')}>
                 <span aria-hidden="true" className={cn('h-2.5 w-2.5 rounded-full border border-current transition-colors', on && 'border-secondary bg-secondary')} />
-                {String(index + 1).padStart(2, '0')}
+                {item.title}
               </span>
-              <span className={cn('mt-2 block transition-colors max-md:text-[1.5rem] max-md:leading-[1.15] md:mt-4', type.title, on ? 'text-black' : 'text-black/45 group-hover:text-black/75')}>{item.concern}</span>
-              {/* On a phone only the chosen question carries its answer: three would push the third question off the first screen. */}
-              <span className={cn('mt-2 transition-colors md:mt-3 md:block', on ? 'block' : 'hidden', type.body, on ? 'text-black' : 'text-gray')}>{item.title}</span>
+              <span className={cn('block transition-colors max-md:text-[1.5rem] max-md:leading-[1.15] md:mt-3', type.title, on ? 'text-black' : 'text-black/55 group-hover:text-black')}>{item.concern}</span>
+              {/* The facts a buyer decides on. A desktop stacks them with their labels; a
+                  phone runs the three values on a line, so all three services fit one screen. */}
+              <span className="mt-2 flex flex-wrap gap-x-4 gap-y-1 md:mt-6 md:grid md:w-full md:grid-cols-2 md:gap-x-6 md:gap-y-4 md:border-t md:border-black/15 md:pt-5">
+                <span data-journey-fact="hold" className="md:col-span-2">
+                  <span className={cn('block text-gray max-md:hidden', type.caption)}>You get</span>
+                  <span className={cn('block', type.body)}>{item.youHoldLabel}</span>
+                </span>
+                <span data-journey-fact="length">
+                  <span className={cn('block text-gray max-md:hidden', type.caption)}>Takes</span>
+                  <span className={cn('block max-md:text-gray', type.body)}>{item.engagement.length}</span>
+                </span>
+                <span data-journey-fact="investment">
+                  <span className={cn('block text-gray max-md:hidden', type.caption)}>Typical investment</span>
+                  <span className={cn('block max-md:text-gray', type.body)}>{item.engagement.investment}</span>
+                </span>
+              </span>
             </button>
           )
         })}
       </div>
 
-      <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${journey.id}`} data-journey-panel={journey.id} className="mt-10 md:mt-12">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={journey.id} initial={low ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={low ? { opacity: 1 } : { opacity: 0, y: -6 }} transition={{ duration: low ? 0 : 0.35, ease: ease.outExpo }}>
-            <JourneyView journey={journey} low={low} />
-          </motion.div>
-        </AnimatePresence>
+      <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${journey.id}`} data-journey-panel={journey.id} className="mt-10 md:mt-14">
+        {/* Keyed, so a new choice mounts fresh and fades in; nothing waits on an exit. */}
+        <motion.div key={journey.id} initial={low ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: low ? 0 : 0.35, ease: ease.outExpo }}>
+          <JourneyView journey={journey} low={low} />
+        </motion.div>
       </div>
     </Section>
   )
@@ -130,8 +139,7 @@ function JourneyView({ journey, low }: { journey: Journey; low: boolean }) {
       <div className="grid gap-12 lg:grid-cols-[1.4fr_0.6fr] lg:gap-16">
         <div>
           <p className={cn('m-0', type.label)}>How it goes</p>
-          <p className={cn('mb-0 mt-3 max-w-[52ch]', type.lead)}>{journey.description}</p>
-          <ol data-journey-steps className="relative m-0 mt-10 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-0">
+          <ol data-journey-steps className="relative m-0 mt-8 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-0">
             <motion.span aria-hidden="true" {...draw} className="absolute left-3 top-3 hidden h-px w-[calc(100%-1.5rem)] origin-left bg-black md:block" />
             {journey.steps.map((step, index) => (
               <motion.li
@@ -148,29 +156,23 @@ function JourneyView({ journey, low }: { journey: Journey; low: boolean }) {
               </motion.li>
             ))}
           </ol>
+          {journey.outcome && (
+            <figure data-journey-outcome className="m-0 mt-12 grid gap-3 border-t border-black/15 pt-6 md:grid-cols-[auto_1fr] md:items-center md:gap-10">
+              <p className="m-0 whitespace-nowrap font-serif text-[clamp(44px,4.4vw,72px)] leading-[0.9] tracking-[-0.04em]">{journey.outcome.figure}</p>
+              <figcaption className={cn('max-w-[46ch]', type.body)}>{journey.outcome.result}<ActionLink href={journey.outcome.href} className="mt-2">{journey.outcome.link}</ActionLink></figcaption>
+            </figure>
+          )}
         </div>
-        <aside aria-label="What you hold at the end" data-journey-hold className="relative bg-tertiary-lightest p-7 md:p-9">
+        <aside aria-label="What you hold at the end" data-journey-hold className="relative self-start bg-tertiary-lightest p-7 md:p-9">
           <p className={cn('m-0', type.label)}>At the end, you hold</p>
           <h3 className={cn('mb-5 mt-2', type.title)}>{journey.youHoldLabel}</h3>
           <Dashes items={journey.youHold} />
-          <dl className="m-0 mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-black/15 pt-6">
-            <div className="col-span-2"><dt className={type.caption}>Usually starts as</dt><dd className={cn('m-0', type.body)}>{journey.engagement.name}</dd></div>
-            <div><dt className={type.caption}>Length</dt><dd className={cn('m-0', type.body)}>{journey.engagement.length}</dd></div>
-            <div><dt className={type.caption}>Who’s in the room</dt><dd className={cn('m-0', type.body)}>{journey.engagement.team}</dd></div>
-            <div className="col-span-2"><dt className={type.caption}>Typical investment</dt><dd className="m-0 mt-1 font-serif text-[clamp(32px,2.6vw,44px)] leading-none tracking-[-0.03em]">{journey.engagement.investment}</dd></div>
-          </dl>
-          <ActionLink href={journey.engagement.href} className="mt-6">{journey.engagement.cta}</ActionLink>
+          <p className={cn('mb-0 mt-6 border-t border-black/15 pt-5 text-gray', type.caption)}>Usually starts as a {journey.engagement.name}, with {journey.engagement.team.toLowerCase()}.</p>
+          <ActionLink href={journey.engagement.href} className="mt-4">{journey.engagement.cta}</ActionLink>
         </aside>
       </div>
-      {journey.outcome && (
-        <figure data-journey-outcome className="m-0 mt-14 grid gap-4 border-t border-black/15 pt-8 md:grid-cols-[auto_1fr_auto] md:items-end md:gap-12">
-          <p className="m-0 whitespace-nowrap font-serif text-[clamp(48px,5vw,80px)] leading-[0.9] tracking-[-0.04em]">{journey.outcome.figure}</p>
-          <figcaption className={cn('max-w-[46ch]', type.body)}>{journey.outcome.result}<span className={cn('mt-1 block text-gray', type.caption)}>{journey.outcome.client}</span></figcaption>
-          <ActionLink href={journey.outcome.href}>{journey.outcome.link}</ActionLink>
-        </figure>
-      )}
       <p className={cn('mb-0 mt-10 text-gray', type.body)}>
-        Need a team for longer? An {LONG_TERM.name.toLowerCase()} runs {LONG_TERM.rows[0]} with a {LONG_TERM.rows[1].toLowerCase()}.{' '}
+        Need a team for longer? An {LONG_TERM.name.toLowerCase()} runs {LONG_TERM.rows[0]}.{' '}
         <SmoothScrollLink href={`#${TALK}`} className="text-inherit underline underline-offset-4 hover:text-black">Talk about a partnership</SmoothScrollLink>
       </p>
     </>
@@ -179,12 +181,12 @@ function JourneyView({ journey, low }: { journey: Journey; low: boolean }) {
 
 function Proof() {
   return (
-    <Section spacing="none" className="py-16 md:py-24">
-      <ul aria-label="GoInvo in numbers" className="m-0 grid list-none gap-x-10 gap-y-12 p-0 sm:grid-cols-2 lg:grid-cols-4">
+    <Section spacing="none" className="py-14 md:py-20">
+      <ul aria-label="GoInvo in numbers" className="m-0 grid list-none grid-cols-2 gap-x-8 gap-y-10 p-0 lg:grid-cols-4">
         {STATS.map((stat) => (
-          <li key={stat.v} data-rule className="border-t border-black pt-6">
+          <li key={stat.v} data-rule className="border-t border-black pt-5">
             <Figure value={stat.v} />
-            <p className={cn('mb-0 mt-4 max-w-[26ch]', type.body)}>{stat.cap}</p>
+            <p className={cn('mb-0 mt-3 max-w-[26ch]', type.body)}>{stat.cap}</p>
           </li>
         ))}
       </ul>
@@ -192,39 +194,24 @@ function Proof() {
   )
 }
 
-/** A sector, told like the homepage's evidence rows: the picture opens as it arrives. */
-function SectorRow({ sector, index, low }: { sector: typeof SECTORS[number]; index: number; low: boolean }) {
-  const row = useRef<HTMLLIElement>(null)
-  const { scrollYProgress } = useScroll({ target: row, offset: ['start 0.95', 'start 0.45'] })
-  // Through a JS transform: handed straight on, framer runs these on a native scroll
-  // timeline, which stopped the crop short of open (measured 6% at the end of its range).
-  const progress = useTransform(scrollYProgress, (v) => v)
-  const crop = useTransform(progress, [0, 1], ['inset(14% 0 14% 0)', 'inset(0% 0 0% 0)'])
-  const scale = useTransform(progress, [0, 1], [1.15, 1])
-  return (
-    <li ref={row} data-rule className="grid items-center gap-8 border-t border-black/15 py-12 md:grid-cols-2 md:gap-16 md:py-16">
-      <motion.div style={{ clipPath: low ? 'inset(0)' : crop }} className={cn('relative aspect-[4/3] overflow-hidden', index % 2 === 1 && 'md:order-2')}>
-        <motion.div style={{ scale: low ? 1 : scale }} className="absolute inset-0">
-          <Image src={sector.img} alt={`Design for ${sector.k}`} fill sizes="(min-width:768px) 45vw, 90vw" className="object-cover" />
-        </motion.div>
-      </motion.div>
-      <div>
-        <h3 className={cn('m-0', type.title)}>{sector.k}</h3>
-        <p data-hand-note className={cn('mb-0 mt-2 text-secondary', type.lead)}>{sector.sub}</p>
-        <p className={cn('mb-6 mt-6 max-w-[52ch]', type.body)}>{sector.d}</p>
-        <Dashes items={sector.bullets} columns={2} />
-        <ActionLink href={sector.href} className="mt-4">{sector.link}</ActionLink>
-      </div>
-    </li>
-  )
-}
-
-function Sectors({ low }: { low: boolean }) {
+/** The four sectors as pictures to click, not paragraphs to read: the work is behind each. */
+function Sectors() {
   return (
     <Section aria-labelledby="services-where">
-      <p className={cn('mb-6 mt-0', type.label)}>Where we work</p>
-      <SectionHeading id="services-where" sweep reduced={low} text="Four places where software can’t afford to fail." className="max-w-[18ch]" />
-      <ul className="m-0 mt-12 list-none p-0 md:mt-16">{SECTORS.map((sector, index) => <SectorRow key={sector.k} sector={sector} index={index} low={low} />)}</ul>
+      <SectionHeading id="services-where" text="Four places where software can’t afford to fail." className="max-w-[18ch]" />
+      <ul className="m-0 mt-10 grid list-none grid-cols-2 gap-x-5 gap-y-10 p-0 md:mt-14 lg:grid-cols-4 lg:gap-x-8">
+        {SECTORS.map((sector) => (
+          <li key={sector.k} data-sector>
+            <Link href={sector.href} aria-label={sector.link} className="group block text-black no-underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary">
+              <span className="relative block aspect-[4/3] overflow-hidden">
+                <Image src={sector.img} alt="" fill sizes="(min-width:1024px) 22vw, 45vw" className="object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04] motion-reduce:transition-none" />
+              </span>
+              <span className={cn('mt-4 flex items-center gap-2', type.quote)}><span data-link-label className="group-hover:underline group-focus-visible:underline">{sector.k}</span><Arrow /></span>
+              <span className={cn('mt-1 block text-gray', type.body)}>{sector.sub}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </Section>
   )
 }
@@ -273,7 +260,7 @@ export function ServicesHuman({ booking }: { booking: ReactNode }) {
     <div className="bg-white text-black">
       <Opening low={low} />
       <Proof />
-      <Sectors low={low} />
+      <Sectors />
       <Testimonial />
       <Talk booking={booking} />
     </div>
