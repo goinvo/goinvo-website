@@ -53,6 +53,14 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   // One picture per service, its own, painted, on the first screen.
   const pictures = first.tabs.map((tab) => tab.image)
   check(pictures.every((image) => image?.loaded && image.width >= 80 && image.bottom <= height) && new Set(pictures.map((image) => image?.src)).size === 3, `${width}: each service has its own picture on the first screen ${JSON.stringify(pictures.map((image) => image && [image.loaded, image.width, image.bottom]))}`)
+  // No picture twice anywhere on the page: seven places, seven pictures, all painted.
+  const all = await page.evaluate(async () => {
+    const root = document.querySelector('[data-journey-tabs]').closest('[data-design-only="human"]') || document
+    const imgs = [...root.querySelectorAll('[data-journey-tab] img, [data-sector] img')].filter((img) => img.getBoundingClientRect().width > 0)
+    for (const img of imgs) { img.loading = 'eager'; await img.decode().catch(() => {}) }
+    return imgs.map((img) => ({ file: new URL(img.currentSrc || img.src).searchParams.get('url') || new URL(img.currentSrc || img.src).pathname, loaded: img.naturalWidth > 0 }))
+  })
+  check(all.length === 7 && all.every((img) => img.loaded) && new Set(all.map((img) => img.file)).size === 7, `${width}: seven pictures on the page, none used twice ${JSON.stringify(all.map((img) => img.file.split('/').pop()))}`)
   check(first.imagesAbove === 0, `${width}: no image above the services (${first.imagesAbove})`)
   // A phone's menu carries Contact; the services need the first screen.
   if (width < 768) check(await page.evaluate(() => ![...document.querySelectorAll('[data-design-only="human"] a')].some((a) => a.textContent.includes('Schedule a chat') && a.getBoundingClientRect().height > 0 && a.getBoundingClientRect().top < innerHeight)), `${width}: no "Schedule a chat" crowding the phone's first screen`)

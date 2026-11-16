@@ -70,7 +70,7 @@ export const JOURNEYS: Journey[] = [
     id: 'usable',
     concern: 'Will people trust and use it?',
     title: 'Make complexity usable.',
-    image: { src: '/images/experiments/home-2026/facto2.jpg' },
+    image: { src: '/images/services/work-ipsos-facto.jpg', focus: '50% 78%' },
     description: 'Shape AI interactions and connected workflows around clear evidence, human context, and the decisions people make.',
     steps: [
       { name: 'Find the right problems', does: ['Research with the people who use it', 'System mapping', 'Synthesis'] },
@@ -123,3 +123,15 @@ export const JOURNEYS: Journey[] = [
 
 /** For work that outlasts one launch: the third engagement, offered under every journey. */
 export const LONG_TERM = tier('Embedded Partnership')
+
+/**
+ * The sector pictures for the new design, each from a different project and none shared
+ * with a service above (scripts/check-services-journeys.mjs fails on a repeat). The
+ * classic page keeps the pictures in services/content.ts.
+ */
+export const SECTOR_PICTURES: Record<string, string> = {
+  Healthcare: '/images/services/work-infobionic.jpg',
+  Government: '/images/services/work-state-of-us-healthcare.jpg',
+  Enterprise: '/images/services/work-fifteen-tools-to-one.jpg',
+  AI: '/images/services/work-guidelines.jpg',
+}

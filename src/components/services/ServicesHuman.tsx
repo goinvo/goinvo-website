@@ -13,7 +13,7 @@ import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { SmoothScrollLink } from '@/components/ui/SmoothScrollLink'
 import { SECTORS, STATS } from '@/app/(main)/services/content'
-import { JOURNEYS, type Journey } from '@/components/services/servicesJourneys'
+import { JOURNEYS, SECTOR_PICTURES, type Journey } from '@/components/services/servicesJourneys'
 
 /**
  * The services page in the homepage study's design, told from the buyer's side. The first
@@ -200,7 +200,7 @@ function Sectors() {
           <li key={sector.k} data-sector>
             <Link href={sector.href} aria-label={sector.link} className="group block text-black no-underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary">
               <span className="relative block aspect-[4/3] overflow-hidden">
-                <Image src={sector.img} alt="" fill sizes="(min-width:1024px) 22vw, 45vw" className="object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04] motion-reduce:transition-none" />
+                <Image src={SECTOR_PICTURES[sector.k] ?? sector.img} alt="" fill sizes="(min-width:1024px) 22vw, 45vw" className="object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04] motion-reduce:transition-none" />
               </span>
               <span className={cn('mt-4 flex items-center gap-2', type.quote)}><span data-link-label className="group-hover:underline group-focus-visible:underline">{sector.k}</span><Arrow /></span>
               <span className={cn('mt-1 block text-gray', type.body)}>{sector.sub}</span>
