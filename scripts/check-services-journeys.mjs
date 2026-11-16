@@ -15,7 +15,7 @@ const failures = []
 const check = (ok, label) => { console.log(`${ok ? 'PASS' : 'FAIL'} ${label}`); if (!ok) failures.push(label) }
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 /** The page's own words, the scheduler aside: more than this and it reads as a brochure. */
-const WORD_LIMIT = 420
+const WORD_LIMIT = 260
 const HOLD = { direction: 'A Product Blueprint', usable: 'Interactions people can trust', ship: 'Working software' }
 
 const settled = (page, id) => page.waitForFunction((want, hold) => {

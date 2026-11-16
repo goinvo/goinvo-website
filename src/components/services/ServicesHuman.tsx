@@ -13,7 +13,7 @@ import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { SmoothScrollLink } from '@/components/ui/SmoothScrollLink'
 import { SECTORS, STATS } from '@/app/(main)/services/content'
-import { JOURNEYS, LONG_TERM, type Journey } from '@/components/services/servicesJourneys'
+import { JOURNEYS, type Journey } from '@/components/services/servicesJourneys'
 
 /**
  * The services page in the homepage study's design, told from the buyer's side. The first
@@ -36,7 +36,7 @@ function ActionLink({ href, children, className }: { href: string; children: Rea
 /** A dash-marked list, the page's one list style (the classic page used orange dots). */
 function Dashes({ items, columns = 1 }: { items: string[]; columns?: 1 | 2 }) {
   return (
-    <ul className={cn('m-0 grid list-none gap-x-8 gap-y-2 p-0', columns === 2 && 'sm:grid-cols-2')}>
+    <ul className={cn('m-0 grid list-none gap-x-8 gap-y-3 p-0', columns === 2 && 'sm:grid-cols-2')}>
       {items.map((item) => <li key={item} className={cn('relative pl-6', type.body)}><span aria-hidden="true" className="absolute left-0">–</span>{item}</li>)}
     </ul>
   )
@@ -70,13 +70,13 @@ function Opening({ low }: { low: boolean }) {
   }
   const journey = JOURNEYS[selected]
   return (
-    <Section spacing="none" aria-labelledby="services-title" className="pb-16 pt-[calc(var(--spacing-header-height)+1.5rem)] md:pb-24 md:pt-[calc(var(--spacing-header-height)+2rem)]">
+    <Section spacing="none" aria-labelledby="services-title" className="pb-24 pt-[calc(var(--spacing-header-height)+2rem)] md:pb-36 md:pt-[calc(var(--spacing-header-height)+3rem)]">
       <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end md:gap-16">
         <h1 id="services-title" className="m-0 max-w-[19ch] font-serif text-page-title font-normal">What’s between you and software people use?</h1>
         <ActionLink href={`#${TALK}`} className={cn('max-md:hidden md:mb-2', type.lead)}>Schedule a chat</ActionLink>
       </div>
 
-      <div role="tablist" aria-label="The question you’re facing" data-journey-tabs className="mt-6 grid border-t border-black/15 md:mt-9 md:grid-cols-3">
+      <div role="tablist" aria-label="The question you’re facing" data-journey-tabs className="mt-8 grid border-t border-black/15 md:mt-14 md:grid-cols-3">
         {JOURNEYS.map((item, index) => {
           const on = index === selected
           return (
@@ -92,17 +92,13 @@ function Opening({ low }: { low: boolean }) {
               data-journey-tab={item.id}
               onClick={() => choose(index)}
               onKeyDown={(event) => onKey(event, index)}
-              className={cn('group relative flex cursor-pointer flex-col items-start border-b border-black/15 bg-transparent py-4 text-left text-black focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary md:border-b-0 md:py-6 md:pr-8', index > 0 && 'md:border-l md:pl-8')}
+              className={cn('group relative flex cursor-pointer flex-col items-start border-b border-black/15 bg-transparent py-6 text-left text-black focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary md:border-b-0 md:py-8 md:pr-10', index > 0 && 'md:border-l md:pl-10')}
             >
               <span aria-hidden="true" className={cn('absolute -top-px left-0 h-[3px] bg-black transition-[width] duration-500 motion-reduce:transition-none', on ? 'w-full' : 'w-0 group-hover:w-8')} />
-              <span className={cn('flex items-center gap-3 max-md:hidden', type.label, on ? 'text-black' : 'text-gray')}>
-                <span aria-hidden="true" className={cn('h-2.5 w-2.5 rounded-full border border-current transition-colors', on && 'border-secondary bg-secondary')} />
-                {item.title}
-              </span>
-              <span className={cn('block transition-colors max-md:text-[1.5rem] max-md:leading-[1.15] md:mt-3', type.title, on ? 'text-black' : 'text-black/55 group-hover:text-black')}>{item.concern}</span>
+              <span className={cn('block transition-colors max-md:text-[1.5rem] max-md:leading-[1.15]', type.title, on ? 'text-black' : 'text-black/55 group-hover:text-black')}>{item.concern}</span>
               {/* The facts a buyer decides on. A desktop stacks them with their labels; a
                   phone runs the three values on a line, so all three services fit one screen. */}
-              <span className="mt-2 flex flex-wrap gap-x-4 gap-y-1 md:mt-6 md:grid md:w-full md:grid-cols-2 md:gap-x-6 md:gap-y-4 md:border-t md:border-black/15 md:pt-5">
+              <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 md:mt-8 md:grid md:w-full md:grid-cols-2 md:gap-x-6 md:gap-y-5">
                 <span data-journey-fact="hold" className="md:col-span-2">
                   <span className={cn('block text-gray max-md:hidden', type.caption)}>You get</span>
                   <span className={cn('block', type.body)}>{item.youHoldLabel}</span>
@@ -121,7 +117,7 @@ function Opening({ low }: { low: boolean }) {
         })}
       </div>
 
-      <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${journey.id}`} data-journey-panel={journey.id} className="mt-10 md:mt-14">
+      <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${journey.id}`} data-journey-panel={journey.id} className="mt-16 md:mt-24">
         {/* Keyed, so a new choice mounts fresh and fades in; nothing waits on an exit. */}
         <motion.div key={journey.id} initial={low ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: low ? 0 : 0.35, ease: ease.outExpo }}>
           <JourneyView journey={journey} low={low} />
@@ -136,10 +132,10 @@ function JourneyView({ journey, low }: { journey: Journey; low: boolean }) {
   const draw = low ? { initial: false as const } : { initial: { scaleX: 0 }, animate: { scaleX: 1 }, transition: { duration: 0.9, ease: ease.outExpo } }
   return (
     <>
-      <div className="grid gap-12 lg:grid-cols-[1.4fr_0.6fr] lg:gap-16">
+      <div className="grid gap-16 lg:grid-cols-[1.4fr_0.6fr] lg:gap-24">
         <div>
           <p className={cn('m-0', type.label)}>How it goes</p>
-          <ol data-journey-steps className="relative m-0 mt-8 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-0">
+          <ol data-journey-steps className="relative m-0 mt-10 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-0">
             <motion.span aria-hidden="true" {...draw} className="absolute left-3 top-3 hidden h-px w-[calc(100%-1.5rem)] origin-left bg-black md:block" />
             {journey.steps.map((step, index) => (
               <motion.li
@@ -151,38 +147,33 @@ function JourneyView({ journey, low }: { journey: Journey; low: boolean }) {
                 className="relative pl-12 md:pl-0 md:pr-8"
               >
                 <span aria-hidden="true" className="absolute left-0 top-0 flex h-6 w-6 items-center justify-center rounded-full border border-black bg-white text-[13px] tabular-nums leading-none md:relative">{index + 1}</span>
-                <h3 className={cn('mb-3 mt-0 md:mt-6', type.quote)}>{step.name}</h3>
-                <Dashes items={step.does} />
+                <h3 className={cn('mb-2 mt-0 md:mt-8', type.quote)}>{step.name}</h3>
+                <p className={cn('m-0 max-w-[24ch] text-gray', type.body)}>{step.does.join(', ')}</p>
               </motion.li>
             ))}
           </ol>
           {journey.outcome && (
-            <figure data-journey-outcome className="m-0 mt-12 grid gap-3 border-t border-black/15 pt-6 md:grid-cols-[auto_1fr] md:items-center md:gap-10">
+            <figure data-journey-outcome className="m-0 mt-16 grid gap-4 border-t border-black/15 pt-8 md:mt-20 md:grid-cols-[auto_1fr] md:items-center md:gap-12">
               <p className="m-0 whitespace-nowrap font-serif text-[clamp(44px,4.4vw,72px)] leading-[0.9] tracking-[-0.04em]">{journey.outcome.figure}</p>
               <figcaption className={cn('max-w-[46ch]', type.body)}>{journey.outcome.result}<ActionLink href={journey.outcome.href} className="mt-2">{journey.outcome.link}</ActionLink></figcaption>
             </figure>
           )}
         </div>
-        <aside aria-label="What you hold at the end" data-journey-hold className="relative self-start bg-tertiary-lightest p-7 md:p-9">
+        <aside aria-label="What you hold at the end" data-journey-hold className="relative self-start bg-tertiary-lightest p-8 md:p-12">
           <p className={cn('m-0', type.label)}>At the end, you hold</p>
-          <h3 className={cn('mb-5 mt-2', type.title)}>{journey.youHoldLabel}</h3>
-          <Dashes items={journey.youHold} />
-          <p className={cn('mb-0 mt-6 border-t border-black/15 pt-5 text-gray', type.caption)}>Usually starts as a {journey.engagement.name}, with {journey.engagement.team.toLowerCase()}.</p>
-          <ActionLink href={journey.engagement.href} className="mt-4">{journey.engagement.cta}</ActionLink>
+          <h3 className={cn('mb-6 mt-3', type.title)}>{journey.youHoldLabel}</h3>
+          <Dashes items={journey.youHold.slice(0, 3)} />
+          <ActionLink href={journey.engagement.href} className="mt-8">{journey.engagement.cta}</ActionLink>
         </aside>
       </div>
-      <p className={cn('mb-0 mt-10 text-gray', type.body)}>
-        Need a team for longer? An {LONG_TERM.name.toLowerCase()} runs {LONG_TERM.rows[0]}.{' '}
-        <SmoothScrollLink href={`#${TALK}`} className="text-inherit underline underline-offset-4 hover:text-black">Talk about a partnership</SmoothScrollLink>
-      </p>
     </>
   )
 }
 
 function Proof() {
   return (
-    <Section spacing="none" className="py-14 md:py-20">
-      <ul aria-label="GoInvo in numbers" className="m-0 grid list-none grid-cols-2 gap-x-8 gap-y-10 p-0 lg:grid-cols-4">
+    <Section spacing="none" className="py-24 md:py-36">
+      <ul aria-label="GoInvo in numbers" className="m-0 grid list-none grid-cols-2 gap-x-8 gap-y-14 p-0 lg:grid-cols-4 lg:gap-x-12">
         {STATS.map((stat) => (
           <li key={stat.v} data-rule className="border-t border-black pt-5">
             <Figure value={stat.v} />
@@ -199,7 +190,7 @@ function Sectors() {
   return (
     <Section aria-labelledby="services-where">
       <SectionHeading id="services-where" text="Four places where software can’t afford to fail." className="max-w-[18ch]" />
-      <ul className="m-0 mt-10 grid list-none grid-cols-2 gap-x-5 gap-y-10 p-0 md:mt-14 lg:grid-cols-4 lg:gap-x-8">
+      <ul className="m-0 mt-12 grid list-none grid-cols-2 gap-x-5 gap-y-12 p-0 md:mt-20 lg:grid-cols-4 lg:gap-x-10">
         {SECTORS.map((sector) => (
           <li key={sector.k} data-sector>
             <Link href={sector.href} aria-label={sector.link} className="group block text-black no-underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary">
@@ -235,15 +226,14 @@ function Talk({ booking }: { booking: ReactNode }) {
       <div className="grid items-end gap-8 md:grid-cols-[1.1fr_0.9fr] md:gap-16">
         <SectionHeading id="services-talk" text="Choose a time to talk about your project." className="max-w-[15ch]" />
         <div>
-          <p className={cn('m-0 max-w-[44ch]', type.body)}>Thirty minutes with a principal, not a salesperson. We’ll talk about your problem, what it will take to ship, and whether we’re the right firm. No deck, no obligation.</p>
+          <p className={cn('m-0 max-w-[44ch]', type.body)}>Thirty minutes with a principal, not a salesperson. No deck, no obligation.</p>
           <p className={cn('mb-0 mt-4', type.label)}>Prefer email? <InlineLink href="mailto:info@goinvo.com">info@goinvo.com</InlineLink></p>
         </div>
       </div>
-      <div data-rule className="mt-12 border-t border-black/15 pt-8 md:mt-16">{booking}</div>
+      <div data-rule className="mt-16 border-t border-black/15 pt-10 md:mt-24">{booking}</div>
       <div data-rule className="mt-12 grid gap-6 border-t border-black/15 pt-8 md:grid-cols-[1fr_auto] md:items-end md:gap-16">
         <div>
           <p className={cn('m-0', type.label)}>Certified &amp; contracted</p>
-          <p className={cn('mb-0 mt-2 max-w-[52ch]', type.body)}>Prequalified for IT professional services as a trusted vendor for state and federal agencies.</p>
         </div>
         <dl className="m-0 flex flex-wrap gap-x-12 gap-y-4">
           <div><dt className={type.caption}>State of MA</dt><dd className={cn('m-0', type.label)}>ITS81</dd></div>
