@@ -1,6 +1,6 @@
 // The services page under the human design (?design=human), told from the buyer's side.
 // Rules: the three services are on the first screen (no hero image above them), each with
-// what you get, how long it takes and what it costs; choosing one shows its steps and what
+// its own picture, what you get, how long it takes and what it costs; choosing one shows its steps and what
 // you hold at the end; choosing quickly never leaves the steps invisible; the tabs work by
 // keyboard; the page stays short on words; nothing spills sideways.
 // Usage: node scripts/check-services-journeys.mjs [base] [--out dir]
@@ -40,7 +40,7 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
     const imagesAbove = [...root.querySelectorAll('img')].filter((img) => visible(img) && img.getBoundingClientRect().top < tabs[0].getBoundingClientRect().top)
     const fact = (tab, name) => { const el = [...tab.querySelectorAll(`[data-journey-fact="${name}"]`)].find(visible); return el ? { text: el.textContent.trim(), bottom: Math.round(el.getBoundingClientRect().bottom) } : null }
     return {
-      tabs: tabs.map((tab) => ({ id: tab.dataset.journeyTab, bottom: Math.round(tab.getBoundingClientRect().bottom), hold: fact(tab, 'hold'), length: fact(tab, 'length'), investment: fact(tab, 'investment') })),
+      tabs: tabs.map((tab) => ({ image: (() => { const img = [...tab.querySelectorAll('img')].find(visible); return img ? { src: img.currentSrc || img.src, loaded: img.complete && img.naturalWidth > 0, bottom: Math.round(img.getBoundingClientRect().bottom), width: Math.round(img.getBoundingClientRect().width) } : null })(), id: tab.dataset.journeyTab, bottom: Math.round(tab.getBoundingClientRect().bottom), hold: fact(tab, 'hold'), length: fact(tab, 'length'), investment: fact(tab, 'investment') })),
       imagesAbove: imagesAbove.length,
       overflow: document.documentElement.scrollWidth - innerWidth,
       words: root.innerText.split(/\s+/).filter(Boolean).length,
@@ -50,6 +50,9 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   // The important information, per service, without a scroll or a press.
   const facts = first.tabs.every((tab) => ['hold', 'length', 'investment'].every((name) => tab[name]?.text && tab[name].bottom <= height))
   check(facts && first.tabs.every((tab) => tab.hold.text.includes(HOLD[tab.id]) && /\$\d/.test(tab.investment.text)), `${width}: each service shows what you get, how long and the investment on the first screen ${JSON.stringify(first.tabs.map((tab) => [tab.hold?.text, tab.length?.text, tab.investment?.text]))}`)
+  // One picture per service, its own, painted, on the first screen.
+  const pictures = first.tabs.map((tab) => tab.image)
+  check(pictures.every((image) => image?.loaded && image.width >= 80 && image.bottom <= height) && new Set(pictures.map((image) => image?.src)).size === 3, `${width}: each service has its own picture on the first screen ${JSON.stringify(pictures.map((image) => image && [image.loaded, image.width, image.bottom]))}`)
   check(first.imagesAbove === 0, `${width}: no image above the services (${first.imagesAbove})`)
   // A phone's menu carries Contact; the services need the first screen.
   if (width < 768) check(await page.evaluate(() => ![...document.querySelectorAll('[data-design-only="human"] a')].some((a) => a.textContent.includes('Schedule a chat') && a.getBoundingClientRect().height > 0 && a.getBoundingClientRect().top < innerHeight)), `${width}: no "Schedule a chat" crowding the phone's first screen`)

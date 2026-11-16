@@ -30,6 +30,8 @@ export interface Journey {
   concern: string
   title: string
   description: string
+  /** The service's picture: the work it stands for. `focus` is the crop's centre. */
+  image: { src: string; focus?: string }
   /** What happens, in order. */
   steps: JourneyStep[]
   /** What the buyer holds at the end. */
@@ -47,6 +49,7 @@ export const JOURNEYS: Journey[] = [
     id: 'direction',
     concern: 'Are we solving the right problem?',
     title: 'Find the product direction.',
+    image: { src: '/images/services/design-diagnostic-collaboration.png', focus: '50% 88%' },
     description: 'Research with your users, map the system, and test the choices before committing to a build.',
     steps: [
       { name: 'Reality check', does: ['Stakeholder interviews', 'Workflow review', 'Product teardown'] },
@@ -67,6 +70,7 @@ export const JOURNEYS: Journey[] = [
     id: 'usable',
     concern: 'Will people trust and use it?',
     title: 'Make complexity usable.',
+    image: { src: '/images/experiments/home-2026/facto2.jpg' },
     description: 'Shape AI interactions and connected workflows around clear evidence, human context, and the decisions people make.',
     steps: [
       { name: 'Find the right problems', does: ['Research with the people who use it', 'System mapping', 'Synthesis'] },
@@ -93,6 +97,7 @@ export const JOURNEYS: Journey[] = [
     id: 'ship',
     concern: 'Can this ship with our team?',
     title: 'Design through delivery.',
+    image: { src: '/images/experiments/home-2026/snapcover.jpg' },
     description: 'Turn tested prototypes into working software, with your team involved from early decisions through implementation.',
     steps: [
       { name: 'Research and discovery', does: ['Research with your users', 'Market validation', 'Your team in the early decisions'] },

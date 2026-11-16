@@ -76,7 +76,7 @@ function Opening({ low }: { low: boolean }) {
         <ActionLink href={`#${TALK}`} className={cn('max-md:hidden md:mb-2', type.lead)}>Schedule a chat</ActionLink>
       </div>
 
-      <div role="tablist" aria-label="The question you’re facing" data-journey-tabs className="mt-8 grid border-t border-black/15 md:mt-14 md:grid-cols-3">
+      <div role="tablist" aria-label="The question you’re facing" data-journey-tabs className="mt-8 grid border-t border-black/15 md:mt-10 md:grid-cols-3">
         {JOURNEYS.map((item, index) => {
           const on = index === selected
           return (
@@ -92,13 +92,18 @@ function Opening({ low }: { low: boolean }) {
               data-journey-tab={item.id}
               onClick={() => choose(index)}
               onKeyDown={(event) => onKey(event, index)}
-              className={cn('group relative flex cursor-pointer flex-col items-start border-b border-black/15 bg-transparent py-6 text-left text-black focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary md:border-b-0 md:py-8 md:pr-10', index > 0 && 'md:border-l md:pl-10')}
+              className={cn('group relative flex cursor-pointer flex-col items-start border-b border-black/15 bg-transparent py-6 text-left text-black max-md:pr-28 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary md:border-b-0 md:py-8 md:pr-10', index > 0 && 'md:border-l md:pl-10')}
             >
               <span aria-hidden="true" className={cn('absolute -top-px left-0 h-[3px] bg-black transition-[width] duration-500 motion-reduce:transition-none', on ? 'w-full' : 'w-0 group-hover:w-8')} />
+              {/* Its picture: a strip across the column on a desktop, a thumbnail beside the
+                  words on a phone, so the three services still fit one screen. */}
+              <span className={cn('overflow-hidden transition-opacity duration-500 motion-reduce:transition-none max-md:absolute max-md:right-0 max-md:top-6 max-md:h-24 max-md:w-24 md:relative md:mb-6 md:block md:h-[clamp(120px,10vw,152px)] md:w-full', on ? 'opacity-100' : 'opacity-80 group-hover:opacity-100')}>
+                <Image src={item.image.src} alt="" fill priority sizes="(min-width:768px) 30vw, 96px" className="object-cover" style={{ objectPosition: item.image.focus }} />
+              </span>
               <span className={cn('block transition-colors max-md:text-[1.5rem] max-md:leading-[1.15]', type.title, on ? 'text-black' : 'text-black/55 group-hover:text-black')}>{item.concern}</span>
               {/* The facts a buyer decides on. A desktop stacks them with their labels; a
                   phone runs the three values on a line, so all three services fit one screen. */}
-              <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 md:mt-8 md:grid md:w-full md:grid-cols-2 md:gap-x-6 md:gap-y-5">
+              <span className="mt-3 flex flex-wrap gap-x-4 gap-y-1 md:mt-6 md:grid md:w-full md:grid-cols-2 md:gap-x-6 md:gap-y-5">
                 <span data-journey-fact="hold" className="md:col-span-2">
                   <span className={cn('block text-gray max-md:hidden', type.caption)}>You get</span>
                   <span className={cn('block', type.body)}>{item.youHoldLabel}</span>
