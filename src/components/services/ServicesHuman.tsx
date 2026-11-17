@@ -72,7 +72,7 @@ function Opening({ low }: { low: boolean }) {
   return (
     <Section spacing="none" aria-labelledby="services-title" className="pb-24 pt-[calc(var(--spacing-header-height)+2rem)] md:pb-36 md:pt-[calc(var(--spacing-header-height)+3rem)]">
       <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end md:gap-16">
-        <h1 id="services-title" className="m-0 max-w-[19ch] font-serif text-page-title font-normal">What’s between you and software people use?</h1>
+        <h1 id="services-title" className="m-0 max-w-[19ch] font-serif text-page-title font-normal">Design for impact. Where do you need it?</h1>
         <ActionLink href={`#${TALK}`} className={cn('max-md:hidden md:mb-2', type.lead)}>Schedule a chat</ActionLink>
       </div>
 

@@ -32,12 +32,16 @@ export interface Tagline {
 }
 
 export const TAGLINES: Tagline[] = [
-  // The current default, then the earlier candidates, unchanged.
-  { key: 'ship', angle: 'Current', note: 'The line on the preview today: shipping, and care after launch.', fit: FIT.medium, text: 'Designs that ship, with stewardship.', node: <>Designs that <em>ship</em>, with <em>stewardship</em>.</> },
-  { key: 'design', angle: 'Current', note: 'The same, read as one practice rather than many designs.', fit: FIT.medium, text: 'Design that ships, with stewardship.', node: <>Design that <em>ships</em>, with <em>stewardship</em>.</> },
-  { key: 'stay', angle: 'Current', note: 'Shipping, and not disappearing after it.', fit: FIT.short, text: 'We ship. Then we stay.', node: <>We ship. Then we stay.</> },
-  { key: 'machine', angle: 'Current', note: 'Making complex systems legible.', fit: FIT.medium, text: 'Make the machine make sense.', node: <>Make the machine make sense.</> },
-  { key: 'human', angle: 'Current', note: 'Complexity turned into something people can use.', fit: FIT.short, text: 'Complexity, made human.', node: <>Complexity, made human.</> },
+  // The default: the studio's position. Design is judged by what it changes.
+  { key: 'impact', angle: 'Impact', note: 'The position: design that drives results. The line under it carries the proof.', fit: FIT.short, pair: 'impact', text: 'Design for impact.', node: <>Design for <em>impact</em>.</> },
+  { key: 'results', angle: 'Impact', note: 'The same position, said as what the buyer gets.', fit: FIT.medium, pair: 'impact', text: 'Design that drives results.', node: <>Design that drives <em>results</em>.</> },
+
+  // The earlier default and candidates, unchanged.
+  { key: 'ship', angle: 'Earlier', note: 'The preview’s earlier line: shipping, and care after launch.', fit: FIT.medium, text: 'Designs that ship, with stewardship.', node: <>Designs that <em>ship</em>, with <em>stewardship</em>.</> },
+  { key: 'design', angle: 'Earlier', note: 'The same, read as one practice rather than many designs.', fit: FIT.medium, text: 'Design that ships, with stewardship.', node: <>Design that <em>ships</em>, with <em>stewardship</em>.</> },
+  { key: 'stay', angle: 'Earlier', note: 'Shipping, and not disappearing after it.', fit: FIT.short, text: 'We ship. Then we stay.', node: <>We ship. Then we stay.</> },
+  { key: 'machine', angle: 'Earlier', note: 'Making complex systems legible.', fit: FIT.medium, text: 'Make the machine make sense.', node: <>Make the machine make sense.</> },
+  { key: 'human', angle: 'Earlier', note: 'Complexity turned into something people can use.', fit: FIT.short, text: 'Complexity, made human.', node: <>Complexity, made human.</> },
 
   // Adoption: the outcome is that people actually use it.
   { key: 'used', angle: 'Adoption', note: 'The failure buyers fear most is software that launches and gets ignored.', fit: FIT.medium, pair: 'adoption', text: 'Software people actually use.', node: <>Software people actually <em>use</em>.</> },
@@ -76,7 +80,8 @@ export const SUBLINES: Subline[] = [
   { key: 'inside', label: 'The people inside', node: <>For 20 years, our design studio has made complex systems work for the people inside them.</> },
   { key: 'clinics', label: 'Clinics to agencies', node: <>A design studio for complex systems, from clinics to state agencies, for over 20 years.</> },
   { key: 'ai', label: 'AI and people', node: <>AI knows how <em>software</em> works.<br />We know how <em>people</em> do.</> },
-  // Proof lines: one published figure each.
+  // Proof lines: published figures only.
+  { key: 'impact', label: 'Proof: results', node: <>Design measured by what it changes: SNAP applications online from 7% to 70%, over 90% adoption at Ipsos.</> },
   { key: 'adoption', label: 'Proof: Ipsos adoption', node: <>Over 90% of Ipsos analysts adopted the AI research platform we designed, because it fit how they already worked.</> },
   { key: 'snap', label: 'Proof: SNAP 7% → 70%', node: <>Massachusetts SNAP applications went from 7% to 70% online, once the form fit the people filling it out.</> },
   { key: 'shipped', label: 'Proof: 60+ shipped', node: <>A design studio with 60+ shipped products for hospitals, payers, federal agencies and enterprises.</> },

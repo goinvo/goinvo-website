@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { siteConfig } from '@/lib/config'
 import { cloudfrontImage } from '@/lib/utils'
+import { designSwitchEnabled } from '@/lib/designSwitch'
+import { ContactHuman } from '@/components/contact/ContactHuman'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/contact' },
@@ -11,6 +13,17 @@ export const metadata: Metadata = {
 }
 
 export default function ContactPage() {
+  if (!designSwitchEnabled) return <ContactClassic />
+  // The review switch (src/lib/designSwitch.ts) shows one of the two; design-human.css.
+  return (
+    <>
+      <div data-design-only="classic"><ContactClassic /></div>
+      <div data-design-only="human"><ContactHuman /></div>
+    </>
+  )
+}
+
+function ContactClassic() {
   return (
     <div className="pt-[var(--spacing-header-height)]">
       <h1 className="sr-only">Contact GoInvo</h1>
