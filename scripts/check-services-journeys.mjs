@@ -62,7 +62,8 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
       sentence: sentence ? { text: sentence.textContent.trim(), bottom: Math.round(sentence.getBoundingClientRect().bottom) } : null,
       links: [...root.querySelectorAll('[data-service-link]')].filter(visible).map((el) => ({ id: el.dataset.serviceLink, bottom: Math.round(el.getBoundingClientRect().bottom) })),
       images: [...root.querySelectorAll('img')].filter((img) => visible(img) && img.getBoundingClientRect().top < height * 0.8).length,
-      act: [...root.querySelectorAll('a')].some((a) => onScreen(a) && /Tell us what you’re working on/.test(a.textContent)),
+      // One way to act, and it is the LAST row of the index, worded as the alternative.
+      act: (() => { const rows = [...root.querySelectorAll('[data-service-index] li')].filter(visible); const last = rows[rows.length - 1]; const links = [...root.querySelectorAll('a')].filter((a) => onScreen(a) && /tell us what you’re working on/i.test(a.textContent)); return links.length === 1 && rows.length === 4 && !!last && last.contains(links[0]) && /^…or tell us/.test((links[0].querySelector('[data-link-label]') || links[0]).textContent.trim()) })(),
       // The page's prose. The contact form's own labels and buttons are controls, not copy to read.
       pageWords: (() => { const form = root.querySelector('[data-contact-composer]'); const count = (text) => text.split(/\s+/).filter(Boolean).length; return count(root.innerText) - (form ? count(form.innerText) : 0) })(),
       overflow: document.documentElement.scrollWidth - innerWidth,
@@ -71,7 +72,7 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   }, height)
   check(!!first.sentence && /design studio/.test(first.sentence.text) && /in person or from anywhere/.test(first.sentence.text) && first.sentence.bottom <= height, `${width}: the first screen says what we do, in one sentence ${JSON.stringify(first.sentence)}`)
   check(first.links.map((link) => link.id).join() === IDS.join() && first.links.every((link) => link.bottom <= height), `${width}: the three questions are on the first screen as an index ${JSON.stringify(first.links)}`)
-  check(first.act, `${width}: the first screen has one way to act (Tell us what you’re working on)`)
+  check(first.act, `${width}: the first screen has one way to act, “…or tell us what you’re working on”, as the last row under the three questions`)
   check(first.images === 0 && !/\$\d/.test(first.text), `${width}: no picture and no price on the first screen (${first.images} pictures)`)
   check(first.words <= FIRST_SCREEN_WORDS, `${width}: the first screen is one statement (${first.words} of ${FIRST_SCREEN_WORDS} words)`)
   check(first.charts === 0, `${width}: no chart and no tab list on the page (${first.charts})`)

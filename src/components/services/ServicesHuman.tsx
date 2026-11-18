@@ -43,7 +43,6 @@ function Opening() {
         <div>
           <h1 id="services-title" className="m-0 font-serif text-page-title font-normal">Design for impact.</h1>
           <p data-what-we-do className={cn('mb-0 mt-6 max-w-[44ch] md:mt-8', type.subhead)}>{WHAT_WE_DO}</p>
-          <ActionLink href={`#${TALK}`} className={cn('mt-8', type.lead)}>Tell us what you’re working on</ActionLink>
         </div>
         <nav aria-label="Our services" data-service-index className="border-t border-black/15">
           <ol className="m-0 list-none p-0">
@@ -56,6 +55,14 @@ function Opening() {
                 </SmoothScrollLink>
               </li>
             ))}
+            {/* The other way in, last and worded as the alternative to the three questions. */}
+            <li data-service-talk className="border-b border-black/15">
+              <SmoothScrollLink href={`#${TALK}`} className="group flex items-baseline gap-4 py-4 text-black no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary lg:py-5">
+                <span aria-hidden="true" className={cn('invisible tabular-nums', type.caption)}>00</span>
+                <span data-link-label className={cn('flex-1 text-gray group-hover:text-black group-hover:underline group-focus-visible:underline', type.lead)}>…or tell us what you’re working on</span>
+                <Arrow />
+              </SmoothScrollLink>
+            </li>
           </ol>
         </nav>
       </div>
