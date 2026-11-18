@@ -14,6 +14,13 @@
  */
 import { TIERS } from '@/app/(main)/services/content'
 
+/**
+ * What we do, in one sentence. "A design studio" and the three sectors are published (the
+ * About and Services pages). "In person or from anywhere" is NOT published anywhere yet: it
+ * is how the studio describes itself (2026-11-18) and needs confirming before this ships.
+ */
+export const WHAT_WE_DO = 'GoInvo is a design studio. We research, design and ship software for healthcare, government and enterprise, with your team, in person or from anywhere.'
+
 const tier = (name: string) => {
   const found = TIERS.find((entry) => entry.name === name)
   if (!found) throw new Error(`No engagement named ${name}`)
@@ -120,18 +127,3 @@ export const JOURNEYS: Journey[] = [
     },
   },
 ]
-
-/** For work that outlasts one launch: the third engagement, offered under every journey. */
-export const LONG_TERM = tier('Embedded Partnership')
-
-/**
- * The sector pictures for the new design, each from a different project and none shared
- * with a service above (scripts/check-services-journeys.mjs fails on a repeat). The
- * classic page keeps the pictures in services/content.ts.
- */
-export const SECTOR_PICTURES: Record<string, string> = {
-  Healthcare: '/images/services/work-infobionic.jpg',
-  Government: '/images/services/work-state-of-us-healthcare.jpg',
-  Enterprise: '/images/services/work-fifteen-tools-to-one.jpg',
-  AI: '/images/services/work-guidelines.jpg',
-}
