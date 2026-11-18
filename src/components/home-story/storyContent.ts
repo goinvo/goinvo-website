@@ -14,7 +14,7 @@ export const opening = {
   lead: 'Anyone can generate software now.',
   body:
     'Knowing how coders work through a backlog of thousands of charts, or why most SNAP applicants still applied by fax, mail and walk-in, comes from watching people work.',
-  coda: "We've done that for 20 years.",
+  coda: 'We’ve done that for 20 years.',
   hint: 'Here is what we saw',
 }
 
@@ -57,13 +57,13 @@ export const peopleScenes: PeopleScene[] = [
     id: 'coderyte',
     client: '3M CodeRyte',
     context: 'Hospital systems',
-    observation: "Memorial Hermann's coders were buried under a backlog of thousands of charts.",
+    observation: "Memorial Hermann’s coders were buried under a backlog of thousands of charts.",
     shortObservation: 'A backlog of thousands of charts.',
     detail: 'Throughput, accuracy, and auditability all needed to move at once.',
     from: 0,
     to: 200,
     suffix: '%',
-    result: 'increase in coding efficiency, for coders buried under a chart backlog.',
+    result: 'increase in coding efficiency.',
     href: '/work/3m-coderyte',
     image: `${imageBase}/coderyte1.jpg`,
     alt: '3M CodeRyte medical coding workspace',
@@ -72,7 +72,7 @@ export const peopleScenes: PeopleScene[] = [
     id: 'ipsos',
     client: 'Ipsos',
     context: 'Global market research',
-    observation: "A global research firm's analyst workflows took weeks.",
+    observation: "A global research firm’s analyst workflows took weeks.",
     shortObservation: 'Weeks of work before the insight.',
     detail: 'Insight generation was bottlenecked behind manual coding and report-stitching.',
     from: 0,
@@ -168,7 +168,7 @@ export const openSource = {
 }
 
 export const testimonial = {
-  quote: "I haven't yet figured out how they know so much about medicine and its future.",
+  quote: "I haven’t yet figured out how they know so much about medicine and its future.",
   name: 'Eric Topol, MD',
   role: 'Founder, Scripps Research Translational Institute',
   image: `${imageBase}/eric-topol.jpg`,
@@ -217,7 +217,7 @@ export const humanProof = {
     { name: 'Partners Healthcare', file: 'logo-partners.svg' },
   ],
   testimonials: [
-    { quote: "I haven't yet figured out how they know so much about medicine and its future.", name: 'Eric Topol, MD', organization: 'Scripps Research Translational Institute', source: 'https://www.goinvo.com/' },
+    { quote: "I haven’t yet figured out how they know so much about medicine and its future.", name: 'Eric Topol, MD', organization: 'Scripps Research Translational Institute', source: 'https://www.goinvo.com/' },
     { quote: "With Invo, design wasn’t just design. It impacted our IP portfolio. It changed our business.", name: 'Serban Georgescu, MD', organization: 'InfoBionic', source: 'https://www.goinvo.com/services/' },
   ],
 }
