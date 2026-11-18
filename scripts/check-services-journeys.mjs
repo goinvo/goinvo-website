@@ -6,7 +6,7 @@
 //    you get, who you work with, how long, the investment and one link to act on; no step
 //    sequence (it read as a template and added nothing to the message);
 //  - each question in the index lands on its own block;
-//  - proof is one section; there is no chart and no tab list; the page stays under 380 words (the surveyed pages run 206 to 1,175, median about 450);
+//  - proof is one section; there is no chart and no tab list; the page stays under 320 words (the surveyed pages run 206 to 1,175, median about 450);
 //  - pressing a service's "Ask us about this" lands on the contact form with that service's
 //    sentence in the box and the NEXT question offered (never the one just answered, and
 //    only one question at a time); a second service replaces the first; the
@@ -24,7 +24,7 @@ if (out) fs.mkdirSync(out, { recursive: true })
 const failures = []
 const check = (ok, label) => { console.log(`${ok ? 'PASS' : 'FAIL'} ${label}`); if (!ok) failures.push(label) }
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const WORD_LIMIT = 380
+const WORD_LIMIT = 320
 const FIRST_SCREEN_WORDS = 70
 const IDS = ['direction', 'usable', 'ship']
 const HOLD = { direction: 'A Product Blueprint', usable: 'Interactions people can trust', ship: 'Working software' }

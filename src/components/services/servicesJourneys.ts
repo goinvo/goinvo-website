@@ -33,7 +33,8 @@ const tier = (name: string) => {
  * praise twice): scripts/check-services-journeys.mjs fails if this person is quoted there.
  */
 export const SERVICES_TESTIMONIAL = {
-  quote: 'GoInvo digested a complex landscape in astonishingly little time and returned with insightful and creative solutions. They were an absolute joy to work with and we look forward to working with them again soon.',
+  // The first sentence of the published quote; the second is praise without information.
+  quote: 'GoInvo digested a complex landscape in astonishingly little time and returned with insightful and creative solutions.',
   name: 'Eric Davis',
   role: 'Senior Product and Program Manager, CommonHealth',
   href: '/work/commonhealth-smart-health-cards',
@@ -73,7 +74,7 @@ export const JOURNEYS: Journey[] = [
     concern: 'Are we solving the right problem?',
     title: 'Find the product direction.',
     image: { src: '/images/services/design-diagnostic-collaboration.png', focus: '50% 88%' },
-    description: 'Research with your users, map the system, and test the choices before committing to a build.',
+    description: 'Research with your users and test the choices before committing to a build.',
     steps: [
       { name: 'Reality check', does: ['Stakeholder interviews', 'Workflow review', 'Product teardown'] },
       { name: 'Design to learn', does: ['Rapid concepts', 'Alternative workflows', 'Prototypes'] },
@@ -95,7 +96,7 @@ export const JOURNEYS: Journey[] = [
     concern: 'Will people trust and use it?',
     title: 'Make complexity usable.',
     image: { src: '/images/services/work-ipsos-facto.jpg', focus: '50% 78%' },
-    description: 'Shape AI interactions and connected workflows around clear evidence, human context, and the decisions people make.',
+    description: 'AI interactions and workflows shaped around the decisions people make.',
     steps: [
       { name: 'Find the right problems', does: ['Research with the people who use it', 'System mapping', 'Synthesis'] },
       { name: 'Prototype and test', does: ['Prototype quickly', 'Test with real users and data', 'Refine the design'] },
@@ -111,7 +112,7 @@ export const JOURNEYS: Journey[] = [
     engagement: { name: launch.name, length: launch.rows[0], team: launch.rows[1], investment: launch.price, href: '#book', cta: 'Talk about your product' },
     outcome: {
       figure: '90+%',
-      result: 'of Ipsos analysts adopted the AI research platform, because it fit how they already worked.',
+      result: 'of Ipsos analysts adopted the AI research platform.',
       client: 'Ipsos',
       href: '/work/ipsos-facto',
       link: 'Read the Ipsos Facto case study',
@@ -123,7 +124,7 @@ export const JOURNEYS: Journey[] = [
     concern: 'Can this ship with our team?',
     title: 'Design through delivery.',
     image: { src: '/images/experiments/home-2026/snapcover.jpg' },
-    description: 'Turn tested prototypes into working software, with your team involved from early decisions through implementation.',
+    description: 'Tested prototypes turned into working software, with your team involved throughout.',
     steps: [
       { name: 'Research and discovery', does: ['Research with your users', 'Market validation', 'Your team in the early decisions'] },
       { name: 'Prototype and test', does: ['Tested prototypes', 'Real users, real data', 'Risk found before it gets expensive'] },
@@ -138,7 +139,7 @@ export const JOURNEYS: Journey[] = [
     engagement: { name: launch.name, length: launch.rows[0], team: launch.rows[1], investment: launch.price, href: '#book', cta: 'Talk about a launch' },
     outcome: {
       figure: '7% → 70%',
-      result: 'of SNAP applications now online, once the form fit the people filling it out.',
+      result: 'of SNAP applications now online.',
       client: 'State of Massachusetts',
       href: '/work/mass-snap',
       link: 'Read the SNAP case study',

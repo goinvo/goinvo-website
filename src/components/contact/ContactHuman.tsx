@@ -17,7 +17,7 @@ export function ContactHuman() {
         <div className="grid gap-x-24 gap-y-12 lg:grid-cols-[0.8fr_1.2fr] lg:grid-rows-[auto_1fr]">
           <div className="lg:col-start-1 lg:row-start-1">
             <h1 id="contact-title" className="m-0 max-w-[12ch] font-serif text-page-title font-normal">Tell us the result you’re after.</h1>
-            <p className={cn('mb-0 mt-6 max-w-[30ch]', type.lead)}>A question or a rough idea is enough. No meeting required.</p>
+            <p className={cn('mb-0 mt-6 max-w-[30ch]', type.lead)}>A rough idea is enough.</p>
           </div>
           {/* One group: InlineLink's 48px touch height is for a link on its own line; stacked
               here it pushed the three apart, so here they drop it and sit together as one block,

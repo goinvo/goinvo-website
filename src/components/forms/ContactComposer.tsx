@@ -94,11 +94,9 @@ export function ContactComposer({ className, preset }: { className?: string; pre
       <button type="button" data-composer-forward aria-label="Next question" disabled={at >= total} onMouseDown={(event) => event.preventDefault()} onClick={() => { setAt(stepQuestion(at, 1)); setPointed(null) }} className={arrow}><span aria-hidden="true">→</span></button>
     </span>
   )
-  const hint = !open
-    ? 'No need to write an essay: a few clicks is enough.'
-    : group
-      ? 'Pick one, use the arrows to move on, or keep typing.'
-      : atPause(text) ? 'That’s plenty to start. Add anything else, or send it.' : 'Finish the sentence and the next question appears.'
+  // One hint only, for the one moment that needs explaining: the answers went away
+  // because a sentence is unfinished. Everything else the form shows for itself.
+  const hint = open && !group && !atPause(text) ? 'Finish the sentence for the next question.' : ''
 
   if (state === 'sent') {
     return (
@@ -150,7 +148,7 @@ export function ContactComposer({ className, preset }: { className?: string; pre
               onFocus={() => setOpen(true)}
               aria-invalid={!!errors.message}
               aria-describedby={`${id}-hint`}
-              placeholder={addition ? '' : 'Click here for a few quick questions, or just type.'}
+              placeholder={addition ? '' : 'Click for a few quick questions, or just type.'}
               className={cn('absolute inset-0 block h-full w-full resize-none overflow-y-auto border-0 bg-transparent p-4 text-black outline-none placeholder:text-gray', type.body)}
             />
           </div>
@@ -194,7 +192,7 @@ export function ContactComposer({ className, preset }: { className?: string; pre
         </div>
         {errors.message
           ? <p id={`${id}-hint`} role="alert" className={cn('mb-0 mt-3 text-primary', type.caption)}>{errors.message}</p>
-          : <p id={`${id}-hint`} className={cn('mb-0 mt-3 text-gray', type.caption)}>{hint}</p>}
+          : <p id={`${id}-hint`} className={cn('mb-0 mt-3 min-h-5 text-gray', type.caption)}>{hint}</p>}
 
         {state !== 'fallback' && (
           <div className="mt-auto pt-6">

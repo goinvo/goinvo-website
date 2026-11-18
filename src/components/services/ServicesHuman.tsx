@@ -107,6 +107,9 @@ function Service({ journey, index, ask }: { journey: Journey; index: number; ask
   )
 }
 
+/** The published captions, cut to the few words that carry the number. */
+const STAT_WORDS: Record<string, string> = { '20+yrs': 'designing complex software', '60+': 'products shipped', '91%': 'of clients return', '160M+': 'people impacted' }
+
 /** Proof, in one place: what a client said, four numbers, and where we work. */
 function Proof() {
   return (
@@ -121,7 +124,7 @@ function Proof() {
         {STATS.map((stat) => (
           <li key={stat.v} data-stat>
             <p className={cn('m-0', type.title)}>{stat.v.replace(/yrs$/, ' years')}</p>
-            <p className={cn('mb-0 mt-2 max-w-[24ch] text-gray', type.caption)}>{stat.cap}</p>
+            <p className={cn('mb-0 mt-2 max-w-[24ch] text-gray', type.caption)}>{STAT_WORDS[stat.v] ?? stat.cap}</p>
           </li>
         ))}
       </ul>
@@ -142,7 +145,7 @@ function Talk({ booking, preset }: { booking: ReactNode; preset?: ComposerPreset
       <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[0.9fr_1.1fr]">
         <div>
           <SectionHeading id="services-talk" text="Tell us what you’re working on." className="text-balance" />
-          <p className={cn('mb-0 mt-6 max-w-[34ch] text-pretty', type.lead)}>A question or a rough idea is enough. A principal reads it, not a salesperson.</p>
+          <p className={cn('mb-0 mt-6 max-w-[34ch] text-pretty', type.lead)}>A principal reads it, not a salesperson.</p>
           <p className={cn('mb-0 mt-6', type.label)}>Prefer email? <InlineLink href="mailto:info@goinvo.com">info@goinvo.com</InlineLink></p>
         </div>
         <ContactComposer preset={preset} />
