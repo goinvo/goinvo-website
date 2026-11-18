@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COMPOSER_GROUPS, hasSentence, presetSentence, toggleSentence } from '@/lib/contactComposer'
+import { COMPOSER_GROUPS, atPause, hasSentence, nextGroup, presetSentence, previewAddition, toggleSentence } from '@/lib/contactComposer'
 
 const group = (key: string) => COMPOSER_GROUPS.find((entry) => entry.key === key)!
 const result = group('result')
@@ -71,5 +71,46 @@ describe('a choice made elsewhere on the page (a service) fills the box', () => 
 
   it('the same service twice is written once', () => {
     expect(presetSentence(presetSentence('', trusted, all), trusted, all)).toBe(trusted)
+  })
+})
+
+describe('one question at a time', () => {
+  const need = group('need')
+
+  it('rule: the first question is the one that tells us most (what they need), then result, sector, timing', () => {
+    expect(COMPOSER_GROUPS.map((entry) => entry.key)).toEqual(['need', 'result', 'sector', 'timing'])
+    expect(nextGroup('')?.key).toBe('need')
+  })
+
+  it('rule: no question is offered mid-sentence, only at a pause', () => {
+    expect(atPause('')).toBe(true)
+    expect(atPause('Our intake form loses half its applicants.')).toBe(true)
+    expect(atPause('Is this something you do?')).toBe(true)
+    expect(atPause('First line.\n')).toBe(true)
+    expect(atPause('Our intake form loses')).toBe(false)
+    expect(nextGroup('Our intake form loses')).toBeNull()
+    expect(nextGroup('Our intake form loses half.')?.key).toBe('need')
+  })
+
+  it('rule: an answered question is never asked again, and the next one follows', () => {
+    const one = toggleSentence('', need.options[0], need)
+    expect(nextGroup(one)?.key).toBe('result')
+    const two = toggleSentence(one, result.options[0], result)
+    expect(nextGroup(two)?.key).toBe('sector')
+  })
+
+  it('a question they pass over is not asked again, and after the last there is none', () => {
+    expect(nextGroup('', ['need'])?.key).toBe('result')
+    expect(nextGroup('', ['need', 'result', 'sector', 'timing'])).toBeNull()
+  })
+
+  it('a service pressed elsewhere counts as the first answer', () => {
+    expect(nextGroup(presetSentence('', 'We need a clear product direction.'))?.key).toBe('result')
+  })
+
+  it('rule: the preview is exactly what a press would add', () => {
+    const typed = 'Call me after 3pm.'
+    for (const option of need.options) expect(`${typed}${previewAddition(typed, option, need)}`).toBe(toggleSentence(typed, option, need))
+    expect(previewAddition('', need.options[0], need)).toBe(need.options[0].sentence)
   })
 })

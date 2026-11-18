@@ -8,7 +8,8 @@
 //  - each question in the index lands on its own block;
 //  - proof is one section; there is no chart and no tab list; the page stays under 380 words (the surveyed pages run 206 to 1,175, median about 450);
 //  - pressing a service's "Ask us about this" lands on the contact form with that service's
-//    sentence in the box and its option lit; a second service replaces the first; the
+//    sentence in the box and the NEXT question offered (never the one just answered, and
+//    only one question at a time); a second service replaces the first; the
 //    visitor's own words survive; booking a call is folded away until asked for;
 //  - its testimonial is not one a homepage also shows;
 //  - nothing spills sideways.
@@ -123,8 +124,8 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   const pressAsk = async (id) => { await page.$eval(`[data-service-ask="${id}"]`, (el) => el.scrollIntoView({ block: 'center' })); await pause(300); await page.click(`[data-service-ask="${id}"]`); await pause(1700) }
   check(await page.evaluate(() => !document.querySelector('#talk [data-booking]') && !!document.querySelector('#talk [data-booking-toggle]')), `${width}: the calendar is folded away until asked for`)
   await pressAsk('usable')
-  const one = await page.evaluate((label) => ({ top: Math.round(document.getElementById('talk').getBoundingClientRect().top), lit: document.querySelector(`#talk [data-composer-option="${label}"]`)?.getAttribute('aria-pressed') }), ASK.usable[1])
-  check((await field()) === ASK.usable[0] && one.lit === 'true' && one.top > -40 && one.top < 200, `${width}: pressing a service lands on the form with its sentence written and its option lit ${JSON.stringify([await field(), one])}`)
+  const one = await page.evaluate(() => ({ top: Math.round(document.getElementById('talk').getBoundingClientRect().top), groups: [...document.querySelectorAll('#talk [data-composer-group]')].map((el) => el.dataset.composerGroup) }))
+  check((await field()) === ASK.usable[0] && one.groups.join() === 'result' && one.top > -40 && one.top < 200, `${width}: pressing a service lands on the form with its sentence written and the next question offered ${JSON.stringify([await field(), one])}`)
   await page.focus('#talk [data-composer-field]'); await page.keyboard.type(' Call me after 3pm.')
   await pressAsk('ship')
   check((await field()) === `Call me after 3pm. ${ASK.ship[0]}`, `${width}: a second service replaces the first and keeps the visitor’s words ${JSON.stringify(await field())}`)

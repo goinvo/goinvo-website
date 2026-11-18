@@ -1,9 +1,12 @@
 /**
- * The contact composer: instead of a blank "How can we help?" box, a visitor can press a
- * few options and each one writes a plain sentence into the box, which stays theirs to
- * edit. The box's text is the only state: an option is "on" when its sentence is in the
- * text, so typing over a sentence turns its option off, and nothing is hidden from them.
- * Pure, so the rules are unit-tested (tests/contact-composer.test.ts).
+ * The contact composer: instead of a blank "How can we help?" box, a visitor is offered ONE
+ * small question at a time under the box, and each answer writes a plain sentence into it,
+ * which stays theirs to edit. A question appears only at a pause (the box is empty, or the
+ * last sentence is finished), never mid-sentence, and the questions come in order from the
+ * one that tells us most to the one that tells us least. Hovering an answer shows what it
+ * would write. The box's text is the only record: a question counts as answered when one of
+ * its sentences is in the text. Pure, so the rules are unit-tested
+ * (tests/contact-composer.test.ts).
  */
 
 export interface ComposerOption {
@@ -21,19 +24,8 @@ export interface ComposerGroup {
   options: ComposerOption[]
 }
 
-/** The result comes first: it is what the studio is hired for. */
+/** In the order they are asked: what tells us most, and is answered most often, comes first. */
 export const COMPOSER_GROUPS: ComposerGroup[] = [
-  {
-    key: 'result',
-    prompt: 'The result you’re after',
-    options: [
-      { label: 'More people using it', sentence: 'We want more people using our product.' },
-      { label: 'Fewer errors', sentence: 'We want fewer errors in the work it supports.' },
-      { label: 'Faster work', sentence: 'We want the work to take less time.' },
-      { label: 'A launch we can hit', sentence: 'We want a launch date we can hit.' },
-      { label: 'Buy-in or funding', sentence: 'We want buy-in or funding for the idea.' },
-    ],
-  },
   {
     key: 'need',
     prompt: 'What you need',
@@ -43,6 +35,17 @@ export const COMPOSER_GROUPS: ComposerGroup[] = [
       { label: 'An AI tool people trust', sentence: 'We need an AI tool people will trust and use.' },
       { label: 'An expert review', sentence: 'We need an expert review of our product.' },
       { label: 'A long-term design team', sentence: 'We need a long-term design team.' },
+    ],
+  },
+  {
+    key: 'result',
+    prompt: 'The result you’re after',
+    options: [
+      { label: 'More people using it', sentence: 'We want more people using our product.' },
+      { label: 'Fewer errors', sentence: 'We want fewer errors in the work it supports.' },
+      { label: 'Faster work', sentence: 'We want the work to take less time.' },
+      { label: 'A launch we can hit', sentence: 'We want a launch date we can hit.' },
+      { label: 'Buy-in or funding', sentence: 'We want buy-in or funding for the idea.' },
     ],
   },
   {
@@ -95,4 +98,26 @@ export function presetSentence(text: string, sentence: string, replaces: string[
   if (next.includes(sentence)) return next
   next = next.trimEnd()
   return next ? `${next} ${sentence}` : sentence
+}
+
+/** A pause in the writing: nothing yet, or the last sentence is finished, or a new line. */
+export const atPause = (text: string) => text.trim() === '' || /[.!?…]["’”)]?\s*$/.test(text) || /\n\s*$/.test(text)
+
+/** A question is answered once one of its sentences is in the box. */
+export const isAnswered = (text: string, group: ComposerGroup) => group.options.some((option) => hasSentence(text, option))
+
+/**
+ * The one question to offer now, or none: nothing mid-sentence, and never a question that
+ * is already answered or that they passed over.
+ */
+export function nextGroup(text: string, skipped: string[] = []): ComposerGroup | null {
+  if (!atPause(text)) return null
+  return COMPOSER_GROUPS.find((group) => !skipped.includes(group.key) && !isAnswered(text, group)) ?? null
+}
+
+/** What pressing an answer would add to the box, for showing before they press. */
+export function previewAddition(text: string, option: ComposerOption, group?: ComposerGroup): string {
+  const base = text.trimEnd()
+  const after = toggleSentence(text, option, group)
+  return after.startsWith(base) ? after.slice(base.length) : ` ${option.sentence}`
 }
