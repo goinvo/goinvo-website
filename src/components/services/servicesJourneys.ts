@@ -58,6 +58,9 @@ export interface Journey {
   youHoldLabel: string
   engagement: { name: string; length: string; team: string; investment: string; href: string; cta: string }
   outcome?: { figure: string; result: string; client: string; href: string; link: string }
+  /** What pressing this service writes into the contact form: one of the composer's own
+   * "What you need" sentences (src/lib/contactComposer.ts), so its option lights up. */
+  ask: string
 }
 
 const diagnostic = tier('Design Diagnostic')
@@ -66,6 +69,7 @@ const launch = tier('Product Launch')
 export const JOURNEYS: Journey[] = [
   {
     id: 'direction',
+    ask: 'We need a clear product direction.',
     concern: 'Are we solving the right problem?',
     title: 'Find the product direction.',
     image: { src: '/images/services/design-diagnostic-collaboration.png', focus: '50% 88%' },
@@ -87,6 +91,7 @@ export const JOURNEYS: Journey[] = [
   },
   {
     id: 'usable',
+    ask: 'We need an AI tool people will trust and use.',
     concern: 'Will people trust and use it?',
     title: 'Make complexity usable.',
     image: { src: '/images/services/work-ipsos-facto.jpg', focus: '50% 78%' },
@@ -114,6 +119,7 @@ export const JOURNEYS: Journey[] = [
   },
   {
     id: 'ship',
+    ask: 'We need a product designed and shipped.',
     concern: 'Can this ship with our team?',
     title: 'Design through delivery.',
     image: { src: '/images/experiments/home-2026/snapcover.jpg' },

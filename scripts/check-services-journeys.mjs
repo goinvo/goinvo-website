@@ -7,6 +7,9 @@
 //    sequence (it read as a template and added nothing to the message);
 //  - each question in the index lands on its own block;
 //  - proof is one section; there is no chart and no tab list; the page stays under 380 words (the surveyed pages run 206 to 1,175, median about 450);
+//  - pressing a service's "Ask us about this" lands on the contact form with that service's
+//    sentence in the box and its option lit; a second service replaces the first; the
+//    visitor's own words survive; booking a call is folded away until asked for;
 //  - its testimonial is not one a homepage also shows;
 //  - nothing spills sideways.
 // Usage: node scripts/check-services-journeys.mjs [base] [--out dir]
@@ -58,15 +61,16 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
       sentence: sentence ? { text: sentence.textContent.trim(), bottom: Math.round(sentence.getBoundingClientRect().bottom) } : null,
       links: [...root.querySelectorAll('[data-service-link]')].filter(visible).map((el) => ({ id: el.dataset.serviceLink, bottom: Math.round(el.getBoundingClientRect().bottom) })),
       images: [...root.querySelectorAll('img')].filter((img) => visible(img) && img.getBoundingClientRect().top < height * 0.8).length,
-      act: [...root.querySelectorAll('a')].some((a) => onScreen(a) && /Schedule a chat/.test(a.textContent)),
-      pageWords: root.innerText.split(/\s+/).filter(Boolean).length,
+      act: [...root.querySelectorAll('a')].some((a) => onScreen(a) && /Tell us what you’re working on/.test(a.textContent)),
+      // The page's prose. The contact form's own labels and buttons are controls, not copy to read.
+      pageWords: (() => { const form = root.querySelector('[data-contact-composer]'); const count = (text) => text.split(/\s+/).filter(Boolean).length; return count(root.innerText) - (form ? count(form.innerText) : 0) })(),
       overflow: document.documentElement.scrollWidth - innerWidth,
       charts: root.querySelectorAll('[data-hours-band], [role="tablist"]').length,
     }
   }, height)
   check(!!first.sentence && /design studio/.test(first.sentence.text) && /in person or from anywhere/.test(first.sentence.text) && first.sentence.bottom <= height, `${width}: the first screen says what we do, in one sentence ${JSON.stringify(first.sentence)}`)
   check(first.links.map((link) => link.id).join() === IDS.join() && first.links.every((link) => link.bottom <= height), `${width}: the three questions are on the first screen as an index ${JSON.stringify(first.links)}`)
-  check(first.act, `${width}: the first screen has one way to act (Schedule a chat)`)
+  check(first.act, `${width}: the first screen has one way to act (Tell us what you’re working on)`)
   check(first.images === 0 && !/\$\d/.test(first.text), `${width}: no picture and no price on the first screen (${first.images} pictures)`)
   check(first.words <= FIRST_SCREEN_WORDS, `${width}: the first screen is one statement (${first.words} of ${FIRST_SCREEN_WORDS} words)`)
   check(first.charts === 0, `${width}: no chart and no tab list on the page (${first.charts})`)
@@ -112,6 +116,23 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
     check(top > -40 && top < 200, `${width} ${id}: its question on the first screen lands on its block (top ${top})`)
     if (out) await page.screenshot({ path: `${out}/${width}-${id}.png` })
   }
+
+  // A service fills the contact form.
+  const ASK = { direction: ['We need a clear product direction.', 'A product direction'], usable: ['We need an AI tool people will trust and use.', 'An AI tool people trust'], ship: ['We need a product designed and shipped.', 'A product designed and shipped'] }
+  const field = () => page.$eval('#talk [data-composer-field]', (el) => el.value)
+  const pressAsk = async (id) => { await page.$eval(`[data-service-ask="${id}"]`, (el) => el.scrollIntoView({ block: 'center' })); await pause(300); await page.click(`[data-service-ask="${id}"]`); await pause(1700) }
+  check(await page.evaluate(() => !document.querySelector('#talk [data-booking]') && !!document.querySelector('#talk [data-booking-toggle]')), `${width}: the calendar is folded away until asked for`)
+  await pressAsk('usable')
+  const one = await page.evaluate((label) => ({ top: Math.round(document.getElementById('talk').getBoundingClientRect().top), lit: document.querySelector(`#talk [data-composer-option="${label}"]`)?.getAttribute('aria-pressed') }), ASK.usable[1])
+  check((await field()) === ASK.usable[0] && one.lit === 'true' && one.top > -40 && one.top < 200, `${width}: pressing a service lands on the form with its sentence written and its option lit ${JSON.stringify([await field(), one])}`)
+  await page.focus('#talk [data-composer-field]'); await page.keyboard.type(' Call me after 3pm.')
+  await pressAsk('ship')
+  check((await field()) === `Call me after 3pm. ${ASK.ship[0]}`, `${width}: a second service replaces the first and keeps the visitor’s words ${JSON.stringify(await field())}`)
+  await pressAsk('ship')
+  check((await field()) === `Call me after 3pm. ${ASK.ship[0]}`, `${width}: the same service twice is written once`)
+  await page.$eval('#talk [data-booking-toggle]', (el) => el.scrollIntoView({ block: 'center' })); await page.click('#talk [data-booking-toggle]'); await pause(600)
+  check(await page.evaluate(() => !!document.querySelector('#talk [data-booking]')), `${width}: "Or choose a time to talk" opens the calendar`)
+  if (out) { await page.$eval('#talk', (el) => el.scrollIntoView({ block: 'start' })); await pause(400); await page.screenshot({ path: `${out}/${width}-talk.png` }) }
 
   const proof = await page.evaluate(() => ({ stats: document.querySelectorAll('[data-stat]').length, sectors: document.querySelectorAll('[data-sectors] a').length, quote: !!document.querySelector('blockquote'), talk: !!document.getElementById('talk') }))
   check(proof.stats === 4 && proof.sectors === 4 && proof.quote && proof.talk, `${width}: proof in one section, then a time to talk ${JSON.stringify(proof)}`)

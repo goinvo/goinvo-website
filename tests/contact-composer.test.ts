@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COMPOSER_GROUPS, hasSentence, toggleSentence } from '@/lib/contactComposer'
+import { COMPOSER_GROUPS, hasSentence, presetSentence, toggleSentence } from '@/lib/contactComposer'
 
 const group = (key: string) => COMPOSER_GROUPS.find((entry) => entry.key === key)!
 const result = group('result')
@@ -51,5 +51,25 @@ describe('the contact composer', () => {
     const all = COMPOSER_GROUPS.flatMap((entry) => entry.options)
     for (const a of all) for (const b of all) if (a !== b) expect(a.sentence.includes(b.sentence)).toBe(false)
     expect(new Set(all.map((option) => option.sentence)).size).toBe(all.length)
+  })
+})
+
+describe('a choice made elsewhere on the page (a service) fills the box', () => {
+  const [direction, shipped, trusted] = ['We need a clear product direction.', 'We need a product designed and shipped.', 'We need an AI tool people will trust and use.']
+  const all = [direction, shipped, trusted]
+
+  it('writes the sentence into an empty box, and lights the matching option', () => {
+    const text = presetSentence('', direction, all)
+    expect(text).toBe(direction)
+    expect(hasSentence(text, group('need').options.find((option) => option.sentence === direction)!)).toBe(true)
+  })
+
+  it('choosing another service replaces the first choice, and keeps what the visitor typed', () => {
+    const typed = `Our intake form loses half its applicants. ${direction}`
+    expect(presetSentence(typed, shipped, all)).toBe(`Our intake form loses half its applicants. ${shipped}`)
+  })
+
+  it('the same service twice is written once', () => {
+    expect(presetSentence(presetSentence('', trusted, all), trusted, all)).toBe(trusted)
   })
 })

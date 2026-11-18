@@ -83,3 +83,16 @@ export function toggleSentence(text: string, option: ComposerOption, group?: Com
   if (!next) return option.sentence
   return `${next}${/[\n]$/.test(text) ? '\n' : ' '}${option.sentence}`
 }
+
+/**
+ * A choice made elsewhere on the page (pressing a service) arrives in the box as a sentence.
+ * It replaces the sentence an earlier such choice put there, never anything the visitor
+ * typed, and it is never written twice.
+ */
+export function presetSentence(text: string, sentence: string, replaces: string[] = []): string {
+  let next = text
+  for (const other of replaces) if (other !== sentence) next = without(next, other)
+  if (next.includes(sentence)) return next
+  next = next.trimEnd()
+  return next ? `${next} ${sentence}` : sentence
+}

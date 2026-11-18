@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { ease, useReducedMotion } from '@/lib/motion'
 import { type } from '@/components/ui/type'
 import { Arrow } from '@/components/ui/Arrow'
-import { COMPOSER_GROUPS, hasSentence, toggleSentence } from '@/lib/contactComposer'
+import { COMPOSER_GROUPS, hasSentence, presetSentence, toggleSentence } from '@/lib/contactComposer'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 
 /**
@@ -14,8 +14,14 @@ import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
  * each one writes a sentence into it (press again to take it out). The text stays the
  * visitor's to edit. "Next" carries it into the contact form, already filled in, where
  * they add their name and email. Rules: src/lib/contactComposer.ts.
+ *
+ * `preset` is a choice made elsewhere on the page (a service pressed on the services page):
+ * its sentence is written into the box and the options open. `key` changes on every press,
+ * so pressing the same service again after editing puts its sentence back.
  */
-export function ContactComposer({ className }: { className?: string }) {
+export interface ComposerPreset { sentence: string; replaces?: string[]; key: number }
+
+export function ContactComposer({ className, preset }: { className?: string; preset?: ComposerPreset }) {
   const low = useReducedMotion() ?? false
   const id = useId()
   const field = useRef<HTMLTextAreaElement>(null)
@@ -24,6 +30,14 @@ export function ContactComposer({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
   /** What was carried into the form; null until they press Next. */
   const [sent, setSent] = useState<string | null>(null)
+  // Applied while rendering, once per press: the box is the visitor's, so a preset is an
+  // edit to it, not a value that keeps overwriting what they type.
+  const [applied, setApplied] = useState(0)
+  if (preset && preset.key !== applied) {
+    setApplied(preset.key)
+    setText((current) => presetSentence(current, preset.sentence, preset.replaces))
+    setOpen(true)
+  }
 
   const next = (event: FormEvent) => {
     event.preventDefault()

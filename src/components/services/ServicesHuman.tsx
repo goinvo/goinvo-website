@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -10,6 +10,7 @@ import { InlineLink, textLinkClass } from '@/components/ui/TextLink'
 import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { SmoothScrollLink } from '@/components/ui/SmoothScrollLink'
+import { ContactComposer, type ComposerPreset } from '@/components/forms/ContactComposer'
 import { SECTORS, STATS } from '@/app/(main)/services/content'
 import { JOURNEYS, SERVICES_TESTIMONIAL, WHAT_WE_DO, type Journey } from '@/components/services/servicesJourneys'
 
@@ -38,7 +39,7 @@ function Opening() {
     <Section spacing="none" aria-labelledby="services-title" className="pb-16 pt-[calc(var(--spacing-header-height)+2.5rem)] md:pb-24 md:pt-[calc(var(--spacing-header-height)+5rem)]">
       <h1 id="services-title" className="m-0 font-serif text-page-title font-normal">Design for impact.</h1>
       <p data-what-we-do className={cn('mb-0 mt-6 max-w-[44ch] md:mt-8', type.subhead)}>{WHAT_WE_DO}</p>
-      <ActionLink href={`#${TALK}`} className={cn('mt-8', type.lead)}>Schedule a chat</ActionLink>
+      <ActionLink href={`#${TALK}`} className={cn('mt-8', type.lead)}>Tell us what you’re working on</ActionLink>
 
       <nav aria-label="Our services" data-service-index className="mt-14 border-t border-black/15 md:mt-24">
         <ol className="m-0 grid list-none p-0 md:grid-cols-3">
@@ -66,7 +67,7 @@ function Fact({ name, label, value }: { name: string; label: string; value: stri
 }
 
 /** One service. The page is this block three times and nothing else in between. */
-function Service({ journey, index }: { journey: Journey; index: number }) {
+function Service({ journey, index, ask }: { journey: Journey; index: number; ask: (journey: Journey) => void }) {
   return (
     <Section id={journey.id} spacing="none" aria-labelledby={`service-${journey.id}`} data-service={journey.id} className="scroll-mt-20 border-t border-black/15 py-16 md:py-28">
       <div className="grid gap-10 lg:grid-cols-2 lg:gap-20">
@@ -90,7 +91,10 @@ function Service({ journey, index }: { journey: Journey; index: number }) {
               <strong className="font-semibold">{journey.outcome.figure}</strong> {journey.outcome.result} <InlineLink href={journey.outcome.href}>{journey.outcome.client} case study</InlineLink>
             </p>
           )}
-          <ActionLink href={journey.engagement.href} className="mt-8">{journey.engagement.cta}</ActionLink>
+          <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+            <button type="button" data-service-ask={journey.id} onClick={() => ask(journey)} className={cn('group inline-flex cursor-pointer items-center gap-3 bg-black px-6 py-3.5 text-white hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label)}>Ask us about this<Arrow /></button>
+            {!journey.engagement.href.startsWith('#') && <ActionLink href={journey.engagement.href}>{journey.engagement.cta}</ActionLink>}
+          </div>
         </div>
       </div>
     </Section>
@@ -123,17 +127,26 @@ function Proof() {
   )
 }
 
-function Talk({ booking }: { booking: ReactNode }) {
+/** The way to act: the contact composer, already holding the service they pressed. Booking a
+ * call is the second way, folded away until asked for, so the section stays one thing. */
+function Talk({ booking, preset }: { booking: ReactNode; preset?: ComposerPreset }) {
+  const [calendar, setCalendar] = useState(false)
   return (
-    <Section id={TALK} aria-labelledby="services-talk" className="scroll-mt-24">
-      <div className="grid items-end gap-8 md:grid-cols-[1.1fr_0.9fr] md:gap-16">
-        <SectionHeading id="services-talk" text="Choose a time to talk about your project." className="max-w-[15ch]" />
+    <Section id={TALK} aria-labelledby="services-talk" className="scroll-mt-20">
+      <div className="grid gap-x-24 gap-y-12 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
-          <p className={cn('m-0 max-w-[44ch]', type.body)}>Thirty minutes with a principal, not a salesperson. No deck, no obligation.</p>
-          <p className={cn('mb-0 mt-4', type.label)}>Prefer email? <InlineLink href="mailto:info@goinvo.com">info@goinvo.com</InlineLink></p>
+          <SectionHeading id="services-talk" text="Tell us what you’re working on." className="max-w-[12ch]" />
+          <p className={cn('mb-0 mt-6 max-w-[30ch]', type.lead)}>A question or a rough idea is enough. A principal reads it, not a salesperson.</p>
+          <p className={cn('mb-0 mt-6', type.label)}>Prefer email? <InlineLink href="mailto:info@goinvo.com">info@goinvo.com</InlineLink></p>
         </div>
+        <ContactComposer preset={preset} />
       </div>
-      <div data-rule className="mt-16 border-t border-black/15 pt-10 md:mt-24">{booking}</div>
+      <div data-rule className="mt-16 border-t border-black/15 pt-8 md:mt-24">
+        <button type="button" data-booking-toggle aria-expanded={calendar} onClick={() => setCalendar(!calendar)} className={cn('group inline-flex cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-black focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary', type.lead)}>
+          <span data-link-label className="group-hover:underline group-focus-visible:underline">{calendar ? 'Hide the calendar' : 'Or choose a time to talk'}</span><Arrow />
+        </button>
+        {calendar && <div data-booking className="mt-10">{booking}</div>}
+      </div>
       <dl className="m-0 mt-12 flex flex-wrap gap-x-12 gap-y-4 border-t border-black/15 pt-8">
         <div><dt className={type.caption}>State of MA contract</dt><dd className={cn('m-0', type.label)}>ITS81</dd></div>
         <div><dt className={type.caption}>Federal contract</dt><dd className={cn('m-0', type.label)}>GSA 47QTCA26D001W</dd></div>
@@ -143,12 +156,20 @@ function Talk({ booking }: { booking: ReactNode }) {
 }
 
 export function ServicesHuman({ booking }: { booking: ReactNode }) {
+  const [preset, setPreset] = useState<ComposerPreset>()
+  /** Press a service: its sentence goes into the form, and the page goes there. */
+  const ask = (journey: Journey) => {
+    setPreset((current) => ({ sentence: journey.ask, replaces: JOURNEYS.map((item) => item.ask), key: (current?.key ?? 0) + 1 }))
+    const target = document.getElementById(TALK)
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    target?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' })
+  }
   return (
     <div className="bg-white text-black">
       <Opening />
-      {JOURNEYS.map((journey, index) => <Service key={journey.id} journey={journey} index={index} />)}
+      {JOURNEYS.map((journey, index) => <Service key={journey.id} journey={journey} index={index} ask={ask} />)}
       <Proof />
-      <Talk booking={booking} />
+      <Talk booking={booking} preset={preset} />
     </div>
   )
 }
