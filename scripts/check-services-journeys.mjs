@@ -3,7 +3,8 @@
 //  - the first screen is ONE statement: the headline, the what-we-do sentence, one way to act,
 //    and the three questions as an index; no picture, no price, at most 70 words;
 //  - below it the page is one block repeated three times, each with its own picture, what
-//    you get, who you work with, how long, the investment, three steps and one link to act on;
+//    you get, who you work with, how long, the investment and one link to act on; no step
+//    sequence (it read as a template and added nothing to the message);
 //  - each question in the index lands on its own block;
 //  - proof is one section; there is no chart and no tab list; the page stays under 380 words (the surveyed pages run 206 to 1,175, median about 450);
 //  - nothing spills sideways.
@@ -72,18 +73,18 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
         id: el.dataset.service,
         picture: img ? { file: new URL(img.currentSrc || img.src).searchParams.get('url') || new URL(img.currentSrc || img.src).pathname, loaded: img.naturalWidth > 0 } : null,
         hold: fact('hold'), team: fact('team'), length: fact('length'), investment: fact('investment'),
-        steps: el.querySelectorAll('[data-service-steps] li').length,
+        steps: el.querySelectorAll('[data-service-steps], ol').length,
         heading: el.querySelector('h2')?.textContent.trim() || '',
         links: [...el.querySelectorAll('a')].filter((a) => a.getBoundingClientRect().height > 0).length,
-        shape: [...el.querySelectorAll('h2, dl, [data-service-steps]')].map((node) => node.tagName).join(),
+        shape: [...el.querySelectorAll('h2, dl, dt')].map((node) => node.tagName).join(),
       })
     }
     return result
   })
   check(blocks.map((block) => block.id).join() === IDS.join(), `${width}: three services, in order ${JSON.stringify(blocks.map((block) => block.id))}`)
   for (const block of blocks) {
-    const complete = block.hold === HOLD[block.id] && !!block.team && /\d/.test(block.length) && /\$\d/.test(block.investment) && block.steps === 3 && /\?$/.test(block.heading) && block.links >= 1
-    check(complete, `${width} ${block.id}: what you get, who, how long, the cost, three steps and a link ${JSON.stringify([block.hold, block.team, block.length, block.investment, block.steps, block.links])}`)
+    const complete = block.hold === HOLD[block.id] && !!block.team && /\d/.test(block.length) && /\$\d/.test(block.investment) && block.steps === 0 && /\?$/.test(block.heading) && block.links >= 1
+    check(complete, `${width} ${block.id}: what you get, who, how long, the cost and a link, with no step sequence ${JSON.stringify([block.hold, block.team, block.length, block.investment, block.steps, block.links])}`)
   }
   check(new Set(blocks.map((block) => block.shape)).size === 1, `${width}: every service is the same block ${JSON.stringify(blocks.map((block) => block.shape))}`)
   const pictures = blocks.map((block) => block.picture)

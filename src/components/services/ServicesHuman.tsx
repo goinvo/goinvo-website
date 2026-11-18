@@ -85,12 +85,6 @@ function Service({ journey, index }: { journey: Journey; index: number }) {
             <Fact name="investment" label="Typical investment" value={journey.engagement.investment} />
           </dl>
 
-          <ol aria-label="How it goes" data-service-steps className={cn('m-0 mt-8 flex list-none flex-wrap items-center gap-x-3 gap-y-1 p-0', type.label)}>
-            {journey.steps.map((step, at) => (
-              <li key={step.name} className="flex items-center gap-3">{at > 0 && <span aria-hidden="true" className="text-gray">→</span>}{step.name}</li>
-            ))}
-          </ol>
-
           {journey.outcome && (
             <p data-service-outcome className={cn('mb-0 mt-8 max-w-[46ch] border-l-2 border-primary pl-5', type.body)}>
               <strong className="font-semibold">{journey.outcome.figure}</strong> {journey.outcome.result} <InlineLink href={journey.outcome.href}>{journey.outcome.client} case study</InlineLink>
