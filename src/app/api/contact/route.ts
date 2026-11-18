@@ -2,13 +2,16 @@
  * POST /api/contact: send the contact form's name, email and note to the site's JotForm.
  * Answers { sent: true } only when JotForm accepted it (src/lib/contactSubmit.ts); anything
  * else is { sent: false } and the page falls back to the JotForm itself, filled in.
+ * Either way Marqueta posts the note in Slack afterwards (src/lib/contactNotify.ts), saying
+ * whether JotForm took it; the answer to the visitor never waits on, or depends on, Slack.
  *
  * Public, so it is narrow: same-origin browsers only, a small body, bounded fields, and a
  * hidden field (`company`) that people leave empty and robots fill. It can only ever post
  * to the one form in siteConfig; nothing in the request chooses where it goes.
  */
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { siteConfig } from '@/lib/config'
+import { sendContactToSlack } from '@/lib/contactNotify.server'
 import { contactErrors, jotformAccepted, jotformBody, jotformSubmitUrl, readContactFields } from '@/lib/contactSubmit'
 
 export const runtime = 'nodejs'
@@ -39,10 +42,13 @@ export async function POST(request: Request) {
       signal: AbortSignal.timeout(12000),
     })
     const body = response.status === 200 ? await response.text() : ''
-    if (jotformAccepted(response.status, body, response.headers.get('location') || '')) return answer({ sent: true })
+    const accepted = jotformAccepted(response.status, body, response.headers.get('location') || '')
+    after(() => sendContactToSlack(fields, accepted))
+    if (accepted) return answer({ sent: true })
     console.warn(`[contact] JotForm did not accept a submission (status ${response.status}); the page shows the form itself.`)
     return answer({ sent: false }, 502)
   } catch (error) {
+    after(() => sendContactToSlack(fields, false))
     console.warn('[contact] JotForm could not be reached; the page shows the form itself.', error instanceof Error ? error.name : '')
     return answer({ sent: false }, 502)
   }
