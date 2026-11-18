@@ -1,6 +1,7 @@
 // The contact page under the human design (?design=human): "How can we help?" asks one
 // small question at a time instead of leaving a blank box. Rules: nothing is offered until
-// the field is clicked; then exactly ONE question shows, the one that tells us most first;
+// the field is clicked; then exactly ONE question shows, INSIDE the text box (its answers
+// along the box's bottom edge), the one that tells us most first;
 // hovering an answer shows its sentence in the field without writing it; pressing writes
 // it and brings the next question; nothing is offered mid-sentence and the question comes
 // back when the sentence is finished; Skip moves on; after the last there are none; the
@@ -39,6 +40,9 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
   await page.click(FIELD); await pause(600)
   let now = await shown()
   check(now.groups.join() === 'need' && now.options >= 3, `${width}: clicking the empty field offers one question, what you need ${JSON.stringify(now)}`)
+
+  const inside = await page.evaluate(() => { const box = document.querySelector('[data-composer-box]').getBoundingClientRect(); const field = document.querySelector('[data-composer-field]').getBoundingClientRect(); const pills = [...document.querySelectorAll('[data-composer-option], [data-composer-skip]')].map((el) => el.getBoundingClientRect()); return { pills: pills.length, within: pills.every((r) => r.left >= box.left && r.right <= box.right && r.top >= field.bottom - 1 && r.bottom <= box.bottom), fieldInBox: field.top >= box.top && field.bottom <= box.bottom } })
+  check(inside.pills >= 4 && inside.within && inside.fieldInBox, `${width}: the answers sit inside the text box, under the words ${JSON.stringify(inside)}`)
 
   // Hover shows the sentence where it would land, and writes nothing.
   await page.$eval(option('A product direction'), (el) => el.scrollIntoView({ block: 'center' }))

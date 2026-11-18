@@ -63,35 +63,36 @@ export function ContactComposer({ className, preset }: { className?: string; pre
     <div data-contact-composer className={className}>
       <form onSubmit={next}>
         <label htmlFor={`${id}-field`} className={cn('block', type.title)}>How can we help?</label>
-        <div className="relative mt-5">
+        {/* One box: the visitor's words at the top, the current question's answers along its
+            bottom edge. A press anywhere in the box puts the caret in the field. */}
+        <div data-composer-box onClick={(event) => { if (event.target === event.currentTarget) field.current?.focus() }} className="mt-5 cursor-text border border-black/25 bg-white focus-within:border-black focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-secondary">
+         <div className="relative">
           <textarea
             ref={field}
             id={`${id}-field`}
             data-composer-field
-            rows={4}
+            rows={3}
             value={text}
             onChange={(event) => setText(event.target.value)}
             onFocus={() => setOpen(true)}
             aria-describedby={`${id}-hint`}
             placeholder={addition ? '' : 'Click here for a few quick questions, or just type.'}
-            className={cn('block w-full resize-y border border-black/25 bg-white p-4 text-black placeholder:text-gray focus:border-black focus:outline-2 focus:outline-offset-2 focus:outline-secondary', type.body)}
+            className={cn('block w-full resize-none border-0 bg-transparent p-4 text-black outline-none placeholder:text-gray', type.body)}
           />
           {/* The answer under the pointer, shown where it would land. Same box, padding and type
               as the field, so the grey words sit exactly after the visitor's own. */}
           {addition && (
-            <div aria-hidden="true" data-composer-preview className={cn('pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words border border-transparent p-4', type.body)}>
+            <div aria-hidden="true" data-composer-preview className={cn('pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words p-4', type.body)}>
               <span className="invisible">{text.trimEnd()}</span><span className="text-gray">{addition}</span>
             </div>
           )}
-        </div>
-        <p id={`${id}-hint`} className={cn('mb-0 mt-3 text-gray', type.caption)}>{hint}</p>
-
-        <div aria-live="polite" data-composer-options className="min-h-[7.5rem]">
+         </div>
+         <div aria-live="polite" data-composer-options onClick={(event) => { if (event.target === event.currentTarget) field.current?.focus() }} className={cn('px-4 pb-4', open && 'min-h-[6.5rem]')}>
           {group && (
-            <motion.fieldset key={group.key} data-composer-group={group.key} initial={low ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: low ? 0 : 0.35, ease: ease.outExpo }} className="m-0 mt-6 min-w-0 border-0 p-0">
-              <legend className={cn('mb-3 flex w-full items-baseline justify-between gap-4 p-0', type.label)}>
+            <motion.fieldset key={group.key} data-composer-group={group.key} initial={low ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: low ? 0 : 0.35, ease: ease.outExpo }} className="m-0 min-w-0 border-0 p-0">
+              <legend className={cn('mb-2.5 flex w-full items-baseline justify-between gap-4 p-0 text-gray', type.caption)}>
                 <span>{group.prompt}</span>
-                <span className={cn('tabular-nums text-gray', type.caption)}>{asked + 1} of {COMPOSER_GROUPS.length}</span>
+                <span className="tabular-nums">{asked + 1} of {COMPOSER_GROUPS.length}</span>
               </legend>
               <div className="flex flex-wrap items-center gap-2.5">
                 {group.options.map((item) => (
@@ -108,7 +109,7 @@ export function ContactComposer({ className, preset }: { className?: string; pre
                     onFocus={() => setPointed(item.label)}
                     onBlur={() => setPointed(null)}
                     onClick={() => { setText((current) => toggleSentence(current, item, group)); setPointed(null) }}
-                    className={cn('cursor-pointer rounded-full border border-black/25 bg-white px-4 py-2 text-black transition-colors hover:border-black hover:bg-black hover:text-white motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label)}
+                    className={cn('cursor-pointer rounded-full border border-black/25 bg-white px-3.5 py-1.5 text-black transition-colors hover:border-black hover:bg-black hover:text-white motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label)}
                   >
                     {item.label}
                   </button>
@@ -117,7 +118,9 @@ export function ContactComposer({ className, preset }: { className?: string; pre
               </div>
             </motion.fieldset>
           )}
+         </div>
         </div>
+        <p id={`${id}-hint`} className={cn('mb-0 mt-3 text-gray', type.caption)}>{hint}</p>
 
         <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-4">
           <button type="submit" data-composer-next className={cn('group inline-flex cursor-pointer items-center gap-3 bg-black px-6 py-3.5 text-white hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label)}>
