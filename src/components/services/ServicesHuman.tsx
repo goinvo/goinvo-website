@@ -36,23 +36,29 @@ function ActionLink({ href, children, className }: { href: string; children: Rea
 /** One statement, one way to act, and the three questions as an index into the page. */
 function Opening() {
   return (
-    <Section spacing="none" aria-labelledby="services-title" className="pb-16 pt-[calc(var(--spacing-header-height)+2.5rem)] md:pb-24 md:pt-[calc(var(--spacing-header-height)+5rem)]">
-      <h1 id="services-title" className="m-0 font-serif text-page-title font-normal">Design for impact.</h1>
-      <p data-what-we-do className={cn('mb-0 mt-6 max-w-[44ch] md:mt-8', type.subhead)}>{WHAT_WE_DO}</p>
-      <ActionLink href={`#${TALK}`} className={cn('mt-8', type.lead)}>Tell us what you’re working on</ActionLink>
-
-      <nav aria-label="Our services" data-service-index className="mt-14 border-t border-black/15 md:mt-24">
-        <ol className="m-0 grid list-none p-0 md:grid-cols-3">
-          {JOURNEYS.map((item, index) => (
-            <li key={item.id} data-service-link={item.id} className={cn('border-b border-black/15 md:border-b-0', index > 0 && 'md:border-l md:border-black/15')}>
-              <SmoothScrollLink href={`#${item.id}`} className={cn('group flex items-baseline gap-4 py-4 text-black no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary md:py-6 md:pr-8', index > 0 && 'md:pl-8')}>
-                <span aria-hidden="true" className={cn('tabular-nums text-gray', type.caption)}>{String(index + 1).padStart(2, '0')}</span>
-                <span data-link-label className={cn('group-hover:underline group-focus-visible:underline', type.lead)}>{item.concern}</span>
-              </SmoothScrollLink>
-            </li>
-          ))}
-        </ol>
-      </nav>
+    <Section spacing="none" aria-labelledby="services-title" className="pb-16 pt-[calc(var(--spacing-header-height)+2.5rem)] md:pb-24 md:pt-[calc(var(--spacing-header-height)+5rem)] lg:flex lg:min-h-svh lg:flex-col lg:justify-center lg:py-[var(--spacing-header-height)]">
+      {/* Wide screens: the statement on the left, the three questions beside it, so the
+          first screen is one composed block and not a statement over an empty half. */}
+      <div className="grid gap-y-14 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-x-24">
+        <div>
+          <h1 id="services-title" className="m-0 font-serif text-page-title font-normal">Design for impact.</h1>
+          <p data-what-we-do className={cn('mb-0 mt-6 max-w-[44ch] md:mt-8', type.subhead)}>{WHAT_WE_DO}</p>
+          <ActionLink href={`#${TALK}`} className={cn('mt-8', type.lead)}>Tell us what you’re working on</ActionLink>
+        </div>
+        <nav aria-label="Our services" data-service-index className="border-t border-black/15">
+          <ol className="m-0 list-none p-0">
+            {JOURNEYS.map((item, index) => (
+              <li key={item.id} data-service-link={item.id} className="border-b border-black/15">
+                <SmoothScrollLink href={`#${item.id}`} className="group flex items-baseline gap-4 py-4 text-black no-underline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary lg:py-5">
+                  <span aria-hidden="true" className={cn('tabular-nums text-gray', type.caption)}>{String(index + 1).padStart(2, '0')}</span>
+                  <span data-link-label className={cn('flex-1 group-hover:underline group-focus-visible:underline', type.lead)}>{item.concern}</span>
+                  <Arrow />
+                </SmoothScrollLink>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </div>
     </Section>
   )
 }
@@ -133,24 +139,27 @@ function Talk({ booking, preset }: { booking: ReactNode; preset?: ComposerPreset
   const [calendar, setCalendar] = useState(false)
   return (
     <Section id={TALK} aria-labelledby="services-talk" className="scroll-mt-20">
-      <div className="grid gap-x-24 gap-y-12 lg:grid-cols-[0.8fr_1.2fr]">
+      <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[0.9fr_1.1fr]">
         <div>
-          <SectionHeading id="services-talk" text="Tell us what you’re working on." className="max-w-[12ch]" />
-          <p className={cn('mb-0 mt-6 max-w-[30ch]', type.lead)}>A question or a rough idea is enough. A principal reads it, not a salesperson.</p>
+          <SectionHeading id="services-talk" text="Tell us what you’re working on." className="text-balance" />
+          <p className={cn('mb-0 mt-6 max-w-[34ch] text-pretty', type.lead)}>A question or a rough idea is enough. A principal reads it, not a salesperson.</p>
           <p className={cn('mb-0 mt-6', type.label)}>Prefer email? <InlineLink href="mailto:info@goinvo.com">info@goinvo.com</InlineLink></p>
         </div>
         <ContactComposer preset={preset} />
       </div>
+      {/* One closing row: the other way to reach us on the left, the contract numbers on the right. */}
       <div data-rule className="mt-16 border-t border-black/15 pt-8 md:mt-24">
-        <button type="button" data-booking-toggle aria-expanded={calendar} onClick={() => setCalendar(!calendar)} className={cn('group inline-flex cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-black focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary', type.lead)}>
-          <span data-link-label className="group-hover:underline group-focus-visible:underline">{calendar ? 'Hide the calendar' : 'Or choose a time to talk'}</span><Arrow />
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-x-12 gap-y-6">
+          <button type="button" data-booking-toggle aria-expanded={calendar} onClick={() => setCalendar(!calendar)} className={cn('group inline-flex cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-black focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary', type.lead)}>
+            <span data-link-label className="group-hover:underline group-focus-visible:underline">{calendar ? 'Hide the calendar' : 'Or choose a time to talk'}</span><Arrow />
+          </button>
+          <dl className="m-0 flex flex-wrap gap-x-10 gap-y-3">
+            <div><dt className={cn('text-gray', type.caption)}>State of MA contract</dt><dd className={cn('m-0', type.label)}>ITS81</dd></div>
+            <div><dt className={cn('text-gray', type.caption)}>Federal contract</dt><dd className={cn('m-0', type.label)}>GSA 47QTCA26D001W</dd></div>
+          </dl>
+        </div>
         {calendar && <div data-booking className="mt-10">{booking}</div>}
       </div>
-      <dl className="m-0 mt-12 flex flex-wrap gap-x-12 gap-y-4 border-t border-black/15 pt-8">
-        <div><dt className={type.caption}>State of MA contract</dt><dd className={cn('m-0', type.label)}>ITS81</dd></div>
-        <div><dt className={type.caption}>Federal contract</dt><dd className={cn('m-0', type.label)}>GSA 47QTCA26D001W</dd></div>
-      </dl>
     </Section>
   )
 }
