@@ -834,6 +834,10 @@ first screen), the rest are picture cards. The verifier checks all of it at 1440
   CSS-transition fight.
 - **Vocabulary:** `src/components/ui` (`Section`, `SectionHeading`, `TextLink`, `Label`, `Arrow`,
   `Reveal`, `ReadAlong`, `type`). Use them; don't hand-roll headings, labels or links.
+- **One review panel** (`src/components/review/ReviewSwitches.tsx`, off in production): page links,
+  design options and, on `/design-lab/human`, the headline candidates. A page hands it controls
+  through `headlineBridge.ts`; don't add a second floating picker. Add a newly designed page to
+  `REVIEW_PAGES`. `?picker=off` hides it. Check: `node scripts/check-tagline-picker.mjs <base>`.
 - **Review switch:** `?design=human` (cookie; `?design=classic` turns it off; off in production)
   sets `html[data-design="human"]` before first paint. The human mode is
   `src/app/design-human.css`. Stylesheets imported by the root layout are site-wide by design;

@@ -1,7 +1,8 @@
 'use client'
 
 import { sublineFor, taglineFor, type Subline, type Tagline } from '@/components/home-story/taglines'
-import { TaglinePicker, taglinePickerEnabled } from '@/components/home-story/TaglinePicker'
+import { taglinePickerEnabled } from '@/components/home-story/TaglinePicker'
+import { publishHeadlineControl } from '@/components/review/headlineBridge'
 import { useEffect, useId, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react'
 import { usePageTransition } from '@/context/PageTransitionContext'
 import { prototypeHeaderById } from '@/lib/prototypeHeaders'
@@ -556,6 +557,15 @@ export function HumanHome({ work }: { work?: string }) {
     // The headline is at the top: bring it into view when choosing from further down.
     if (window.scrollY > window.innerHeight * 0.5) window.scrollTo({ top: 0, behavior: low ? 'auto' : 'smooth' })
   }
+  // The headline choices are drawn by the one review panel (ReviewSwitches), which lives
+  // outside this page: hand it what is shown and how to change it.
+  const chooseRef = useRef(chooseTagline)
+  useEffect(() => { chooseRef.current = chooseTagline })
+  useEffect(() => {
+    if (!showPicker) return
+    publishHeadlineControl({ tagline: headline, subline, choose: (nextHeadline, nextSubline) => chooseRef.current(nextHeadline, nextSubline) })
+    return () => publishHeadlineControl(null)
+  }, [showPicker, headline, subline])
   // The visitor's last search, carried down into the contact form.
   const [asked, setAsked] = useState('')
   function choose(id: PrototypeId) {
@@ -601,10 +611,9 @@ export function HumanHome({ work }: { work?: string }) {
   return (
     <MotionConfig reducedMotion={low ? 'always' : 'never'}>
       <div data-human-home data-motion={low ? 'low' : 'full'} style={{ color: ink, background: paper }} className={cn("relative mx-auto min-h-svh w-[calc(100%_-_56px)] pb-24 font-sans selection:bg-secondary selection:text-white md:w-full", largerText && "[&_p.text-base]:text-[20px] [&_p.text-base]:leading-relaxed [&_p.text-body]:text-[20px] [&_p.text-body]:leading-relaxed")}>
-        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headline} subline={subline} review={showPicker ? <TaglinePicker placement="inline" tagline={headline} subline={subline} choose={chooseTagline} /> : null} /><HomeSearch onAsked={setAsked} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
+        <div id="human-main"><Work low={low || largerText} ready={ready} selected={selected} choose={choose} view={view} chooseView={chooseView} headline={headline} subline={subline} /><HomeSearch onAsked={setAsked} /><Services low={low} /><Trust low={low} /><Evidence low={low} /></div>
         <Contact selected={selected} asked={asked} />
         <NextPrompt low={low} />
-        {showPicker && <TaglinePicker placement="floating" tagline={headline} subline={subline} choose={chooseTagline} />}
         <HumanPageControls low={low} ready={ready} toggleMotion={toggleMotion} largerText={largerText} setLargerText={value => { setLargerText(value); try { localStorage.setItem('goinvo-human-large-text', String(value)) } catch { /* Optional storage. */ } }} />
       </div>
     </MotionConfig>
