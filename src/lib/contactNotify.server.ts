@@ -2,6 +2,7 @@ import 'server-only'
 import { postSlackMessage } from '@/lib/chat/slack'
 import { MARQUETA_IDENTITY } from '@/lib/marketing/marquetaStyle'
 import type { ContactFields } from '@/lib/contactSubmit'
+import { slackPostsOverLimit } from '@/lib/contactRateLimit.server'
 import { contactSpamReason } from '@/lib/contactSpam'
 import { contactSlackChannel, contactSlackMessage } from '@/lib/contactNotify'
 
@@ -17,6 +18,7 @@ export async function sendContactToSlack(fields: ContactFields, delivered: boole
   const spam = contactSpamReason(fields)
   if (spam) { console.warn(`[contact] not posted in Slack: looks like spam (${spam}).`); return false }
   try {
+    if (await slackPostsOverLimit()) { console.warn('[contact] not posted in Slack: over the hourly limit.'); return false }
     const message = contactSlackMessage(fields, delivered)
     const posted = await postSlackMessage({ channel, text: message.text, blocks: message.blocks as never, unfurl: false, username: MARQUETA_IDENTITY.username, iconEmoji: MARQUETA_IDENTITY.iconEmoji })
     if (!posted) console.warn('[contact] the note was not posted in Slack.')

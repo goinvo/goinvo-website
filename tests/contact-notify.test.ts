@@ -13,6 +13,14 @@ vi.mock('next/server', async (importOriginal) => {
   return { ...actual, after: (task: () => unknown) => void queue.push(task) }
 })
 
+const kv = { counts: new Map<string, number>(), on: true, broken: false }
+vi.mock('@/lib/marketing/drainSink', () => ({
+  getKvClient: () => (kv.on ? {
+    incr: async (key: string) => { if (kv.broken) throw new Error('kv down'); const next = (kv.counts.get(key) || 0) + 1; kv.counts.set(key, next); return next },
+    expire: async () => 1,
+  } : null),
+}))
+
 const good = { name: 'Ana Reyes', email: 'ana@example.org', message: 'We need a clear product direction.\nBy March.' }
 const THANKS = '<h1>Thank You!</h1><p>Your submission has been received.</p>'
 
@@ -20,15 +28,16 @@ let jotform: { status: number; body: string }
 let slackPosts: Array<Record<string, unknown>>
 let slackFails: boolean
 
-async function send(input: Record<string, unknown>) {
+async function send(input: Record<string, unknown>, ip = '203.0.113.7') {
   const { POST } = await import('@/app/api/contact/route')
-  const response = await POST(new Request('https://www.example.test/api/contact', { method: 'POST', headers: { origin: 'https://www.example.test' }, body: JSON.stringify(input) }))
+  const response = await POST(new Request('https://www.example.test/api/contact', { method: 'POST', headers: { origin: 'https://www.example.test', 'x-forwarded-for': `${ip}, 10.0.0.1` }, body: JSON.stringify(input) }))
   for (const task of queue.splice(0)) await task()
   return { status: response.status, body: await response.json() }
 }
 
 beforeEach(() => {
   queue.length = 0
+  kv.counts.clear(); kv.on = true; kv.broken = false
   jotform = { status: 200, body: THANKS }
   slackPosts = []
   slackFails = false
@@ -128,6 +137,29 @@ describe('the contact note in Slack', () => {
     expect(reason('Patients keep forgetting their specialist appointments.')).toBeNull()
     expect(reason('We lost search traffic after a redesign and need the product rethought.')).toBeNull()
     expect(contactSpamReason(good)).toBeNull()
+  })
+
+  it('rule: one address gets three notes in ten minutes; the fourth is not sent, and others are unaffected', async () => {
+    for (let i = 0; i < 3; i++) expect((await send(good)).status).toBe(200)
+    const jotformCalls = () => vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes('jotform')).length
+    const before = jotformCalls()
+    expect(await send(good)).toEqual({ status: 429, body: { sent: false } })
+    expect(jotformCalls()).toBe(before)
+    expect(slackPosts).toHaveLength(3)
+    expect((await send(good, '198.51.100.9')).status).toBe(200)
+  })
+
+  it('rule: Slack gets at most twelve notes an hour, however many addresses send', async () => {
+    for (let i = 0; i < 15; i++) expect((await send(good, `198.51.100.${i}`)).status).toBe(200)
+    expect(slackPosts).toHaveLength(12)
+  })
+
+  it('rule: a missing or failing counter limits nobody', async () => {
+    kv.broken = true
+    for (let i = 0; i < 5; i++) expect((await send(good)).status).toBe(200)
+    kv.on = false
+    expect((await send(good)).status).toBe(200)
+    expect(slackPosts).toHaveLength(6)
   })
 
   it('fits Slack with the longest note the form allows', () => {

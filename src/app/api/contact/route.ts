@@ -6,11 +6,13 @@
  * whether JotForm took it; the answer to the visitor never waits on, or depends on, Slack.
  *
  * Public, so it is narrow: same-origin browsers only, a small body, bounded fields, and a
- * hidden field (`company`) that people leave empty and robots fill. It can only ever post
+ * hidden field (`company`) that people leave empty and robots fill, and a limit per address
+ * (src/lib/contactRateLimit.server.ts). It can only ever post
  * to the one form in siteConfig; nothing in the request chooses where it goes.
  */
 import { NextResponse, after } from 'next/server'
 import { siteConfig } from '@/lib/config'
+import { clientIp, contactOverLimit } from '@/lib/contactRateLimit.server'
 import { sendContactToSlack } from '@/lib/contactNotify.server'
 import { contactErrors, jotformAccepted, jotformBody, jotformSubmitUrl, readContactFields } from '@/lib/contactSubmit'
 
@@ -32,6 +34,8 @@ export async function POST(request: Request) {
   const fields = readContactFields(input)
   const errors = contactErrors(fields)
   if (Object.keys(errors).length) return answer({ sent: false, errors }, 422)
+  // More notes than a person sends: not sent from here; the page shows the form itself.
+  if (await contactOverLimit(clientIp(request))) return answer({ sent: false }, 429)
 
   try {
     const response = await fetch(jotformSubmitUrl(siteConfig.jotformId), {
