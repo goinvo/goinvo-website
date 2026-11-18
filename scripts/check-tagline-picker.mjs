@@ -22,7 +22,6 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   const page = await browser.newPage()
   await page.setViewport({ width, height })
   const P = '[data-review-ui]'
-  const ALL = `${P} [data-headline-all]`
   await page.goto(`${base}/design-lab/human`, { waitUntil: 'networkidle2', timeout: 180000 })
   await page.waitForSelector(P, { visible: true, timeout: 30000 })
   await pause(1200) // let hydration finish: a press before it can lose its URL write
@@ -33,8 +32,8 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
     return { open: document.querySelector('[data-review-ui]').querySelector('[data-review-toggle]').getAttribute('aria-expanded') === 'true', coversHeadline: hits(h1.getBoundingClientRect()), coversLineUnder: hits(under.getBoundingClientRect()) }
   })
   check(!bar.open && !bar.coversHeadline && !bar.coversLineUnder, `${width}: the picker starts as its bar, clear of the headline and the line under it ${JSON.stringify(bar)}`)
-  const controls = await page.evaluate(() => ({ review: document.querySelectorAll('[data-review-ui]').length, old: document.querySelectorAll('[data-tagline-picker]').length, stepper: document.querySelectorAll('[data-review-ui] [data-headline-stepper]').length }))
-  check(controls.review === 1 && controls.old === 0 && controls.stepper === 1, `${width}: one review control on the page, with the headline stepper in it ${JSON.stringify(controls)}`)
+  const controls = await page.evaluate(() => ({ review: document.querySelectorAll('[data-review-ui]').length, old: document.querySelectorAll('[data-tagline-picker]').length, stepper: document.querySelectorAll('[data-review-ui] [data-review-bar] [data-direction]').length }))
+  check(controls.review === 1 && controls.old === 0 && controls.stepper === 3, `${width}: one review control on the page, with the three directions in its bar ${JSON.stringify(controls)}`)
   // Nothing of the site's own sits under the picker: every press reaches it.
   const covered = await page.evaluate(() => {
     const picker = document.querySelector('[data-review-ui]').getBoundingClientRect()
@@ -59,27 +58,22 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   await page.goto(`${base}/design-lab/human`, { waitUntil: 'networkidle2', timeout: 180000 })
   await page.waitForSelector(P, { visible: true, timeout: 30000 }); await pause(900)
   await page.click(`${P} [data-review-toggle]`); await pause(200) // open the panel,
-  // The three directions under review are one press each, and each shows its lead line.
-  const leads = { human: 'Complexity, made human.', impact: 'Design for impact.', ship: 'Designs that ship, with stewardship.' }
-  for (const [lead, text] of Object.entries(leads)) {
-    await page.$eval(`${P} [data-direction="${lead}"]`, (el) => el.click()); await pause(450)
-    const shown = await page.evaluate((key) => ({ title: document.querySelector('#human-title').textContent.trim(), param: new URL(location.href).searchParams.get('headline'), pressed: [...document.querySelectorAll('[data-direction][aria-pressed="true"]')].map((el) => el.dataset.direction), under: document.querySelector('#human-title').nextElementSibling.textContent.trim().length }), lead)
-    check(shown.title === text && shown.param === lead && shown.pressed.length === 1 && shown.pressed[0] === lead && shown.under > 20, `${width}: the ${lead} direction shows its lead line with a line under it ${JSON.stringify(shown)}`)
-  }
-  await page.$eval(`${P} [data-direction="impact"]`, (el) => el.click()); await pause(300)
-  await page.click(ALL); await pause(200) // then the list to choose from it
-  const keys = await page.$$eval(`${P} [data-tagline-option]`, (els) => els.map((el) => [el.dataset.taglineOption, el.textContent.trim()]))
-  check(keys.length >= 15, `${width}: the picker lists every candidate (${keys.length})`)
+  // Three directions and no more: Impact (the default), Human, Stewardship.
+  const keys = [['impact', 'Design for impact.'], ['human', 'Complexity, made human.'], ['ship', 'Designs that ship, with stewardship.']]
+  const offered = await page.$$eval(`${P} [data-direction]`, (els) => els.map((el) => [el.dataset.direction, el.textContent.trim()]))
+  check(JSON.stringify(offered) === JSON.stringify([['impact', 'Impact'], ['human', 'Human'], ['ship', 'Stewardship']]) && (await page.$$(`${P} [data-tagline-option], ${P} [data-headline-all]`)).length === 0, `${width}: the picker offers the three directions and no list ${JSON.stringify(offered)}`)
   const defaultTitle = await page.$eval('#human-title', (el) => el.textContent.trim())
   check(defaultTitle === keys[0][1], `${width}: without a choice the page shows the default headline ("${defaultTitle}")`)
 
   for (const [key, text] of keys) {
-    await page.$eval(`${P} [data-tagline-option="${key}"]`, (el) => el.click())
+    await page.$eval(`${P} [data-direction="${key}"]`, (el) => el.click())
     await page.waitForFunction((want) => document.querySelector('#human-title')?.textContent.trim() === want, { timeout: 5000 }, text).catch(() => {})
     await pause(450)
     const state = await page.evaluate(() => {
       const h1 = document.querySelector('#human-title'), column = h1.parentElement, r = h1.getBoundingClientRect()
       return {
+        pressed: [...document.querySelectorAll('[data-direction][aria-pressed="true"]')].map((el) => el.dataset.direction).join(),
+        shownInPanel: document.querySelector('[data-tagline-text]')?.textContent.trim(),
         title: h1.textContent.trim(),
         param: new URL(location.href).searchParams.get('headline'),
         subline: h1.nextElementSibling?.textContent.trim().slice(0, 40),
@@ -89,7 +83,7 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
         size: Math.round(parseFloat(getComputedStyle(h1).fontSize)),
       }
     })
-    check(state.title === text && state.param === key && state.fits && state.overflow <= 0 && state.lines <= (width < 768 ? 7 : 5), `${width} ${key}: shown in place, in the URL, and fits ${JSON.stringify(state)}`)
+    check(state.title === text && state.param === key && state.pressed === key && state.shownInPanel === text && (state.subline || '').length > 20 && state.fits && state.overflow <= 0 && state.lines <= (width < 768 ? 7 : 5), `${width} ${key}: shown in place, in the URL, and fits ${JSON.stringify(state)}`)
     if (out && width !== 1280) {
       await page.evaluate(() => scrollTo(0, 0))
       await page.screenshot({ path: `${out}/${width}-${key}.png` })
@@ -101,12 +95,11 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   const chosen = await page.evaluate(() => ({ param: new URL(location.href).searchParams.get('subline'), text: document.querySelector('#human-title').nextElementSibling.textContent }))
   check(chosen.param === 'return' && chosen.text.startsWith('91% of our clients'), `${width}: a chosen line under the headline is shown and recorded ${JSON.stringify(chosen)}`)
 
-  // The stepper in the bar moves to the next headline with the panel folded.
+  // A direction in the bar changes the headline with the panel folded.
   await page.click(`${P} [data-review-toggle]`); await pause(200)
-  const beforeStep = await page.$eval('#human-title', (el) => el.textContent.trim())
-  await page.click(`${P} [aria-label="Next headline"]`); await pause(500)
+  await page.click(`${P} [data-review-bar] [data-direction="human"]`); await pause(500)
   const afterStep = await page.evaluate(() => ({ title: document.querySelector('#human-title').textContent.trim(), panel: Boolean(document.querySelector('[data-review-panel]')) }))
-  check(afterStep.title !== beforeStep && !afterStep.panel, `${width}: the arrows in the folded bar step the headline ("${afterStep.title}")`)
+  check(afterStep.title === 'Complexity, made human.' && !afterStep.panel, `${width}: a direction in the folded bar changes the headline ("${afterStep.title}")`)
 
   // The pages are linked from the panel, the panel is on each of them, and the design switch works there.
   await page.click(`${P} [data-review-toggle]`); await pause(200)
@@ -121,7 +114,7 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
       const bar = document.querySelector('[data-review-ui]').getBoundingClientRect()
       const hits = (r) => r.width > 2 && r.left < bar.right && r.right > bar.left && r.top < bar.bottom && r.bottom > bar.top
       const blocked = [...document.querySelectorAll('main a, main button, main input, main textarea, header a, header button, [data-chat-launcher], [data-chat-teaser]')].filter((el) => !el.closest('[data-review-ui]') && getComputedStyle(el).visibility !== 'hidden' && hits(el.getBoundingClientRect())).map((el) => (el.textContent || el.tagName).trim().slice(0, 30))
-      return { design: document.documentElement.dataset.design, human: Boolean(document.querySelector('[data-design-only="human"]')), stepper: document.querySelectorAll('[data-headline-stepper]').length, blocked, panelOpen: Boolean(document.querySelector('[data-review-panel]')) }
+      return { design: document.documentElement.dataset.design, human: Boolean(document.querySelector('[data-design-only="human"]')), stepper: document.querySelectorAll('[data-direction]').length, blocked, panelOpen: Boolean(document.querySelector('[data-review-panel]')) }
     })
     check(there.design === 'human' && there.stepper === 0 && there.blocked.length === 0, `${width} ${href}: the panel is here, with no headline controls, sitting on none of the page's controls ${JSON.stringify(there)}`)
     if (!there.panelOpen) { await page.click(`${P} [data-review-toggle]`); await pause(200) }
@@ -142,10 +135,15 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
 }
 
 const clean = await browser.newPage()
-await clean.goto(`${base}/design-lab/human?headline=used&picker=off`, { waitUntil: 'networkidle2', timeout: 180000 })
+await clean.goto(`${base}/design-lab/human?headline=ship&picker=off`, { waitUntil: 'networkidle2', timeout: 180000 })
 await pause(800)
 const cleanState = await clean.evaluate(() => ({ picker: Boolean(document.querySelector('[data-review-ui]')), title: document.querySelector('#human-title').textContent.trim(), under: document.querySelector('#human-title').nextElementSibling.textContent.slice(0, 30) }))
-check(!cleanState.picker && cleanState.title === 'Software people actually use.' && cleanState.under.startsWith('Over 90% of Ipsos'), `a shared link opens on its headline and pair, and ?picker=off hides the picker ${JSON.stringify(cleanState)}`)
+check(!cleanState.picker && cleanState.title === 'Designs that ship, with stewardship.' && cleanState.under.startsWith('91% of our clients'), `a shared link opens on its headline and pair, and ?picker=off hides the picker ${JSON.stringify(cleanState)}`)
+// A headline that is no longer offered shows the default, not a parked line.
+await clean.goto(`${base}/design-lab/human?headline=used`, { waitUntil: 'networkidle2', timeout: 180000 })
+await pause(800)
+const parkedTitle = await clean.$eval('#human-title', (el) => el.textContent.trim())
+check(parkedTitle === 'Design for impact.', `a parked headline in the address shows the default ("${parkedTitle}")`)
 await browser.close()
 console.log(failures.length ? `${failures.length} failed` : 'all passed')
 process.exit(failures.length ? 1 : 0)

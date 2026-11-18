@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { HeadlineOptions, HeadlineStepper } from '@/components/home-story/TaglinePicker'
+import { HeadlineDirections, HeadlineOptions } from '@/components/home-story/TaglinePicker'
 import { useHeadlineControl } from '@/components/review/headlineBridge'
 import { cn } from '@/lib/utils'
 import { HAND_FONTS, HAND_LEVELS, REVIEW_COOKIES, setReviewCookie, type HandFont, type HandLevel } from '@/lib/designSwitch'
@@ -121,10 +121,10 @@ export function ReviewSwitches() {
 
   return (
     <aside data-review-ui data-ui aria-label="Design review options" className={cn('fixed bottom-20 left-4 z-[80] bg-white font-sans text-black shadow-[0_4px_28px_#24434d33] md:bottom-auto md:left-auto md:right-4 md:top-[calc(var(--spacing-header-height)+12px)]', open || headline ? 'w-[min(340px,calc(100vw-5rem))]' : '')}>
-      {/* The bar is always there: open or folded, the headline can be stepped with the hero in view. */}
+      {/* The bar is always there: open or folded, the headline direction can be changed with the hero in view. */}
       <div data-review-bar className="flex items-center gap-1 px-1 py-1">
         <button type="button" data-review-toggle aria-expanded={open} onClick={() => toggle(!open)} className="min-h-9 cursor-pointer border-0 bg-transparent px-2 text-[13px] font-semibold text-black">{open ? 'Hide review' : 'Review'}</button>
-        {headline && <HeadlineStepper tagline={headline.tagline} choose={headline.choose} />}
+        {headline && <HeadlineDirections tagline={headline.tagline} choose={headline.choose} />}
       </div>
       {open && (
         <div data-review-panel className="flex max-h-[calc(100svh-var(--spacing-header-height)-140px)] flex-col gap-4 overflow-y-auto border-t border-black/10 p-3 max-md:max-h-[55svh]">
@@ -142,7 +142,7 @@ export function ReviewSwitches() {
           {options('review-font', 'Handwriting', state.font, HAND_FONTS.map((f) => ({ key: f.key, label: f.name })), (font) => apply({ ...state, font }), state.hand === 'off')}
           {headline && (
             <div>
-              <p className={cn('m-0', legend)}>Headline direction</p>
+              <p className={cn('m-0', legend)}>Headline</p>
               <HeadlineOptions {...headline} />
             </div>
           )}
