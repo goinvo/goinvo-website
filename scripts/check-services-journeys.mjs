@@ -1,11 +1,12 @@
 // The services page under the human design (?design=human): clean, scoped, simple, actionable.
 // Rules, from the survey in docs/research/services-pages-2026-11-18.md:
-//  - the first screen is ONE statement: the headline, the what-we-do sentence, one way to act,
-//    and the three questions as an index; no picture, no price, at most 70 words;
-//  - below it the page is one block repeated three times, each with its own picture, what
-//    you get, who you work with, how long, the investment and one link to act on; no step
-//    sequence (it read as a template and added nothing to the message);
-//  - each question in the index lands on its own block;
+//  - the first screen IS the services (the owner's call, 2026-11-18: "the services themselves
+//    should be above the fold"): the headline, the what-we-do sentence, and the three services
+//    side by side, each complete above the fold on a desktop (question, what you get, who,
+//    how long, the investment, one button to act on); the same part sits on the same line in
+//    all three; on a phone the first service starts on the first screen;
+//  - each service has its own picture; there is no step sequence (it read as a template);
+//  - the other way in comes last: "…or tell us what you're working on", after the three;
 //  - proof is one section; there is no chart and no tab list; the page stays under 320 words (the surveyed pages run 206 to 1,175, median about 450);
 //  - pressing a service's "Ask us about this" lands on the contact form with that service's
 //    sentence in the box and the NEXT question offered (never the one just answered, and
@@ -25,7 +26,6 @@ const failures = []
 const check = (ok, label) => { console.log(`${ok ? 'PASS' : 'FAIL'} ${label}`); if (!ok) failures.push(label) }
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const WORD_LIMIT = 320
-const FIRST_SCREEN_WORDS = 70
 const IDS = ['direction', 'usable', 'ship']
 const HOLD = { direction: 'A Product Blueprint', usable: 'Interactions people can trust', ship: 'Working software' }
 
@@ -46,12 +46,12 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   const page = await browser.newPage()
   await page.setViewport({ width, height, deviceScaleFactor: 1 })
   await page.goto(`${base}/services?design=human`, { waitUntil: 'networkidle2', timeout: 180000 })
-  await page.waitForSelector('[data-service-index]', { visible: true, timeout: 30000 })
+  await page.waitForSelector('[data-services]', { visible: true, timeout: 30000 })
   await pause(600)
 
   const first = await page.evaluate((height) => {
     const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden' }
-    const root = document.querySelector('[data-service-index]').closest('[data-design-only="human"]') || document
+    const root = document.querySelector('[data-services]').closest('[data-design-only="human"]') || document
     const onScreen = (el) => visible(el) && el.getBoundingClientRect().top < height && el.getBoundingClientRect().bottom > 0
     const leaves = [...root.querySelectorAll('h1,h2,h3,p,a,button,li,dd,dt,span')].filter((el) => onScreen(el) && el.children.length === 0)
     const text = [...new Set(leaves.map((el) => el.textContent.trim()).filter(Boolean))].join(' ')
@@ -60,10 +60,9 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
       words: text.split(/\s+/).filter(Boolean).length,
       text,
       sentence: sentence ? { text: sentence.textContent.trim(), bottom: Math.round(sentence.getBoundingClientRect().bottom) } : null,
-      links: [...root.querySelectorAll('[data-service-link]')].filter(visible).map((el) => ({ id: el.dataset.serviceLink, bottom: Math.round(el.getBoundingClientRect().bottom) })),
-      images: [...root.querySelectorAll('img')].filter((img) => visible(img) && img.getBoundingClientRect().top < height * 0.8).length,
-      // One way to act, and it is the LAST row of the index, worded as the alternative.
-      act: (() => { const rows = [...root.querySelectorAll('[data-service-index] li')].filter(visible); const last = rows[rows.length - 1]; const links = [...root.querySelectorAll('a')].filter((a) => onScreen(a) && /tell us what you’re working on/i.test(a.textContent)); return links.length === 1 && rows.length === 4 && !!last && last.contains(links[0]) && /^…or tell us/.test((links[0].querySelector('[data-link-label]') || links[0]).textContent.trim()) })(),
+      services: [...root.querySelectorAll('[data-service]')].filter(visible).map((el) => { const at = (sel) => { const r = el.querySelector(sel).getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom) } }; return { id: el.dataset.service, label: at('p'), heading: at('h2'), facts: at('dl'), outcome: at('[data-service-outcome]'), ask: at('[data-service-ask]') } }),
+      // The other way in is ONE link, worded as the alternative, after the three services.
+      act: (() => { const links = [...root.querySelectorAll('a')].filter((a) => visible(a) && /tell us what you’re working on/i.test(a.textContent)); const last = [...root.querySelectorAll('[data-service]')].pop(); return links.length === 1 && !!last && /^…or tell us/.test((links[0].querySelector('[data-link-label]') || links[0]).textContent.trim()) && !!links[0].closest('[data-service-talk]') && links[0].getBoundingClientRect().top >= last.getBoundingClientRect().bottom - 1 })(),
       // The page's prose. The contact form's own labels and buttons are controls, not copy to read.
       pageWords: (() => { const form = root.querySelector('[data-contact-composer]'); const count = (text) => text.split(/\s+/).filter(Boolean).length; return count(root.innerText) - (form ? count(form.innerText) : 0) })(),
       overflow: document.documentElement.scrollWidth - innerWidth,
@@ -71,10 +70,10 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
     }
   }, height)
   check(!!first.sentence && /design studio/.test(first.sentence.text) && /in person or from anywhere/.test(first.sentence.text) && first.sentence.bottom <= height, `${width}: the first screen says what we do, in one sentence ${JSON.stringify(first.sentence)}`)
-  check(first.links.map((link) => link.id).join() === IDS.join() && first.links.every((link) => link.bottom <= height), `${width}: the three questions are on the first screen as an index ${JSON.stringify(first.links)}`)
-  check(first.act, `${width}: the first screen has one way to act, “…or tell us what you’re working on”, as the last row under the three questions`)
-  check(first.images === 0 && !/\$\d/.test(first.text), `${width}: no picture and no price on the first screen (${first.images} pictures)`)
-  check(first.words <= FIRST_SCREEN_WORDS, `${width}: the first screen is one statement (${first.words} of ${FIRST_SCREEN_WORDS} words)`)
+  const wide = width >= 1024
+  check(first.services.map((service) => service.id).join() === IDS.join() && (wide ? first.services.every((service) => service.ask.bottom <= height) : first.services[0].heading.top < height), wide ? `${width}: all three services are complete above the fold, down to the button ${JSON.stringify(first.services.map((service) => service.ask.bottom))} of ${height}` : `${width}: the first service starts on the first screen (its question at ${first.services[0]?.heading.top} of ${height})`)
+  if (wide) { const same = (part, edge) => new Set(first.services.map((service) => service[part][edge])).size === 1; check(same('label', 'top') && same('heading', 'top') && same('facts', 'top') && same('outcome', 'top') && same('ask', 'top'), `${width}: the same part sits on the same line in all three ${JSON.stringify(first.services.map((service) => [service.heading.top, service.facts.top, service.outcome.top, service.ask.top]))}`) }
+  check(first.act, `${width}: the other way in comes last: “…or tell us what you’re working on”, after the three services`)
   check(first.charts === 0, `${width}: no chart and no tab list on the page (${first.charts})`)
   check(first.pageWords <= WORD_LIMIT, `${width}: the page stays short on words (${first.pageWords} of ${WORD_LIMIT})`)
   check(first.overflow <= 0, `${width}: nothing spills sideways (${first.overflow}px)`)
@@ -108,16 +107,6 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   check(new Set(blocks.map((block) => block.shape)).size === 1, `${width}: every service is the same block ${JSON.stringify(blocks.map((block) => block.shape))}`)
   const pictures = blocks.map((block) => block.picture)
   check(pictures.every((picture) => picture?.loaded) && new Set(pictures.map((picture) => picture?.file)).size === 3, `${width}: each service has its own picture, painted ${JSON.stringify(pictures.map((picture) => picture?.file.split('/').pop()))}`)
-
-  // The index is the way in: each question lands on its own block.
-  for (const id of IDS) {
-    await page.evaluate(() => scrollTo(0, 0)); await pause(400)
-    await page.click(`[data-service-link="${id}"] a`)
-    await pause(1600)
-    const top = await page.evaluate((id) => Math.round(document.querySelector(`[data-service="${id}"]`).getBoundingClientRect().top), id)
-    check(top > -40 && top < 200, `${width} ${id}: its question on the first screen lands on its block (top ${top})`)
-    if (out) await page.screenshot({ path: `${out}/${width}-${id}.png` })
-  }
 
   // A service fills the contact form.
   const ASK = { direction: ['We need a clear product direction.', 'A product direction'], usable: ['We need an AI tool people will trust and use.', 'An AI tool people trust'], ship: ['We need a product designed and shipped.', 'A product designed and shipped'] }
