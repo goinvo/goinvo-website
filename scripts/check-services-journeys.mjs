@@ -7,6 +7,7 @@
 //    sequence (it read as a template and added nothing to the message);
 //  - each question in the index lands on its own block;
 //  - proof is one section; there is no chart and no tab list; the page stays under 380 words (the surveyed pages run 206 to 1,175, median about 450);
+//  - its testimonial is not one a homepage also shows;
 //  - nothing spills sideways.
 // Usage: node scripts/check-services-journeys.mjs [base] [--out dir]
 import fs from 'node:fs'
@@ -23,6 +24,18 @@ const WORD_LIMIT = 380
 const FIRST_SCREEN_WORDS = 70
 const IDS = ['direction', 'usable', 'ship']
 const HOLD = { direction: 'A Product Blueprint', usable: 'Interactions people can trust', ship: 'Working software' }
+
+// The testimonial here is not one the homepage shows (either homepage: the new design's
+// and the live one's). Read from the sources, so it holds whatever the pages render today.
+{
+  const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
+  const mine = read('src/components/services/servicesJourneys.ts').match(/SERVICES_TESTIMONIAL = \{[\s\S]*?name: '([^']+)'/)?.[1]
+  const surname = mine?.split(/[ ,]/).filter(Boolean).find((word, at) => at > 0) || ''
+  const homes = ['src/components/home-story/storyContent.ts', 'src/components/home/HomeConceptContent.tsx', 'src/components/home/HomeContent.tsx']
+  const shared = homes.filter((file) => surname && read(file).includes(surname))
+  check(!!mine && shared.length === 0, `the services testimonial (${mine}) is not also on a homepage ${JSON.stringify(shared)}`)
+  if (args.includes('--sources-only')) { console.log(failures.length ? `${failures.length} failed` : 'all passed'); process.exit(failures.length ? 1 : 0) }
+}
 
 const browser = await puppeteer.launch({ headless: true })
 for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {

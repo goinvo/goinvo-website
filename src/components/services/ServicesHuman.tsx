@@ -11,7 +11,7 @@ import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { SmoothScrollLink } from '@/components/ui/SmoothScrollLink'
 import { SECTORS, STATS } from '@/app/(main)/services/content'
-import { JOURNEYS, WHAT_WE_DO, type Journey } from '@/components/services/servicesJourneys'
+import { JOURNEYS, SERVICES_TESTIMONIAL, WHAT_WE_DO, type Journey } from '@/components/services/servicesJourneys'
 
 /**
  * The services page in the homepage study's design. It follows what other studios' services
@@ -101,11 +101,11 @@ function Service({ journey, index }: { journey: Journey; index: number }) {
 function Proof() {
   return (
     <Section tone="grey" aria-label="Proof">
-      <figure className="m-0">
+      <figure data-testimonial className="m-0">
         <blockquote className="m-0">
-          <p className="m-0 max-w-[26ch] font-serif text-[clamp(32px,3.8vw,60px)] leading-[1.12] tracking-[-0.02em]">“With Invo, design wasn’t just design. It impacted our IP portfolio. It changed our business.”</p>
+          <p className="m-0 max-w-[34ch] font-serif text-[clamp(28px,3vw,46px)] leading-[1.16] tracking-[-0.02em]">“{SERVICES_TESTIMONIAL.quote}”</p>
         </blockquote>
-        <figcaption className={cn('mt-8', type.label)}>Serban Georgescu, MD<br /><span className={type.caption}>Director of Clinical Development, InfoBionic</span></figcaption>
+        <figcaption className={cn('mt-8', type.label)}>{SERVICES_TESTIMONIAL.name}<br /><span className={type.caption}>{SERVICES_TESTIMONIAL.role}</span></figcaption>
       </figure>
       <ul aria-label="GoInvo in numbers" className="m-0 mt-16 grid list-none grid-cols-2 gap-x-8 gap-y-8 border-t border-black/15 p-0 pt-10 md:mt-24 lg:grid-cols-4">
         {STATS.map((stat) => (

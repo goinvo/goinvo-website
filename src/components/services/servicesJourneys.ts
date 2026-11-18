@@ -27,6 +27,18 @@ const tier = (name: string) => {
   return found
 }
 
+/**
+ * The page's one testimonial, from the CommonHealth SMART Health Cards case study. It must
+ * not be a quote the homepage also shows (a visitor who reads both pages would see the same
+ * praise twice): scripts/check-services-journeys.mjs fails if this person is quoted there.
+ */
+export const SERVICES_TESTIMONIAL = {
+  quote: 'GoInvo digested a complex landscape in astonishingly little time and returned with insightful and creative solutions. They were an absolute joy to work with and we look forward to working with them again soon.',
+  name: 'Eric Davis',
+  role: 'Senior Product and Program Manager, CommonHealth',
+  href: '/work/commonhealth-smart-health-cards',
+}
+
 export interface JourneyStep {
   name: string
   does: string[]
