@@ -1,6 +1,8 @@
 'use client'
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ease, useReducedMotion } from '@/lib/motion'
 import Image from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -67,13 +69,40 @@ function ServiceCard({ journey, index, open, quiet, toggle }: { journey: Journey
 /** The opened service: what it is, the four facts, one line of evidence, one way to act. */
 function ServicePanel({ journey, ask }: { journey: Journey; ask: (journey: Journey) => void }) {
   const ref = useRef<HTMLDivElement>(null)
-  // Opened under the cards, it can start below the fold: bring it into view, no further.
+  const inner = useRef<HTMLDivElement>(null)
+  const reduced = useReducedMotion()
+  // Opened under the cards, it can end below the fold. It grows from nothing, so where it
+  // will end is worked out from its content now, and the page moves there while it opens.
   useEffect(() => {
+    const box = ref.current, content = inner.current
+    if (!box || !content) return
+    const top = box.getBoundingClientRect().top
+    const past = top + content.offsetHeight + 32 - window.innerHeight
+    if (past <= 0) return
     const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ref.current?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'nearest' })
+    window.scrollBy({ top: Math.min(past, Math.max(0, top - 96)), behavior: calm ? 'auto' : 'smooth' })
   }, [])
+  // The box grows open and closes again; what is in it rises into place just behind.
+  // Reduced motion keeps the same markup and takes no time.
+  const time = (seconds: number) => (reduced ? 0 : seconds)
   return (
-    <div ref={ref} id={`service-panel-${journey.id}`} role="region" aria-labelledby={`service-${journey.id}`} data-service-panel={journey.id} className="scroll-mb-8 border-t border-black pt-6 lg:col-span-3 lg:row-start-2 lg:mt-10">
+    <motion.div
+      ref={ref}
+      id={`service-panel-${journey.id}`}
+      role="region"
+      aria-labelledby={`service-${journey.id}`}
+      data-service-panel={journey.id}
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1, transition: { height: { duration: time(0.5), ease: ease.emphasized }, opacity: { duration: time(0.3), delay: time(0.1), ease: ease.standard } } }}
+      exit={{ height: 0, opacity: 0, transition: { height: { duration: time(0.35), ease: ease.emphasized }, opacity: { duration: time(0.15), ease: ease.standard } } }}
+      className="overflow-hidden lg:col-span-3 lg:col-start-1 lg:row-start-2"
+    >
+      <motion.div
+        ref={inner}
+        initial={{ y: 16 }}
+        animate={{ y: 0, transition: { duration: time(0.5), ease: ease.outExpo } }}
+        className="border-t border-black pt-6 lg:mt-10"
+      >
       <div className="grid gap-x-16 gap-y-8 lg:grid-cols-[1fr_1.2fr]">
         <div>
           <p className={cn('m-0 max-w-[40ch]', type.lead)}>{journey.description}</p>
@@ -94,7 +123,8 @@ function ServicePanel({ journey, ask }: { journey: Journey; ask: (journey: Journ
           <button type="button" data-service-ask={journey.id} onClick={() => ask(journey)} className={cn('group mt-8 inline-flex cursor-pointer items-center gap-3 bg-black px-6 py-3.5 text-white hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label)}>Ask us about this<Arrow /></button>
         </div>
       </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -115,7 +145,7 @@ function Opening({ ask }: { ask: (journey: Journey) => void }) {
         {JOURNEYS.map((journey, index) => (
           <Fragment key={journey.id}>
             <ServiceCard journey={journey} index={index} open={open === journey.id} quiet={open !== null && open !== journey.id} toggle={() => setOpen(open === journey.id ? null : journey.id)} />
-            {open === journey.id && <ServicePanel journey={journey} ask={ask} />}
+            <AnimatePresence initial={false}>{open === journey.id && <ServicePanel key={journey.id} journey={journey} ask={ask} />}</AnimatePresence>
           </Fragment>
         ))}
       </div>

@@ -87,7 +87,7 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   if (out) await page.screenshot({ path: `${out}/${width}-0-first-screen.png` })
 
   // Press a service: its details open under the cards, one at a time; the same parts in each.
-  const openService = async (id) => { await page.$eval(`[data-service-open="${id}"]`, (el) => { el.scrollIntoView({ block: 'center' }); el.click() }); await pause(900) }
+  const openService = async (id) => { await page.$eval(`[data-service-open="${id}"]`, (el) => { el.scrollIntoView({ block: 'center' }); el.click() }); await pause(1500) } // the open and close animations, and the scroll that follows them
   const blocks = []
   for (const id of IDS) {
     await openService(id)
