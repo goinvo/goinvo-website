@@ -102,7 +102,7 @@ export function ContactComposer({ className, preset }: { className?: string; pre
     return (
       <div data-contact-composer data-composer-sent role="status" className={className}>
         <p className={cn('m-0', type.title)}>Thank you, {name.trim().split(/\s+/)[0]}.</p>
-        <p className={cn('mb-0 mt-4 max-w-[40ch]', type.lead)}>Your note is with the studio. A principal will reply to {email.trim()}.</p>
+        <p className={cn('mb-0 mt-4 max-w-[40ch]', type.lead)}>Your note is with the studio. We’ll reply to {email.trim()}.</p>
       </div>
     )
   }

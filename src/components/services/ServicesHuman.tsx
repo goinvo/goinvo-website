@@ -194,7 +194,7 @@ function Talk({ booking, preset }: { booking: ReactNode; preset?: ComposerPreset
       <div className="grid gap-x-16 gap-y-12 lg:grid-cols-[0.9fr_1.1fr]">
         <div>
           <SectionHeading id="services-talk" text="Tell us what you’re working on." className="text-balance" />
-          <p className={cn('mb-0 mt-6 max-w-[34ch] text-pretty', type.lead)}>A principal reads it, not a salesperson.</p>
+          <p className={cn('mb-0 mt-6 max-w-[34ch] text-pretty', type.lead)}>It goes straight to the studio, not a sales team.</p>
           <p className={cn('mb-0 mt-6', type.label)}>Prefer email? <InlineLink href="mailto:info@goinvo.com">info@goinvo.com</InlineLink></p>
         </div>
         <ContactComposer preset={preset} />
