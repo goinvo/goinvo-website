@@ -36,12 +36,14 @@ export const TAGLINES: Tagline[] = [
   { key: 'impact', angle: 'Impact', note: 'The position: design that drives results. The line under it carries the proof.', fit: FIT.short, pair: 'impact', text: 'Design for impact.', node: <>Design for <em>impact</em>.</> },
   { key: 'results', angle: 'Impact', note: 'The same position, said as what the buyer gets.', fit: FIT.medium, pair: 'impact', text: 'Design that drives results.', node: <>Design that drives <em>results</em>.</> },
 
-  // The earlier default and candidates, unchanged.
-  { key: 'ship', angle: 'Earlier', note: 'The preview’s earlier line: shipping, and care after launch.', fit: FIT.medium, text: 'Designs that ship, with stewardship.', node: <>Designs that <em>ship</em>, with <em>stewardship</em>.</> },
-  { key: 'design', angle: 'Earlier', note: 'The same, read as one practice rather than many designs.', fit: FIT.medium, text: 'Design that ships, with stewardship.', node: <>Design that <em>ships</em>, with <em>stewardship</em>.</> },
-  { key: 'stay', angle: 'Earlier', note: 'Shipping, and not disappearing after it.', fit: FIT.short, text: 'We ship. Then we stay.', node: <>We ship. Then we stay.</> },
-  { key: 'machine', angle: 'Earlier', note: 'Making complex systems legible.', fit: FIT.medium, text: 'Make the machine make sense.', node: <>Make the machine make sense.</> },
-  { key: 'human', angle: 'Earlier', note: 'Complexity turned into something people can use.', fit: FIT.short, text: 'Complexity, made human.', node: <>Complexity, made human.</> },
+  // Stewardship: the responsibility angle. We ship it, and we stay answerable for it.
+  { key: 'ship', angle: 'Stewardship', note: 'The responsibility angle: we ship it, and we stay answerable for it after launch.', fit: FIT.medium, pair: 'return', text: 'Designs that ship, with stewardship.', node: <>Designs that <em>ship</em>, with <em>stewardship</em>.</> },
+  { key: 'design', angle: 'Stewardship', note: 'The same, read as one practice rather than many designs.', fit: FIT.medium, pair: 'return', text: 'Design that ships, with stewardship.', node: <>Design that <em>ships</em>, with <em>stewardship</em>.</> },
+  { key: 'stay', angle: 'Stewardship', note: 'Shipping, and not disappearing after it.', fit: FIT.short, pair: 'return', text: 'We ship. Then we stay.', node: <>We ship. Then we stay.</> },
+
+  // Human: what we know that AI-built software does not, which is how people work.
+  { key: 'machine', angle: 'Human', note: 'Making complex systems legible.', fit: FIT.medium, pair: 'inside', text: 'Make the machine make sense.', node: <>Make the machine make sense.</> },
+  { key: 'human', angle: 'Human', note: 'The human angle: complexity turned into something people can use.', fit: FIT.short, pair: 'ai', text: 'Complexity, made human.', node: <>Complexity, made human.</> },
 
   // Adoption: the outcome is that people actually use it.
   { key: 'used', angle: 'Adoption', note: 'The failure buyers fear most is software that launches and gets ignored.', fit: FIT.medium, pair: 'adoption', text: 'Software people actually use.', node: <>Software people actually <em>use</em>.</> },
@@ -60,13 +62,23 @@ export const TAGLINES: Tagline[] = [
   { key: 'seventy', angle: 'Outcome first', note: 'The headline is the result; the line under it says what moved.', fit: FIT.short, pair: 'snap', text: '7% to 70%.', node: <>7% to <em>70%</em>.</> },
   { key: 'number', angle: 'Outcome first', note: 'Every buyer is accountable for a number; this says we move it.', fit: FIT.medium, pair: 'snap', text: 'Design that moves the number.', node: <>Design that moves the <em>number</em>.</> },
 
-  // People: what AI cannot do for them.
-  { key: 'people', angle: 'People', note: 'Our edge over AI-built software: knowing how people work.', fit: FIT.long, pair: 'deep', text: 'AI knows how software works. We know how people do.', node: <>AI knows how software works. We know how <em>people</em> do.</> },
+  // Human again, said against AI directly.
+  { key: 'people', angle: 'Human', note: 'Our edge over AI-built software: knowing how people work.', fit: FIT.long, pair: 'deep', text: 'AI knows how software works. We know how people do.', node: <>AI knows how software works. We know how <em>people</em> do.</> },
 
   // Stakes: regulated, high-consequence work.
   { key: 'fail', angle: 'Stakes', note: 'Filters for serious buyers in healthcare and government; justifies the price.', fit: FIT.long, pair: 'deep', text: 'For software that can’t afford to fail.', node: <>For software that can’t afford to <em>fail</em>.</> },
   { key: 'obvious', angle: 'Stakes', note: 'A craft promise with the outcome inside: usable gets adopted.', fit: FIT.medium, pair: 'inside', text: 'Make the hard thing obvious.', node: <>Make the hard thing <em>obvious</em>.</> },
 ]
+
+/**
+ * The three directions under review, each opened by its lead headline. Every other
+ * candidate is a variation on one of these or a narrower angle, in the full list.
+ */
+export const DIRECTIONS = [
+  { angle: 'Human', label: 'Human', lead: 'human' },
+  { angle: 'Impact', label: 'Impact', lead: 'impact' },
+  { angle: 'Stewardship', label: 'Stewardship', lead: 'ship' },
+] as const
 
 export interface Subline {
   key: string

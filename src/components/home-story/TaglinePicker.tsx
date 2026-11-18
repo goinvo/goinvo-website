@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { SUBLINES, TAGLINES } from '@/components/home-story/taglines'
+import { DIRECTIONS, SUBLINES, TAGLINES } from '@/components/home-story/taglines'
 import type { HeadlineControl } from '@/components/review/headlineBridge'
 
 /**
@@ -37,6 +37,12 @@ export function HeadlineOptions({ tagline, subline, choose }: HeadlineControl) {
   const paired = subline.key === (tagline.pair ?? SUBLINES[0].key)
   return (
     <div data-headline-options>
+      {/* The three directions being weighed: one press each, on its lead line and its pair. */}
+      <div role="group" aria-label="Direction" className="mb-3 flex flex-wrap gap-1">
+        {DIRECTIONS.map((direction) => (
+          <button key={direction.angle} type="button" data-direction={direction.lead} aria-pressed={tagline.angle === direction.angle} onClick={() => choose(direction.lead, null)} className={cn('cursor-pointer border px-2 py-1 text-[13px] leading-tight', tagline.angle === direction.angle ? 'border-black bg-black text-white' : 'border-black/20 bg-white text-black hover:border-black')}>{direction.label}</button>
+        ))}
+      </div>
       <p className="m-0 text-[13px] leading-snug text-gray" data-tagline-note>{tagline.note}</p>
       <label className="mt-3 block text-[12px] leading-tight text-gray">
         Line under it

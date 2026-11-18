@@ -142,7 +142,7 @@ export function ReviewSwitches() {
           {options('review-font', 'Handwriting', state.font, HAND_FONTS.map((f) => ({ key: f.key, label: f.name })), (font) => apply({ ...state, font }), state.hand === 'off')}
           {headline && (
             <div>
-              <p className={cn('m-0', legend)}>Headline</p>
+              <p className={cn('m-0', legend)}>Headline direction</p>
               <HeadlineOptions {...headline} />
             </div>
           )}

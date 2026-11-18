@@ -59,6 +59,14 @@ for (const [width, height] of [[1440, 900], [1280, 720], [390, 844]]) {
   await page.goto(`${base}/design-lab/human`, { waitUntil: 'networkidle2', timeout: 180000 })
   await page.waitForSelector(P, { visible: true, timeout: 30000 }); await pause(900)
   await page.click(`${P} [data-review-toggle]`); await pause(200) // open the panel,
+  // The three directions under review are one press each, and each shows its lead line.
+  const leads = { human: 'Complexity, made human.', impact: 'Design for impact.', ship: 'Designs that ship, with stewardship.' }
+  for (const [lead, text] of Object.entries(leads)) {
+    await page.$eval(`${P} [data-direction="${lead}"]`, (el) => el.click()); await pause(450)
+    const shown = await page.evaluate((key) => ({ title: document.querySelector('#human-title').textContent.trim(), param: new URL(location.href).searchParams.get('headline'), pressed: [...document.querySelectorAll('[data-direction][aria-pressed="true"]')].map((el) => el.dataset.direction), under: document.querySelector('#human-title').nextElementSibling.textContent.trim().length }), lead)
+    check(shown.title === text && shown.param === lead && shown.pressed.length === 1 && shown.pressed[0] === lead && shown.under > 20, `${width}: the ${lead} direction shows its lead line with a line under it ${JSON.stringify(shown)}`)
+  }
+  await page.$eval(`${P} [data-direction="impact"]`, (el) => el.click()); await pause(300)
   await page.click(ALL); await pause(200) // then the list to choose from it
   const keys = await page.$$eval(`${P} [data-tagline-option]`, (els) => els.map((el) => [el.dataset.taglineOption, el.textContent.trim()]))
   check(keys.length >= 15, `${width}: the picker lists every candidate (${keys.length})`)
