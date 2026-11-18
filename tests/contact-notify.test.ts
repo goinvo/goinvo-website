@@ -4,6 +4,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { contactSlackChannel, contactSlackMessage } from '@/lib/contactNotify'
+import { contactSpamReason } from '@/lib/contactSpam'
 import { expectValidSlackBlocks } from './support/slackBlocks'
 
 const queue: Array<() => unknown> = []
@@ -102,6 +103,31 @@ describe('the contact note in Slack', () => {
     expect(text).toContain('&lt;!channel&gt;')
     expect(text).not.toContain('mailto:')
     expectValidSlackBlocks(message.blocks as never)
+  })
+
+  it('rule: obvious robot spam is not posted in Slack, and still goes to JotForm', async () => {
+    const result = await send({ ...good, message: 'Rank higher: https://a.example and https://b.example' })
+    expect(result).toEqual({ status: 200, body: { sent: true } })
+    expect(slackPosts).toHaveLength(0)
+    await send(good)
+    expect(slackPosts).toHaveLength(1)
+  })
+
+  it('names robots, and leaves real notes alone', () => {
+    const reason = (message: string, name = 'Ana Reyes') => contactSpamReason({ name, email: 'a@example.org', message })
+    expect(reason('<a href="https://x.example">cheap pills</a>')).toBe('link markup')
+    expect(reason('[url=https://x.example]click[/url]')).toBe('link markup')
+    expect(reason('Hello', 'Visit www.x.example')).toBe('a link in the name')
+    expect(reason('See https://a.example then www.b.example')).toBe('several links')
+    expect(reason('We offer SEO  services for your website.')).toBe('a sales phrase')
+    expect(reason('Quality backlinks, cheap.')).toBe('a sales phrase')
+    expect(reason('Best online CASINO bonus')).toBe('a sales phrase')
+    // People: one link, and words that only contain a sales word.
+    expect(reason('We need a clear product direction. Our site is https://clinic.example.')).toBeNull()
+    expect(reason('Our team in Seoul runs a reloaned-equipment programme for hospitals.')).toBeNull()
+    expect(reason('Patients keep forgetting their specialist appointments.')).toBeNull()
+    expect(reason('We lost search traffic after a redesign and need the product rethought.')).toBeNull()
+    expect(contactSpamReason(good)).toBeNull()
   })
 
   it('fits Slack with the longest note the form allows', () => {
