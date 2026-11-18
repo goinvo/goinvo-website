@@ -7,7 +7,7 @@ import { ease, useReducedMotion } from '@/lib/motion'
 import { type } from '@/components/ui/type'
 import { Arrow } from '@/components/ui/Arrow'
 import { InlineLink } from '@/components/ui/TextLink'
-import { COMPOSER_GROUPS, atPause, isAnswered, nextGroup, presetSentence, previewAddition, toggleSentence } from '@/lib/contactComposer'
+import { COMPOSER_GROUPS, atPause, firstUnanswered, groupAt, hasSentence, presetSentence, previewAddition, stepQuestion, toggleSentence } from '@/lib/contactComposer'
 import { CONTACT_LIMITS, contactErrors, type ContactErrors } from '@/lib/contactSubmit'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { siteConfig } from '@/lib/config'
@@ -43,8 +43,8 @@ export function ContactComposer({ className, preset }: { className?: string; pre
   const [company, setCompany] = useState('')
   const [text, setText] = useState('')
   const [open, setOpen] = useState(false)
-  /** Questions they passed over, and the answer under the pointer (shown in the field, not yet written). */
-  const [skipped, setSkipped] = useState<string[]>([])
+  /** The question they are on, and the answer under the pointer (shown in the field, not yet written). */
+  const [at, setAt] = useState(0)
   const [pointed, setPointed] = useState<string | null>(null)
   const [errors, setErrors] = useState<ContactErrors>({})
   const [state, setState] = useState<'writing' | 'sending' | 'sent' | 'fallback'>('writing')
@@ -53,7 +53,9 @@ export function ContactComposer({ className, preset }: { className?: string; pre
   const [applied, setApplied] = useState(0)
   if (preset && preset.key !== applied) {
     setApplied(preset.key)
-    setText((current) => presetSentence(current, preset.sentence, preset.replaces))
+    const filled = presetSentence(text, preset.sentence, preset.replaces)
+    setText(filled)
+    setAt(firstUnanswered(filled))
     setOpen(true)
   }
 
@@ -78,14 +80,24 @@ export function ContactComposer({ className, preset }: { className?: string; pre
     }
   }
 
-  const group = open ? nextGroup(text, skipped) : null
+  const total = COMPOSER_GROUPS.length
+  const group = open ? groupAt(text, at) : null
+  const done = open && at >= total && atPause(text)
   const option = group?.options.find((item) => item.label === pointed)
-  const addition = group && option ? previewAddition(text, option, group) : ''
-  const asked = COMPOSER_GROUPS.filter((item) => skipped.includes(item.key) || isAnswered(text, item)).length
+  // An answer already in the text has nothing to preview: pressing it takes it out.
+  const addition = group && option && !hasSentence(text, option) ? previewAddition(text, option, group) : ''
+  const arrow = 'inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-black hover:bg-black/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-secondary disabled:cursor-default disabled:text-black/25 disabled:hover:bg-transparent'
+  const stepper = (
+    <span data-composer-stepper className="flex items-center gap-1">
+      <button type="button" data-composer-back aria-label="Previous question" disabled={at <= 0} onMouseDown={(event) => event.preventDefault()} onClick={() => { setAt(stepQuestion(at, -1)); setPointed(null) }} className={arrow}><span aria-hidden="true">←</span></button>
+      <span data-composer-count className="tabular-nums">{Math.min(at + 1, total)} of {total}</span>
+      <button type="button" data-composer-forward aria-label="Next question" disabled={at >= total} onMouseDown={(event) => event.preventDefault()} onClick={() => { setAt(stepQuestion(at, 1)); setPointed(null) }} className={arrow}><span aria-hidden="true">→</span></button>
+    </span>
+  )
   const hint = !open
     ? 'No need to write an essay: a few clicks is enough.'
     : group
-      ? 'Pick one, skip it, or keep typing.'
+      ? 'Pick one, use the arrows to move on, or keep typing.'
       : atPause(text) ? 'That’s plenty to start. Add anything else, or send it.' : 'Finish the sentence and the next question appears.'
 
   if (state === 'sent') {
@@ -98,8 +110,10 @@ export function ContactComposer({ className, preset }: { className?: string; pre
   }
 
   return (
-    <div data-contact-composer className={className}>
-      <form onSubmit={send} noValidate>
+    // A column as tall as the space it is given, with Send at its foot: beside a taller
+    // neighbour (the contact page's title and details) the button still ends level with it.
+    <div data-contact-composer className={cn('flex flex-col', className)}>
+      <form onSubmit={send} noValidate className="flex flex-1 flex-col">
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label htmlFor={`${id}-name`} className={cn('mb-2 block', type.label)}>Your name</label>
@@ -140,37 +154,42 @@ export function ContactComposer({ className, preset }: { className?: string; pre
               className={cn('absolute inset-0 block h-full w-full resize-none overflow-y-auto border-0 bg-transparent p-4 text-black outline-none placeholder:text-gray', type.body)}
             />
           </div>
-          <div aria-live="polite" data-composer-options onClick={(event) => { if (event.target === event.currentTarget) field.current?.focus() }} className={cn('px-4 pb-4', open && 'min-h-[6.5rem]')}>
+          <div aria-live="polite" data-composer-options onClick={(event) => { if (event.target === event.currentTarget) field.current?.focus() }} className="min-h-[6.5rem] px-4 pb-4">
             {group && (
               <motion.fieldset key={group.key} data-composer-group={group.key} initial={low ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: low ? 0 : 0.35, ease: ease.outExpo }} className="m-0 min-w-0 border-0 p-0">
-                <legend className={cn('mb-2.5 flex w-full items-baseline justify-between gap-4 p-0 text-gray', type.caption)}>
+                <legend className={cn('mb-2 flex w-full items-center justify-between gap-4 p-0 text-gray', type.caption)}>
                   <span>{group.prompt}</span>
-                  <span className="tabular-nums">{asked + 1} of {COMPOSER_GROUPS.length}</span>
+                  {stepper}
                 </legend>
                 <div className="flex flex-wrap items-center gap-2.5">
-                  {group.options.map((item) => (
-                    <button
-                      key={item.label}
-                      type="button"
-                      data-composer-option={item.label}
-                      // Keep the caret in the field: the box never loses focus to a press.
-                      onMouseDown={(event) => event.preventDefault()}
-                      // Only a pointer that actually moved counts as pointing: after a press the next
-                      // question's answers appear under a still cursor, and must not preview themselves.
-                      onMouseMove={(event) => { if ((event.movementX || event.movementY) && pointed !== item.label) setPointed(item.label) }}
-                      onMouseLeave={() => setPointed(null)}
-                      onFocus={() => setPointed(item.label)}
-                      onBlur={() => setPointed(null)}
-                      onClick={() => { setText((current) => toggleSentence(current, item, group)); setPointed(null) }}
-                      className={cn('cursor-pointer rounded-full border border-black/25 bg-white px-3.5 py-1.5 text-black transition-colors hover:border-black hover:bg-black hover:text-white motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                  <button type="button" data-composer-skip onMouseDown={(event) => event.preventDefault()} onClick={() => { setSkipped((current) => [...current, group.key]); setPointed(null) }} className={cn('cursor-pointer border-0 bg-transparent px-2 py-2 text-gray underline-offset-4 hover:text-black hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label)}>Skip</button>
+                  {group.options.map((item) => {
+                    const on = hasSentence(text, item)
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        aria-pressed={on}
+                        data-composer-option={item.label}
+                        // Keep the caret in the field: the box never loses focus to a press.
+                        onMouseDown={(event) => event.preventDefault()}
+                        // Only a pointer that actually moved counts as pointing: after a press the next
+                        // question's answers appear under a still cursor, and must not preview themselves.
+                        onMouseMove={(event) => { if ((event.movementX || event.movementY) && pointed !== item.label) setPointed(item.label) }}
+                        onMouseLeave={() => setPointed(null)}
+                        onFocus={() => setPointed(item.label)}
+                        onBlur={() => setPointed(null)}
+                        // An answer moves on to the next question; taking one back out stays put.
+                        onClick={() => { setText(toggleSentence(text, item, group)); if (!on) setAt(stepQuestion(at, 1)); setPointed(null) }}
+                        className={cn('cursor-pointer rounded-full border px-3.5 py-1.5 transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label, on ? 'border-black bg-black text-white' : 'border-black/25 bg-white text-black hover:border-black hover:bg-black hover:text-white')}
+                      >
+                        {item.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </motion.fieldset>
             )}
+            {done && <p data-composer-done className={cn('m-0 flex items-center justify-between gap-4 text-gray', type.caption)}><span>That’s all four.</span>{stepper}</p>}
           </div>
         </div>
         {errors.message
@@ -178,8 +197,8 @@ export function ContactComposer({ className, preset }: { className?: string; pre
           : <p id={`${id}-hint`} className={cn('mb-0 mt-3 text-gray', type.caption)}>{hint}</p>}
 
         {state !== 'fallback' && (
-          <div className="mt-6">
-            <button type="submit" data-composer-send disabled={state === 'sending'} className={cn('group inline-flex cursor-pointer items-center gap-3 bg-black px-6 py-3.5 text-white hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-wait disabled:opacity-60', type.label)}>
+          <div className="mt-auto pt-6">
+            <button type="submit" data-composer-send disabled={state === 'sending'} className={cn('group flex w-full cursor-pointer items-center justify-center gap-3 bg-black px-6 py-4 text-white hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-wait disabled:opacity-60', type.label)}>
               {state === 'sending' ? 'Sending…' : 'Send'}<Arrow />
             </button>
           </div>

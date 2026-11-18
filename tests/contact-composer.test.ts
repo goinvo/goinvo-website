@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { COMPOSER_GROUPS, atPause, hasSentence, nextGroup, presetSentence, previewAddition, toggleSentence } from '@/lib/contactComposer'
+import { COMPOSER_GROUPS, atPause, firstUnanswered, groupAt, hasSentence, presetSentence, previewAddition, stepQuestion, toggleSentence } from '@/lib/contactComposer'
 
 const group = (key: string) => COMPOSER_GROUPS.find((entry) => entry.key === key)!
 const result = group('result')
@@ -79,7 +79,7 @@ describe('one question at a time', () => {
 
   it('rule: the first question is the one that tells us most (what they need), then result, sector, timing', () => {
     expect(COMPOSER_GROUPS.map((entry) => entry.key)).toEqual(['need', 'result', 'sector', 'timing'])
-    expect(nextGroup('')?.key).toBe('need')
+    expect(groupAt('', firstUnanswered(''))?.key).toBe('need')
   })
 
   it('rule: no question is offered mid-sentence, only at a pause', () => {
@@ -88,24 +88,33 @@ describe('one question at a time', () => {
     expect(atPause('Is this something you do?')).toBe(true)
     expect(atPause('First line.\n')).toBe(true)
     expect(atPause('Our intake form loses')).toBe(false)
-    expect(nextGroup('Our intake form loses')).toBeNull()
-    expect(nextGroup('Our intake form loses half.')?.key).toBe('need')
+    expect(groupAt('Our intake form loses', 0)).toBeNull()
+    expect(groupAt('Our intake form loses half.', 0)?.key).toBe('need')
   })
 
-  it('rule: an answered question is never asked again, and the next one follows', () => {
+  it('answering moves on to the next question', () => {
     const one = toggleSentence('', need.options[0], need)
-    expect(nextGroup(one)?.key).toBe('result')
+    expect(firstUnanswered(one)).toBe(1)
+    expect(groupAt(one, 1)?.key).toBe('result')
     const two = toggleSentence(one, result.options[0], result)
-    expect(nextGroup(two)?.key).toBe('sector')
+    expect(groupAt(two, firstUnanswered(two))?.key).toBe('sector')
   })
 
-  it('a question they pass over is not asked again, and after the last there is none', () => {
-    expect(nextGroup('', ['need'])?.key).toBe('result')
-    expect(nextGroup('', ['need', 'result', 'sector', 'timing'])).toBeNull()
+  it('rule: the arrows step one question back or forward, and stop at the first and past the last', () => {
+    expect(stepQuestion(0, 1)).toBe(1)
+    expect(stepQuestion(1, -1)).toBe(0)
+    expect(stepQuestion(0, -1)).toBe(0)
+    const end = COMPOSER_GROUPS.length
+    expect(stepQuestion(end - 1, 1)).toBe(end)
+    expect(stepQuestion(end, 1)).toBe(end)
+    expect(groupAt('', end)).toBeNull()
+    // Going back shows a question again, answered or not.
+    const one = toggleSentence('', need.options[0], need)
+    expect(groupAt(one, stepQuestion(1, -1))?.key).toBe('need')
   })
 
   it('a service pressed elsewhere counts as the first answer', () => {
-    expect(nextGroup(presetSentence('', 'We need a clear product direction.'))?.key).toBe('result')
+    expect(firstUnanswered(presetSentence('', 'We need a clear product direction.'))).toBe(1)
   })
 
   it('rule: the preview is exactly what a press would add', () => {

@@ -5,7 +5,8 @@
  * last sentence is finished), never mid-sentence, and the questions come in order from the
  * one that tells us most to the one that tells us least. Hovering an answer shows what it
  * would write. The box's text is the only record: a question counts as answered when one of
- * its sentences is in the text. Pure, so the rules are unit-tested
+ * its sentences is in the text. Arrows on the count move back and forward through the
+ * questions, so none has to be answered. Pure, so the rules are unit-tested
  * (tests/contact-composer.test.ts).
  */
 
@@ -107,13 +108,22 @@ export const atPause = (text: string) => text.trim() === '' || /[.!?…]["’”
 export const isAnswered = (text: string, group: ComposerGroup) => group.options.some((option) => hasSentence(text, option))
 
 /**
- * The one question to offer now, or none: nothing mid-sentence, and never a question that
- * is already answered or that they passed over.
+ * The question to show: the one the visitor is on, but only at a pause, never mid-sentence.
+ * Past the last question there is none.
  */
-export function nextGroup(text: string, skipped: string[] = []): ComposerGroup | null {
+export function groupAt(text: string, at: number): ComposerGroup | null {
   if (!atPause(text)) return null
-  return COMPOSER_GROUPS.find((group) => !skipped.includes(group.key) && !isAnswered(text, group)) ?? null
+  return COMPOSER_GROUPS[at] ?? null
 }
+
+/** Where to start: the first question the text has not already answered (all answered: past the end). */
+export function firstUnanswered(text: string): number {
+  const at = COMPOSER_GROUPS.findIndex((group) => !isAnswered(text, group))
+  return at === -1 ? COMPOSER_GROUPS.length : at
+}
+
+/** The arrows on the count: back and forward one question, never before the first or past the end. */
+export const stepQuestion = (at: number, by: 1 | -1) => Math.min(COMPOSER_GROUPS.length, Math.max(0, at + by))
 
 /** What pressing an answer would add to the box, for showing before they press. */
 export function previewAddition(text: string, option: ComposerOption, group?: ComposerGroup): string {

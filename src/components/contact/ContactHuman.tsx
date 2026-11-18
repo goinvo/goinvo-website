@@ -20,10 +20,11 @@ export function ContactHuman() {
             <p className={cn('mb-0 mt-6 max-w-[30ch]', type.lead)}>A question or a rough idea is enough. No meeting required.</p>
           </div>
           {/* One group: InlineLink's 48px touch height is for a link on its own line; stacked
-              here it pushed the three apart, so here they drop it and sit together as one block. */}
-          <address data-contact-details className={cn('grid content-start justify-items-start not-italic max-lg:order-3 lg:col-start-1 lg:row-start-2', type.body)}>
-            <InlineLink href={`mailto:${siteConfig.email.info}`} className="min-h-0 py-0.5">{siteConfig.email.info}</InlineLink>
-            <InlineLink href="tel:617-803-7043" className="min-h-0 py-0.5">617-803-7043</InlineLink>
+              here it pushed the three apart, so here they drop it and sit together as one block,
+              whose last line rests level with the bottom of the Send button. */}
+          <address data-contact-details className={cn('grid content-start justify-items-start not-italic max-lg:order-3 lg:col-start-1 lg:row-start-2 lg:self-end', type.body)}>
+            <InlineLink href={`mailto:${siteConfig.email.info}`} className="!min-h-0 py-0.5">{siteConfig.email.info}</InlineLink>
+            <InlineLink href="tel:617-803-7043" className="!min-h-0 py-0.5">617-803-7043</InlineLink>
             <a href={siteConfig.address.mapUrl} target="_blank" rel="noopener noreferrer" className="mt-1 text-gray no-underline hover:text-black hover:underline">661 Massachusetts Ave, 3rd Floor<br />Arlington, MA 02476</a>
           </address>
           <ContactComposer className="max-lg:order-2 lg:col-start-2 lg:row-span-2 lg:row-start-1" />
