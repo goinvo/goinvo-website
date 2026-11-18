@@ -5,8 +5,14 @@
 // hovering an answer shows its sentence in the field without writing it; pressing writes
 // it and brings the next question; nothing is offered mid-sentence and the question comes
 // back when the sentence is finished; Skip moves on; after the last there are none; the
-// visitor's own typing survives and the field keeps focus through a press; "Next" opens
-// the contact form with the note already filled in; nothing spills sideways.
+// visitor's own typing survives and the field keeps focus through a press; the box grows
+// with the text up to a cap and cannot be dragged.
+// ONE step: name and email are on the first screen above the note, and one Send button
+// sends all three. Send without them names what is missing and sends nothing. When the
+// server says sent, the visitor is thanked; when it does not, the JotForm appears with all
+// three filled in, and the visitor is never told it was sent. The email, phone and address
+// sit together as one group. Nothing spills sideways.
+// This script never submits anything: /api/contact is answered here, in the browser.
 // Usage: node scripts/check-contact-composer.mjs [base] [--out dir]
 import fs from 'node:fs'
 import puppeteer from 'puppeteer'
@@ -28,10 +34,21 @@ const browser = await puppeteer.launch({ headless: true })
 for (const [width, height] of [[1440, 900], [390, 844]]) {
   const page = await browser.newPage()
   await page.setViewport({ width, height, deviceScaleFactor: 1 })
+  // Answer the send ourselves: no real submission ever leaves this script.
+  const sends = []
+  let reply = { status: 200, body: { sent: true } }
+  await page.setRequestInterception(true)
+  page.on('request', (request) => {
+    if (request.url().endsWith('/api/contact') && request.method() === 'POST') { sends.push(JSON.parse(request.postData() || '{}')); return request.respond({ status: reply.status, contentType: 'application/json', body: JSON.stringify(reply.body) }) }
+    return request.continue()
+  })
   await page.goto(`${base}/contact?design=human`, { waitUntil: 'networkidle2', timeout: 180000 })
   await page.waitForSelector(FIELD, { visible: true, timeout: 30000 })
   await pause(800)
 
+  const top = await page.evaluate((height) => { const at = (sel) => { const el = document.querySelector(sel); return el ? Math.round(el.getBoundingClientRect().bottom) : null }; const details = [...document.querySelectorAll('[data-contact-details] a')].map((a) => a.getBoundingClientRect()); return { name: at('[data-composer-name]'), email: at('[data-composer-email]'), field: at('[data-composer-field]'), order: at('[data-composer-email]') <= document.querySelector('[data-composer-field]').getBoundingClientRect().top, steps: document.querySelectorAll('[data-composer-next]').length, gaps: details.slice(1).map((r, i) => Math.round(r.top - details[i].bottom)), height } }, height)
+  check(top.name !== null && top.email !== null && top.name <= height && top.email <= height && top.order && top.steps === 0, `${width}: name and email are on the first screen, above the note, with no second step ${JSON.stringify(top)}`)
+  check(top.gaps.length === 2 && top.gaps.every((gap) => gap >= 0 && gap <= 8), `${width}: the email, phone and address sit together as one group (gaps ${JSON.stringify(top.gaps)}px)`)
   const start = await page.evaluate(() => ({ options: document.querySelectorAll('[data-composer-option]').length, frames: document.querySelectorAll('[data-design-only="human"] iframe').length, fieldTop: Math.round(document.querySelector('[data-composer-field]').getBoundingClientRect().top) }))
   check(start.options === 0 && start.frames === 0 && start.fieldTop < height, `${width}: it opens as one field on the first screen, no options and no form yet ${JSON.stringify(start)}`)
   if (out) await page.screenshot({ path: `${out}/${width}-0-closed.png` })
@@ -77,13 +94,42 @@ for (const [width, height] of [[1440, 900], [390, 844]]) {
   check(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 0, `${width}: nothing spills sideways`)
   if (out) { await page.evaluate(() => scrollTo(0, 0)); await page.screenshot({ path: `${out}/${width}-2-done.png`, fullPage: true }) }
 
-  await page.$eval('[data-composer-next]', (el) => el.scrollIntoView({ block: 'center' }))
-  await page.click('[data-composer-next]')
-  await page.waitForSelector('[data-composer-form] iframe', { timeout: 15000 }).catch(() => {})
-  const src = await page.$eval('[data-composer-form] iframe', (el) => el.src).catch(() => '')
-  const carried = src ? new URL(src).searchParams.get('howCan') : null
-  check(carried === timed, `${width}: Next opens the form with the note filled in ("${carried}")`)
-  if (out) { await pause(2500); await page.screenshot({ path: `${out}/${width}-3-form.png` }) }
+  // The box grows with the text, stops at a cap, and cannot be dragged.
+  const boxHeight = () => page.$eval('[data-composer-grow]', (el) => Math.round(el.getBoundingClientRect().height))
+  const before = await boxHeight()
+  await page.focus(FIELD); await page.keyboard.type(' ' + 'A longer note about the project, its users and the deadline. '.repeat(4)); await pause(300)
+  const grown = await boxHeight()
+  await page.$eval(FIELD, (el) => { const set = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set; set.call(el, el.value + ' More detail on the project.'.repeat(20)); el.dispatchEvent(new Event('input', { bubbles: true })) }); await pause(300)
+  const capped = await boxHeight()
+  const drag = await page.$eval(FIELD, (el) => ({ resize: getComputedStyle(el).resize, scrolls: el.scrollHeight > el.clientHeight + 4 }))
+  check(grown > before + 20 && capped <= 260 && capped >= grown && drag.resize === 'none' && drag.scrolls, `${width}: the box grows with the text (${before} → ${grown}px), stops at a cap (${capped}px) and then scrolls; it cannot be dragged ${JSON.stringify(drag)}`)
+
+  // Send with nothing but the note: it names what is missing and sends nothing.
+  const send = async () => { await page.$eval('[data-composer-send]', (el) => el.scrollIntoView({ block: 'center' })); await page.click('[data-composer-send]'); await pause(700) }
+  await send()
+  const missing = await page.evaluate(() => ({ alerts: [...document.querySelectorAll('[data-contact-composer] [role="alert"]')].map((el) => el.textContent.trim()), focused: document.activeElement?.matches('[data-composer-name]') }))
+  check(sends.length === 0 && missing.alerts.length === 2 && missing.focused, `${width}: Send without a name and email says what is missing, goes to the first one, and sends nothing ${JSON.stringify(missing)}`)
+
+  // The server cannot send: the visitor is NOT thanked, and the form itself appears, filled in.
+  await page.type('[data-composer-name]', 'Test Person'); await page.type('[data-composer-email]', 'test.person@example.org')
+  const note = (await value(page)).trim()
+  reply = { status: 502, body: { sent: false } }
+  await send()
+  await page.waitForSelector('[data-composer-fallback] iframe', { timeout: 15000 }).catch(() => {})
+  const fell = await page.evaluate(() => { const frame = document.querySelector('[data-composer-fallback] iframe'); const query = frame ? Object.fromEntries(new URL(frame.src).searchParams) : null; return { query, thanked: !!document.querySelector('[data-composer-sent]'), typed: document.querySelector('[data-composer-field]')?.value.trim() } })
+  check(sends.length === 1 && sends[0].name === 'Test Person' && sends[0].email === 'test.person@example.org' && sends[0].message === note.slice(0, 1000), `${width}: one Send carries the name, the email and the note together ${JSON.stringify([sends.length, sends[0]?.name, sends[0]?.email, sends[0]?.message?.length])}`)
+  check(!fell.thanked && fell.query?.yourName === 'Test Person' && fell.query?.yourEmail === 'test.person@example.org' && fell.query?.howCan === note.slice(0, 1000) && fell.typed === note, `${width}: when it cannot send, nobody is thanked and the form appears with all three filled in ${JSON.stringify([fell.thanked, fell.query && Object.keys(fell.query)])}`)
+  if (out) { await pause(2500); await page.screenshot({ path: `${out}/${width}-3-fallback.png` }) }
+
+  // The server sends: the visitor is thanked, by name, and the form is gone.
+  await page.reload({ waitUntil: 'networkidle2' }); await page.waitForSelector(FIELD, { visible: true }); await pause(800)
+  reply = { status: 200, body: { sent: true } }
+  await page.type('[data-composer-name]', 'Test Person'); await page.type('[data-composer-email]', 'test.person@example.org')
+  await page.click(FIELD); await pause(500); await press(page, 'A product direction'); await pause(300)
+  await send()
+  const thanked = await page.evaluate(() => ({ text: document.querySelector('[data-composer-sent]')?.textContent || '', form: !!document.querySelector('[data-composer-field]'), frames: document.querySelectorAll('[data-contact-composer] iframe').length }))
+  check(sends.length === 2 && /Thank you, Test\./.test(thanked.text) && thanked.text.includes('test.person@example.org') && !thanked.form && thanked.frames === 0, `${width}: when it is sent, the visitor is thanked by name and told where the reply goes ${JSON.stringify(thanked)}`)
+  if (out) await page.screenshot({ path: `${out}/${width}-4-sent.png` })
   await page.close()
 }
 await browser.close()

@@ -12,15 +12,20 @@ export function ContactFormEmbed({
   background = 'white',
   variant = 'default',
   message,
+  name,
+  email,
 }: {
   showHeader?: boolean
   background?: SectionBackground
   variant?: 'default' | 'inline'
   /** Words the visitor already gave us (the homepage search), put in "How can we help?". */
   message?: string
+  /** Their name and email, when our own form could not send and hands over to this one. */
+  name?: string
+  email?: string
 }) {
   const frameId = `JotFormIFrame-${siteConfig.jotformId}`
-  const wanted = contactFormUrl(siteConfig.jotformId, message)
+  const wanted = contactFormUrl(siteConfig.jotformId, message, { name, email })
   // A new message reloads the form, so it stops following once someone has clicked
   // into it: a later search must never wipe what they are typing.
   const [touched, setTouched] = useState(false)
