@@ -14,13 +14,6 @@
  */
 import { TIERS } from '@/app/(main)/services/content'
 
-/**
- * What we do, in one sentence. "A design studio" and the three sectors are published (the
- * About and Services pages). "In person or from anywhere" is NOT published anywhere yet: it
- * is how the studio describes itself (2026-11-18) and needs confirming before this ships.
- */
-export const WHAT_WE_DO = 'GoInvo is a design studio. We research, design and ship software for healthcare, government and enterprise, with your team, in person or from anywhere.'
-
 const tier = (name: string) => {
   const found = TIERS.find((entry) => entry.name === name)
   if (!found) throw new Error(`No engagement named ${name}`)

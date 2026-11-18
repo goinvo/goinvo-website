@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -12,7 +12,7 @@ import { SectionHeading } from '@/components/ui/SectionHeading'
 import { SmoothScrollLink } from '@/components/ui/SmoothScrollLink'
 import { ContactComposer, type ComposerPreset } from '@/components/forms/ContactComposer'
 import { SECTORS, STATS } from '@/app/(main)/services/content'
-import { JOURNEYS, SERVICES_TESTIMONIAL, WHAT_WE_DO, type Journey } from '@/components/services/servicesJourneys'
+import { JOURNEYS, SERVICES_TESTIMONIAL, type Journey } from '@/components/services/servicesJourneys'
 
 /**
  * The services page in the homepage study's design. It follows what other studios' services
@@ -42,53 +42,82 @@ function Fact({ name, label, value }: { name: string; label: string; value: stri
   )
 }
 
-/** One service, as a column: the question, what it is, the four facts and one way to act. */
-function Service({ journey, index, ask }: { journey: Journey; index: number; ask: (journey: Journey) => void }) {
+/**
+ * One service at rest: its picture, its name and the problem it answers. The whole card is
+ * one button; pressing it opens the details underneath.
+ */
+function ServiceCard({ journey, index, open, quiet, toggle }: { journey: Journey; index: number; open: boolean; /** Another service is open: step back. */ quiet: boolean; toggle: () => void }) {
   return (
-    <article id={journey.id} data-service={journey.id} aria-labelledby={`service-${journey.id}`} className="flex scroll-mt-24 flex-col border-t border-black pt-5 lg:row-span-7 lg:grid lg:grid-rows-subgrid">
-      <p className={cn('m-0 tabular-nums text-gray', type.caption)}>{String(index + 1).padStart(2, '0')} · {journey.title.replace(/\.$/, '')}</p>
-      <h2 id={`service-${journey.id}`} className="mb-0 mt-2 font-serif text-[clamp(1.75rem,2.3vw,2.25rem)] font-normal leading-[1.08] tracking-[-0.02em]">{journey.concern}</h2>
-      <p className={cn('mb-0 mt-3', type.body)}>{journey.description}</p>
-
-      <dl className="m-0 mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-black/15 pt-4">
-        <Fact name="hold" label="You get" value={journey.youHoldLabel} />
-        <Fact name="team" label="You work with" value={journey.engagement.team} />
-        <Fact name="length" label="Takes" value={journey.engagement.length} />
-        <Fact name="investment" label="Typical investment" value={journey.engagement.investment} />
-      </dl>
-
-      {/* One line of evidence, or where to read more: every column has exactly one. */}
-      <p data-service-outcome className={cn('mb-0 mt-4 text-gray', type.caption)}>
-        {journey.outcome
-          ? <><strong className="font-semibold text-black">{journey.outcome.figure}</strong> {journey.outcome.result} <InlineLink href={journey.outcome.href} className="!min-h-0">{journey.outcome.client} case study</InlineLink></>
-          : <InlineLink href={journey.engagement.href} className="!min-h-0">{journey.engagement.cta}</InlineLink>}
-      </p>
-
-      <div className="mt-auto pt-5">
-        <button type="button" data-service-ask={journey.id} onClick={() => ask(journey)} className={cn('group inline-flex w-full cursor-pointer items-center justify-between gap-3 bg-black px-5 py-3 text-white hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label)}>Ask us about this<Arrow /></button>
+    <article id={journey.id} data-service={journey.id} className={cn('group relative scroll-mt-24 transition-opacity duration-300 motion-reduce:transition-none lg:row-start-1', quiet && 'opacity-50 hover:opacity-100 focus-within:opacity-100', ['lg:col-start-1', 'lg:col-start-2', 'lg:col-start-3'][index])}>
+      <div className="relative aspect-[4/3] overflow-hidden">
+        <Image src={journey.image.src} alt="" fill sizes="(min-width:1024px) 30vw, 100vw" className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] motion-reduce:transition-none" style={{ objectPosition: journey.image.focus }} />
       </div>
-      <div className="relative mt-5 aspect-[16/9] overflow-hidden">
-        <Image src={journey.image.src} alt="" fill sizes="(min-width:1024px) 30vw, 100vw" className="object-cover" style={{ objectPosition: journey.image.focus }} />
-      </div>
+      <p className={cn('mb-0 mt-4 tabular-nums text-gray', type.caption)}>{String(index + 1).padStart(2, '0')} · {journey.title.replace(/\.$/, '')}</p>
+      <h2 id={`service-${journey.id}`} className="mb-0 mt-1 font-serif text-[clamp(1.75rem,2.3vw,2.25rem)] font-normal leading-[1.08] tracking-[-0.02em]">
+        {/* The button is the question; its ::after covers the card, so the picture presses too. */}
+        <button type="button" data-service-open={journey.id} aria-expanded={open} aria-controls={`service-panel-${journey.id}`} onClick={toggle} className="flex w-full cursor-pointer items-start justify-between gap-4 border-0 bg-transparent p-0 text-left font-[inherit] text-inherit [letter-spacing:inherit] after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-4 focus-visible:after:outline-secondary">
+          <span className="group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4">{journey.concern}</span>
+          <span aria-hidden="true" data-service-sign className={cn('mt-0.5 shrink-0 font-sans text-[1.5rem] leading-none transition-transform duration-300 motion-reduce:transition-none', open && 'rotate-45')}>+</span>
+        </button>
+      </h2>
     </article>
   )
 }
 
+/** The opened service: what it is, the four facts, one line of evidence, one way to act. */
+function ServicePanel({ journey, ask }: { journey: Journey; ask: (journey: Journey) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  // Opened under the cards, it can start below the fold: bring it into view, no further.
+  useEffect(() => {
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ref.current?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'nearest' })
+  }, [])
+  return (
+    <div ref={ref} id={`service-panel-${journey.id}`} role="region" aria-labelledby={`service-${journey.id}`} data-service-panel={journey.id} className="scroll-mb-8 border-t border-black pt-6 lg:col-span-3 lg:row-start-2 lg:mt-10">
+      <div className="grid gap-x-16 gap-y-8 lg:grid-cols-[1fr_1.2fr]">
+        <div>
+          <p className={cn('m-0 max-w-[40ch]', type.lead)}>{journey.description}</p>
+          {/* One line of evidence, or where to read more: every service has exactly one. */}
+          <p data-service-outcome className={cn('mb-0 mt-5 max-w-[46ch] text-gray', type.label)}>
+            {journey.outcome
+              ? <><strong className="font-semibold text-black">{journey.outcome.figure}</strong> {journey.outcome.result} <InlineLink href={journey.outcome.href} className="!min-h-0">{journey.outcome.client} case study</InlineLink></>
+              : <InlineLink href={journey.engagement.href} className="!min-h-0">{journey.engagement.cta}</InlineLink>}
+          </p>
+        </div>
+        <div>
+          <dl className="m-0 grid grid-cols-2 gap-x-8 gap-y-5">
+            <Fact name="hold" label="You get" value={journey.youHoldLabel} />
+            <Fact name="team" label="You work with" value={journey.engagement.team} />
+            <Fact name="length" label="Takes" value={journey.engagement.length} />
+            <Fact name="investment" label="Typical investment" value={journey.engagement.investment} />
+          </dl>
+          <button type="button" data-service-ask={journey.id} onClick={() => ask(journey)} className={cn('group mt-8 inline-flex cursor-pointer items-center gap-3 bg-black px-6 py-3.5 text-white hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary', type.label)}>Ask us about this<Arrow /></button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /**
- * The first screen IS the services: what we do in one sentence, then the three services
- * side by side, each complete (question, what you get, who, how long, the cost, one way
- * to act). Their pictures sit under the fold line; the other way in comes last.
+ * The first screen IS the services: the headline, then the three services
+ * side by side, each as its picture, its name and the problem it answers. Pressing one
+ * opens its details underneath (one at a time); the other way in comes last.
  */
 function Opening({ ask }: { ask: (journey: Journey) => void }) {
+  const [open, setOpen] = useState<string | null>(null)
   return (
     <Section spacing="none" aria-labelledby="services-title" className="pb-16 pt-[calc(var(--spacing-header-height)+2rem)] md:pb-24 lg:pt-[calc(var(--spacing-header-height)+2.5rem)]">
-      <div className="grid gap-x-16 gap-y-5 lg:grid-cols-[auto_1fr] lg:items-end">
-        <h1 id="services-title" className="m-0 font-serif text-page-title font-normal">Design for impact.</h1>
-        <p data-what-we-do className={cn('m-0 max-w-[58ch] lg:justify-self-end', type.lead)}>{WHAT_WE_DO}</p>
-      </div>
-      {/* Each column is seven rows of one shared grid, so the same part sits on the same line in all three. */}
-      <div data-services className="mt-10 grid gap-x-10 gap-y-14 lg:mt-12 lg:grid-cols-3 lg:gap-y-0">
-        {JOURNEYS.map((journey, index) => <Service key={journey.id} journey={journey} index={index} ask={ask} />)}
+      <h1 id="services-title" className="m-0 font-serif text-page-title font-normal">What are you trying to solve?</h1>
+      {/* In the page's order each panel follows its own card (so it opens under it on a phone
+          and reads in order); on a wide screen the cards share row one and the open panel
+          takes row two, across all three. */}
+      <div data-services className="mt-10 grid gap-x-10 gap-y-10 lg:mt-12 lg:grid-cols-3 lg:gap-y-0">
+        {JOURNEYS.map((journey, index) => (
+          <Fragment key={journey.id}>
+            <ServiceCard journey={journey} index={index} open={open === journey.id} quiet={open !== null && open !== journey.id} toggle={() => setOpen(open === journey.id ? null : journey.id)} />
+            {open === journey.id && <ServicePanel journey={journey} ask={ask} />}
+          </Fragment>
+        ))}
       </div>
       <p data-service-talk className="mb-0 mt-12 border-t border-black/15 pt-6">
         <ActionLink href={`#${TALK}`} className={type.lead}>…or tell us what you’re working on</ActionLink>
